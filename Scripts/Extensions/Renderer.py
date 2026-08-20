@@ -228,6 +228,42 @@ class TemplateRegistration:
     config_store: ExtensionConfigStore  # 独立配置存储（Config/Extensions/<id>.toml）
 
 
+@dataclass(frozen=True)
+class OnlineAsset:
+    """在线资源包装：扩展在上下文中用它标记在线 URL，由渲染器决定如何引用。"""
+
+    url: str
+
+    def __str__(self) -> str:
+        """按当前渲染器转换为可用字符串（未激活渲染器时原样返回 URL）。"""
+        return _resolve_asset_str(self)
+
+
+@dataclass(frozen=True)
+class FileAsset:
+    """本地文件资源包装：扩展在上下文中用它标记本地文件，由渲染器决定如何引用。"""
+
+    path: Path
+
+    def __str__(self) -> str:
+        """按当前渲染器转换为可用字符串（未激活渲染器时返回磁盘路径）。"""
+        return _resolve_asset_str(self)
+
+
+# 当前渲染中的激活渲染器（供 Jinja2 资源函数把包装转换为渲染器可用字符串）
+_current_renderer: BaseRenderer | None = None
+
+
+def _resolve_asset_str(asset: OnlineAsset | FileAsset) -> str:
+    """把资源包装按当前激活渲染器转换为字符串。"""
+    renderer = _current_renderer
+    if isinstance(asset, OnlineAsset):
+        return asset.url if renderer is None else renderer.deal_online_asset(asset)
+    if isinstance(asset, FileAsset):
+        return str(asset.path) if renderer is None else renderer.deal_file_asset(asset)
+    return str(asset)
+
+
 class BaseRenderer:
     """渲染引擎基类，所有渲染扩展必须实现。"""
 
@@ -236,12 +272,23 @@ class BaseRenderer:
     async def setup(self) -> None:
         """初始化（启动浏览器/加载资源等）。"""
 
-    async def render(self, html: str, css: str) -> bytes:
-        """渲染为 PNG 字节。"""
+    async def render(self, html: str, css: str, size: tuple[int, int] | None = None) -> bytes:
+        """渲染为 PNG 字节。
+
+        size: (宽度, 高度)；高度为 0/None 表示按内容自适应。
+        """
         raise NotImplementedError
 
     async def shutdown(self) -> None:
         """清理资源。"""
+
+    def deal_online_asset(self, asset: OnlineAsset) -> str:
+        """把在线资源包装转换为本渲染器可用的字符串（默认原样返回 URL）。"""
+        return asset.url
+
+    def deal_file_asset(self, asset: FileAsset) -> str:
+        """把本地文件包装转换为本渲染器可用的字符串（默认返回磁盘路径）。"""
+        return str(asset.path)
 
 
 class RendererRegistry:
@@ -427,6 +474,7 @@ class RendererManager:
             作为 Jinja 全局函数 `random` 使用，模板或配置中均可调用：
             background = '{{ random("Default", "Backgrounds") }}'。
             directory 相对资源扩展根目录解析，不允许越界。
+            路径经 `FileAsset` 包装，由当前渲染器决定引用格式。
         """
         root = self.resources.get(extension_id)
         if root is None:
@@ -441,15 +489,15 @@ class RendererManager:
         if not images:
             logger.warning(f'RandomImage 错误！目录中没有图片: {extension_id}/{directory}')
             return ''
-        return f'url("{choice(images).absolute()}")'
+        return f'url("{FileAsset(choice(images))}")'
 
-    def resource_path(self, extension_id: str, relative_path: str) -> str:
-        """返回资源文件在磁盘上的绝对路径字符串。"""
-        return str(self._resolve_resource(extension_id, relative_path))
+    def resource_path(self, extension_id: str, relative_path: str) -> FileAsset:
+        """返回资源文件的本地文件包装（由渲染器决定引用格式）。"""
+        return FileAsset(self._resolve_resource(extension_id, relative_path))
 
-    def resource_url(self, extension_id: str, relative_path: str) -> str:
-        """返回资源文件的 file:// URL（供 CSS url() 引用）。"""
-        return self._resolve_resource(extension_id, relative_path).as_uri()
+    def resource_url(self, extension_id: str, relative_path: str) -> FileAsset:
+        """返回资源文件的本地文件包装（由渲染器决定引用格式，如 playwright 需 file://）。"""
+        return FileAsset(self._resolve_resource(extension_id, relative_path))
 
     def resource_text(self, extension_id: str, relative_path: str, encoding: str = 'Utf-8') -> str:
         """以文本形式读取资源内容（单次读取上限 2 MiB）。"""
@@ -473,6 +521,23 @@ class RendererManager:
 
     # ---------- 渲染编排入口 ----------
 
+    def _resolve_assets(self, value: Any, renderer: BaseRenderer | None) -> Any:
+        """
+        递归把上下文中的资源包装（OnlineAsset/FileAsset）转换为渲染器可用字符串。
+
+            渲染器为 None 时按默认规则转换（在线 URL 原样、本地文件返回磁盘路径），
+            保证后续 JSON 编码不因包装对象而失败。
+        """
+        if isinstance(value, OnlineAsset):
+            return value.url if renderer is None else renderer.deal_online_asset(value)
+        if isinstance(value, FileAsset):
+            return str(value.path) if renderer is None else renderer.deal_file_asset(value)
+        if isinstance(value, dict):
+            return {key: self._resolve_assets(item, renderer) for key, item in value.items()}
+        if isinstance(value, list):
+            return [self._resolve_assets(item, renderer) for item in value]
+        return value
+
     async def render_image(
         self,
         template: str,
@@ -487,6 +552,8 @@ class RendererManager:
             template: 模板包内模板名称，如 'List'，对应模板目录下的 List/List.html。
             size: (width, height)。
             context: 模板变量；`config`/资源函数等保留名称由框架注入，冲突立即报错。
+                上下文中的图片/字体资源可用 `OnlineAsset`/`FileAsset` 包装，
+                由渲染器的 `deal_online_asset`/`deal_file_asset` 转换为可用字符串。
             renderer: 渲染引擎名称，缺省用 `config.image.renderer`。
         """
         width, height = size
@@ -496,17 +563,55 @@ class RendererManager:
         missing = [rid for rid in registration.resource_ids if rid not in self.resources]
         if missing:
             raise ExtensionError(f'template {registration.extension_id} 声明了未注册的资源扩展：{missing}！')
-        # 上下文构建：框架注入值优先，调用方值随后（保留名称冲突检查）
+        # 解析渲染引擎：先激活，供资源包装转换使用
+        renderer_name = renderer or config.image.renderer
+        active_renderer = self._active.get(renderer_name)
+        if active_renderer is None:
+            active_renderer = await self.setup(renderer_name)
+        # 设置当前渲染器，供 Jinja2 资源函数把包装转换为渲染器可用字符串
+        global _current_renderer
+        previous_renderer = _current_renderer
+        _current_renderer = active_renderer
+        try:
+            return await self._render_with_renderer(
+                template,
+                size,
+                registration,
+                environment,
+                active_renderer,
+                context,
+            )
+        finally:
+            _current_renderer = previous_renderer
+
+    async def _render_with_renderer(
+        self,
+        template: str,
+        size: tuple[int, int],
+        registration: TemplateRegistration,
+        environment: Environment,
+        active_renderer: BaseRenderer | None,
+        context: dict | None,
+    ) -> bytes:
+        """在已激活渲染器的上下文中完成上下文构建与 HTML/CSS 渲染。"""
+        width, height = size
+        # 上下文构建：先解析扩展传入的资源包装，再做 JSON 编码 + HTML 转义
+        raw_user_context = dict(context or {})
+        user_context = encode_context(self._resolve_assets(raw_user_context, active_renderer))
+        conflicts = _RESERVED_CONTEXT_KEYS & set(user_context)
+        if conflicts:
+            raise ExtensionError(f'template {registration.extension_id} 使用了保留上下文名称：{sorted(conflicts)}！')
+        # 字体链接同样经渲染器处理（如 playwright 需 file:// 前缀）
+        font_path = self._resolve_font_path()
+        font_uri = (
+            active_renderer.deal_file_asset(FileAsset(font_path)) if active_renderer is not None else str(font_path)
+        )
         injected = {
             'config': await self._config_context(registration),
             'width': width,
             'height': height,
-            'font_uri': str(self._resolve_font_path()),
+            'font_uri': font_uri,
         }
-        user_context = encode_context(dict(context or {}))
-        conflicts = _RESERVED_CONTEXT_KEYS & set(user_context)
-        if conflicts:
-            raise ExtensionError(f'template {registration.extension_id} 使用了保留上下文名称：{sorted(conflicts)}！')
         merged = {**injected, **user_context}
         # 渲染 HTML 与 CSS
         try:
@@ -518,7 +623,12 @@ class RendererManager:
             html_template.render_async(**merged),
             css_task,
         )
-        return await self.render(html_content, css_content, renderer or config.image.renderer)
+        return await self.render(
+            html_content,
+            css_content,
+            active_renderer.name if active_renderer else '',
+            (width, height),
+        )
 
     # ---------- 引擎管理 ----------
 
@@ -546,8 +656,11 @@ class RendererManager:
         logger.info(f'渲染引擎 {renderer.name} 已就绪！')
         return renderer
 
-    async def render(self, html: str, css: str, name: str | None = None) -> bytes:
-        """使用指定引擎渲染 HTML+CSS 为 PNG 字节，带并发上限与超时。"""
+    async def render(self, html: str, css: str, name: str | None = None, size: tuple[int, int] | None = None) -> bytes:
+        """使用指定引擎渲染 HTML+CSS 为 PNG 字节，带并发上限与超时。
+
+        size: (宽度, 高度)，透传给渲染器的 render，供布局视口使用。
+        """
         if not name:
             raise RuntimeError('没有选择渲染引擎！')
         renderer = self._active.get(name)
@@ -560,7 +673,7 @@ class RendererManager:
         if semaphore is None:
             raise RuntimeError(f'渲染引擎 {renderer.name} 的并发信号量未配置！')
         async with semaphore:
-            return await asyncio.wait_for(renderer.render(html, css), timeout=timeout)
+            return await asyncio.wait_for(renderer.render(html, css, size), timeout=timeout)
 
     async def shutdown(self) -> None:
         """清理全部已启用引擎。"""

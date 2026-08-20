@@ -55,6 +55,8 @@ from .Renderer import (
     FONT_PATH,
     RESOURCES_DIR,
     BaseRenderer,
+    FileAsset,
+    OnlineAsset,
     RendererManager,
     RendererRegistry,
     TemplateRegistration,
@@ -124,6 +126,8 @@ __all__ = [
     # Renderer
     'BaseRenderer',
     'FONT_PATH',
+    'FileAsset',
+    'OnlineAsset',
     'RESOURCES_DIR',
     'RendererManager',
     'RendererRegistry',

@@ -43,7 +43,7 @@ quote-style = "single"
 docstring-code-format = true
 
 [tool.ruff.lint.isort]
-known-first-party = ["Extensions", "Plugins", "Scripts"]
+known-first-party = ["Extensions", "Scripts"]
 
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = "single"

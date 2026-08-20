@@ -1,13 +1,14 @@
 """内置扩展：在线玩家列表指令。"""
 
 import asyncio
+from pathlib import Path
 from typing import override
 
 from nonebot_plugin_alconna import Match
 
 from Scripts import Globals
 from Scripts.Config import config
-from Scripts.Extensions import Command, Extension
+from Scripts.Extensions import Command, Extension, FileAsset
 from Scripts.Globals import player_list_cache
 from Scripts.Managers import cache_manager
 from Scripts.Messages import messages
@@ -46,7 +47,13 @@ class ListCommand(Command):
             return response
         player_names = {name for groups in response.values() for name in groups[0]}
         avatars = await self.ensure_avatars(list(player_names))
-        return await extension.render_image('List', (600, 800), context={'player_list': response, 'avatars': avatars})
+        # 头像为本地文件，用 FileAsset 包装，由渲染器决定如何引用（如 html2pic 需 file:// 前缀）
+        wrapped_avatars = {name: FileAsset(Path(path)) for name, path in avatars.items()}
+        return await extension.render_image(
+            'List',
+            (600, 800),
+            context={'player_list': response, 'avatars': wrapped_avatars},
+        )
 
     async def ensure_avatars(self, player_names: list):
         """获取玩家头像文件路径：本地已缓存直接复用，缺失的下载后落盘。"""

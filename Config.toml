@@ -73,7 +73,7 @@ enabled = true
 # 启用后机器人将会把所发送的消息渲染为图片，但需额外配置，且响应速度会变慢。
 mode = false
 # 渲染引擎
-renderer = "html2pic"
+renderer = ""
 # 当前模板包：template 扩展的 id。
 # "Default" = 内置默认模板扩展提供的模板，可被其他模板扩展替换（热生效）。
 template = "Default"
