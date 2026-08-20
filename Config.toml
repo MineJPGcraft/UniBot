@@ -30,7 +30,7 @@ command_minecraft_blacklist = ["kill"]
 # 是否播报服务器开启/关闭（播报到其他服务器和 QQ 群）。
 broadcast_server = true
 
-# 是否播报玩家进入/离开服务器。
+# 是否播报玩家进入/离开服务器、死亡和达成成就。
 broadcast_player = true
 
 # 是否把消息群内的所有消息转发到服务器内。关闭后如需向服务器发送消息，请使用 .send 指令。

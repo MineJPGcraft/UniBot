@@ -2,7 +2,13 @@ import asyncio
 from datetime import datetime
 
 from nonebot import on_message, on_notice
-from nonebot.adapters.minecraft import PlayerChatEvent, PlayerDeathEvent, PlayerJoinEvent, PlayerQuitEvent
+from nonebot.adapters.minecraft import (
+    PlayerAchievementEvent,
+    PlayerChatEvent,
+    PlayerDeathEvent,
+    PlayerJoinEvent,
+    PlayerQuitEvent,
+)
 from nonebot.adapters.minecraft.message import MessageSegment
 from nonebot.adapters.minecraft.models import Component, HoverAction, HoverEvent
 from nonebot.plugin import PluginMetadata
@@ -125,6 +131,33 @@ async def handle_player_death(event: PlayerDeathEvent):
 
     if (not config.bot_prefix) or (not player.upper().startswith(config.bot_prefix)):
         broadcast_message = message_config.events.player_death.format(player=player, death=death_message)
+        if config.sync_message_between_servers:
+            server_service = Globals.server_service
+            if server_service is not None:
+                await server_service.broadcast(build_server_message(name, player, broadcast_message), name)
+        if config.broadcast_player:
+            await send_message_to_groups(broadcast_message)
+
+
+@notice_watcher.handle()
+async def handle_player_achievement(event: PlayerAchievementEvent):
+    """处理玩家达成成就事件。"""
+    name = event.server_name
+    player = event.player.nickname
+    achievement = event.achievement
+
+    if achievement.translate and achievement.translate.text:
+        achievement_message = achievement.translate.text
+    elif achievement.display and achievement.display.title and achievement.display.title.text:
+        achievement_message = f'{player} 达成了成就 [{achievement.display.title.text}]'
+    else:
+        achievement_message = f'{player} 达成了成就 [{achievement.key or "未知成就"}]'
+    logger.debug(f'收到玩家成就消息：{achievement_message}')
+
+    if (not config.bot_prefix) or (not player.upper().startswith(config.bot_prefix)):
+        broadcast_message = message_config.events.player_achievement.format(
+            player=player, achievement=achievement_message
+        )
         if config.sync_message_between_servers:
             server_service = Globals.server_service
             if server_service is not None:
