@@ -518,7 +518,7 @@ class RendererManager:
             html_template.render_async(**merged),
             css_task,
         )
-        return await self.render(html_content, css_content, renderer)
+        return await self.render(html_content, css_content, renderer or config.image.renderer)
 
     # ---------- 引擎管理 ----------
 
@@ -529,15 +529,14 @@ class RendererManager:
             self._timeouts[name] = timeout
 
     async def setup(self, name: str) -> BaseRenderer | None:
-        """初始化并启用指定引擎，失败时回退默认引擎。"""
+        """初始化并启用指定引擎，未选择或不存在时返回 None。"""
+        if not name:
+            logger.error('没有选择渲染引擎！')
+            return None
         renderer = self._get_renderer(name)
         if renderer is None:
-            logger.warning(f'渲染引擎 {name} 不存在，回退默认引擎 html2pic！')
-            renderer = self._get_renderer('html2pic')
-            if renderer is None:
-                logger.error('默认渲染引擎 html2pic 不可用！')
-                return None
-            name = renderer.name
+            logger.error(f'渲染引擎 {name} 不存在！')
+            return None
         if name in self._active:
             return renderer
         await renderer.setup()
@@ -549,12 +548,13 @@ class RendererManager:
 
     async def render(self, html: str, css: str, name: str | None = None) -> bytes:
         """使用指定引擎渲染 HTML+CSS 为 PNG 字节，带并发上限与超时。"""
-        engine_name = name or 'html2pic'
-        renderer = self._active.get(engine_name)
+        if not name:
+            raise RuntimeError('没有选择渲染引擎！')
+        renderer = self._active.get(name)
         if renderer is None:
-            renderer = await self.setup(engine_name)
+            renderer = await self.setup(name)
         if renderer is None:
-            raise RuntimeError('没有可用的渲染引擎！')
+            raise RuntimeError(f'渲染引擎 {name} 不可用！')
         semaphore = self._semaphores.get(renderer.name)
         timeout = self._timeouts.get(renderer.name, self._default_timeout)
         if semaphore is None:

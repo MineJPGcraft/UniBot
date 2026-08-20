@@ -9,7 +9,7 @@ TOML_PATH = Path('Config.toml')
 
 class ImageConfig(BaseModel):
     mode: bool = False
-    renderer: str = 'html2pic'  # 当前使用的渲染引擎 name，必须是已注册的引擎
+    renderer: str = ''  # 当前使用的渲染引擎 name，空表示未选择（渲染时回退默认引擎）
     template: str = 'Default'  # 当前模板包（template 扩展 id，'Default' = 内置默认模板）
     font: str = ''  # 自定义字体文件路径；留空自动从资源扩展根目录查找 Font.ttf
 

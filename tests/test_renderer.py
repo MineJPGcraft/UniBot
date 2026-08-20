@@ -87,17 +87,21 @@ class TestRendererManager:
         assert renderer.setup_called
         assert manager._active['fake'] is renderer
 
-    def test_setup_missing_engine_falls_back_to_html2pic(self):
-        # 注册一个待回退的 html2pic 假引擎
+    def test_setup_missing_engine_returns_none(self):
+        # 配置的引擎不存在时不再回退，直接返回 None
         fallback = _FakeRenderer('html2pic')
         manager = RendererManager(lambda name: fallback if name == 'html2pic' else None)
         resolved = asyncio.run(manager.setup('nonexistent'))
-        assert resolved is fallback
-        assert fallback.setup_called
+        assert resolved is None
+        assert not fallback.setup_called
 
     def test_setup_with_no_fallback_returns_none(self):
         manager = RendererManager(lambda name: None)
         assert asyncio.run(manager.setup('anything')) is None
+
+    def test_setup_with_empty_name_returns_none(self):
+        manager = RendererManager(lambda name: None)
+        assert asyncio.run(manager.setup('')) is None
 
     def test_same_renderer_not_setup_twice(self):
         renderer = _FakeRenderer('fake')

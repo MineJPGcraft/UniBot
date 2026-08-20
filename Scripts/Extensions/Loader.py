@@ -313,7 +313,7 @@ class ExtensionLoader:
             try:
                 extension = self._import_extension(extension_id, info)
             except Exception as error:
-                logger.exception(f'导入扩展 {extension_id} 失败！')
+                logger.error(f'导入扩展 {extension_id} 失败：{error}')
                 blocked_reasons[extension_id] = f'导入失败：{error}'
                 self._register_display(extension_id, info, ExtensionState.failed, f'导入扩展失败：{error}')
                 continue

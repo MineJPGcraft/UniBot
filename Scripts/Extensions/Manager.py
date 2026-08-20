@@ -62,9 +62,9 @@ class ExtensionManager:
                 extension.mark_failed(str(error))
                 await self._disable_extension(extension)
                 await self._rollback(extension)
-        # 图片模式开启时才初始化默认渲染引擎（Html2Pic 扩展加载并注册）
+        # 图片模式开启时才初始化配置的渲染引擎
         if config.image.mode:
-            await self.renderer_manager.setup('html2pic')
+            await self.renderer_manager.setup(config.image.renderer)
         logger.success('扩展启动完毕！')
 
     async def _rollback(self, failed_extension: Extension) -> None:

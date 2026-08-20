@@ -254,7 +254,14 @@ async def switch_renderer(request: Request, user: dict = Depends(require_role('a
     except Exception:
         return {'code': 1, 'data': None, 'message': '请求体格式错误'}
     name = (body or {}).get('name', '')
-    if name not in extension_manager.renderers:
+    # 校验目标是「已安装的渲染器扩展」，而非「已启用/已 setup 的引擎实例」
+    # （否则图片模式未开启或目标引擎尚未 setup 时会被误判为不存在）
+    installed = {
+        (ext.metadata.renderer_name or ext.metadata.id)
+        for ext in extension_manager.registry.values()
+        if ExtensionType.renderer in ext.metadata.types
+    }
+    if name not in installed:
         return {'code': 1, 'data': None, 'message': f'渲染引擎 {name} 不存在'}
     _patch_image_config('renderer', name)
     return {'code': 0, 'data': None, 'message': 'ok'}
