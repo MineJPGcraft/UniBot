@@ -74,6 +74,8 @@ class DiscoveredExtension:
     # 仅单文件扩展存在
     builtin: bool = False
     module_path: str = ''
+    # 校验阶段失败原因（版本不兼容/入口缺失），非空表示阻止加载
+    blocked_reason: str = ''
 
 
 class ExtensionLoader:
@@ -200,12 +202,19 @@ class ExtensionLoader:
         """校验发现的扩展：版本兼容性、Python 依赖、入口模块命名。"""
         for extension_id, info in self._discovered.items():
             manifest = info.manifest
-            self._validate_compatibility(extension_id, manifest)
-            if not info.single_file:
-                # 无代码扩展包没有 __init__.py 入口，跳过入口模块校验
-                is_no_code = self._is_no_code(manifest)
-                if not is_no_code:
-                    self._validate_entry_module(extension_id, info.directory)
+            try:
+                self._validate_compatibility(extension_id, manifest)
+                if not info.single_file:
+                    # 无代码扩展包没有 __init__.py 入口，跳过入口模块校验
+                    is_no_code = self._is_no_code(manifest)
+                    if not is_no_code:
+                        self._validate_entry_module(extension_id, info.directory)
+            except (CompatibilityError, ManifestError) as error:
+                # 单个扩展校验失败不阻断整体加载：标记为 blocked 并跳过导入
+                info.blocked_reason = str(error)
+                self._register_display(extension_id, info, ExtensionState.blocked, str(error))
+                logger.error(f'校验不通过，已阻止加载：<red>{error}</red>')
+                continue
 
     @staticmethod
     def _is_no_code(manifest: ExtensionManifest) -> bool:
@@ -284,6 +293,10 @@ class ExtensionLoader:
         blocked_reasons: dict[str, str] = {}
         for extension_id in order:
             info = self._discovered[extension_id]
+            # 校验不通过（版本不兼容/入口缺失）：已登记 blocked，仅记录原因供依赖传播
+            if info.blocked_reason:
+                blocked_reasons[extension_id] = info.blocked_reason
+                continue
             # 主动禁用：直接进入 disabled，不导入、不绑定、不注册
             if not info.enabled:
                 self._register_display(extension_id, info, ExtensionState.disabled, '')

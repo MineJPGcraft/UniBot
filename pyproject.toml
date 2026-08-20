@@ -1,6 +1,6 @@
 [project]
 name = "Minecraft_UniBot"
-version = "v1.0.1"
+version = "v1.0.2"
 description = "一款与 Minecraft 互通的 Nonebot2 机器人。"
 readme = "README.md"
 requires-python = ">=3.11, <4.0"
@@ -22,7 +22,7 @@ webui = [
     "PyJWT>=2.8.0",
     "bcrypt>=4.0.0",
 ]
-extensions = []
+extensions = ["playwright"]
 
 [dependency-groups]
 dev = [

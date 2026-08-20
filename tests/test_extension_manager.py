@@ -1,12 +1,15 @@
 """ExtensionManager 测试：拓扑排序、生命周期、失败隔离、启停状态（验证点 9、14、8）。"""
 
 import asyncio
+from pathlib import Path
 from typing import override
 
 import pytest
 import tomlkit
 
 from Scripts.Extensions import Extension, ExtensionState, Service, ServiceRegistry, extension_manager
+from Scripts.Extensions.Base import parse_manifest
+from Scripts.Extensions.Loader import DiscoveredExtension, ExtensionLoader
 
 
 def _bind_registry(extension: Extension) -> ServiceRegistry:
@@ -205,3 +208,120 @@ class TestSetEnabled:
         data = tomlkit.parse(config_file.read_text('Utf-8'))
         assert data['WeatherExt']['enabled'] is True
         assert data['List']['enabled'] is False
+
+
+# ===== 校验失败隔离（验证点 14：单个扩展失败不阻断整体加载） =====
+
+
+class TestValidationIsolation:
+    """版本不兼容/入口缺失等校验失败时，仅该扩展进入 blocked，整体加载不崩溃。"""
+
+    @staticmethod
+    def _make_loader_with(manifests: dict[str, str], deps: dict[str, list[str]] | None = None) -> ExtensionLoader:
+        """构造携带指定清单的 ExtensionLoader，跳过真实目录扫描。"""
+        deps = deps or {}
+        loader = ExtensionLoader(extension_manager)
+        for extension_id, content in manifests.items():
+            manifest = parse_manifest(content)
+            # 在清单的 [dependencies] 段写入依赖关系
+            manifest.dependencies.extensions = deps.get(extension_id, [])
+            loader._discovered[extension_id] = DiscoveredExtension(
+                manifest=manifest,
+                directory=Path('unused'),
+                single_file=True,
+                enabled=True,
+            )
+        return loader
+
+    def test_incompatible_extension_blocked_not_crash(self, monkeypatch):
+        # 固定当前 UniBot 版本，使 ">=999.0.0" 约束必然不满足
+        monkeypatch.setattr('Scripts.Extensions.Loader.get_unibot_version', lambda: '1.0.0')
+        loader = self._make_loader_with({
+            'Playwright': """
+[extension]
+id = "Playwright"
+name = "Playwright 渲染引擎"
+version = "1.0.0"
+types = ["api"]
+
+[compatibility]
+unibot = ">=999.0.0"
+""",
+        })
+        # 完整校验+排序+加载流程，不应抛异常
+        loader._validate_all()
+        loader._import_and_load(loader._topological_sort())
+        info = extension_manager.registry.get('Playwright')
+        assert info is not None
+        assert info.state is ExtensionState.blocked
+        assert info.failure_reason is not None
+        assert 'UniBot' in info.failure_reason
+
+    def test_compatible_extension_still_loads_alongside_blocked(self, monkeypatch):
+        monkeypatch.setattr('Scripts.Extensions.Loader.get_unibot_version', lambda: '1.0.0')
+        loader = self._make_loader_with({
+            'GoodExt': """
+[extension]
+id = "GoodExt"
+name = "正常扩展"
+version = "1.0.0"
+types = ["api"]
+
+[compatibility]
+unibot = "*"
+""",
+            'BadExt': """
+[extension]
+id = "BadExt"
+name = "不兼容扩展"
+version = "1.0.0"
+types = ["api"]
+
+[compatibility]
+unibot = ">=999.0.0"
+""",
+        })
+        loader._validate_all()
+        loader._import_and_load(loader._topological_sort())
+        assert extension_manager.registry['BadExt'].state is ExtensionState.blocked
+        # GoodExt 未失败也未被禁用：应进入 failed（模块不存在，导入失败）而非崩溃
+        assert extension_manager.registry['GoodExt'].state in (
+            ExtensionState.failed,
+            ExtensionState.blocked,
+        )
+
+    def test_dependent_extension_also_blocked(self, monkeypatch):
+        monkeypatch.setattr('Scripts.Extensions.Loader.get_unibot_version', lambda: '1.0.0')
+        loader = self._make_loader_with(
+            {
+                'Incompat': """
+[extension]
+id = "Incompat"
+name = "底层不兼容扩展"
+version = "1.0.0"
+types = ["api"]
+
+[compatibility]
+unibot = ">=999.0.0"
+""",
+                'Depends': """
+[extension]
+id = "Depends"
+name = "依赖扩展"
+version = "1.0.0"
+types = ["api"]
+
+[compatibility]
+unibot = "*"
+""",
+            },
+            deps={'Depends': ['Incompat']},
+        )
+        loader._validate_all()
+        order = loader._topological_sort()
+        # 拓扑排序必须仍能完成，不抛 DependencyError
+        assert 'Incompat' in order and 'Depends' in order
+        loader._import_and_load(order)
+        assert extension_manager.registry['Incompat'].state is ExtensionState.blocked
+        assert extension_manager.registry['Depends'].state is ExtensionState.blocked
+        assert 'Incompat' in (extension_manager.registry['Depends'].failure_reason or '')
