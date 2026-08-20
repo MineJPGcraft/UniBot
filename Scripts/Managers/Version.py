@@ -3,6 +3,8 @@ import shutil
 import tempfile
 from pathlib import Path
 
+import tomlkit
+
 from Scripts.Logging import logger
 from Scripts.Network import github_download, request
 
@@ -54,7 +56,7 @@ class VersionManager:
         return None
 
     async def update(self) -> str | None:
-        """从 GitHub Release 下载最新代码并替换 Scripts 目录，成功返回 None，失败返回错误信息。"""
+        """从 GitHub Release 下载最新代码并替换核心代码，成功返回 None，失败返回错误信息。"""
         if not await self.fetch_latest():
             return '更新失败，请检查网络稍后再试！'
         asset_url = self.latest_asset_url
@@ -70,7 +72,11 @@ class VersionManager:
         return None
 
     def _apply_update(self, archive_data: bytes) -> str | None:
-        """安全解压 UniBot.zip 并替换 Scripts 目录，成功返回 None，失败返回错误信息。"""
+        """安全解压 UniBot.zip 并替换核心代码，成功返回 None，失败返回错误信息。
+
+        替换范围：Scripts 目录 + 根目录入口文件（Bot.py / Watchdog.py）。
+        仅同步 pyproject.toml 的版本号，用户配置（Config.toml / .env 等）一律保留。
+        """
         from Scripts.Utils import safe_extract_zip
 
         scripts_dir = Path('Scripts')
@@ -92,11 +98,44 @@ class VersionManager:
                         backup_dir.rename(scripts_dir)
                     raise
                 shutil.rmtree(backup_dir, ignore_errors=True)
+                # 覆盖根目录入口文件（Bot.py / Watchdog.py），用户配置一律保留
+                for file_name in ('Bot.py', 'Watchdog.py'):
+                    source_file = temp_dir / file_name
+                    if source_file.is_file():
+                        shutil.copy2(source_file, Path(file_name))
+                        logger.debug(f'已覆盖根目录文件 {file_name}。')
+                # pyproject.toml 仅同步版本号，保留本地其余配置
+                self._sync_version_from_archive(temp_dir / 'pyproject.toml')
             logger.success('已将核心代码更新为最新版本！')
             return None
         except Exception as error:
             logger.warning(f'更新解压失败：{error}')
             return '更新失败，请查看控制台日志！'
+
+    def _sync_version_from_archive(self, archive_pyproject: Path) -> None:
+        """从压缩包 pyproject.toml 同步项目版本与 WebUI 版本到本地，保留本地其余配置。"""
+        if not archive_pyproject.is_file():
+            logger.warning('压缩包内缺少 pyproject.toml，跳过版本同步！')
+            return
+        try:
+            archive_data = tomlkit.parse(archive_pyproject.read_text('Utf-8'))
+            new_version = archive_data.get('project', {}).get('version', '')
+            new_webui_version = archive_data.get('tool', {}).get('unibot', {}).get('webui_version', '')
+            if not new_version:
+                logger.warning('压缩包 pyproject.toml 缺少版本号，跳过版本同步！')
+                return
+            local_path = Path('pyproject.toml')
+            local_data = tomlkit.parse(local_path.read_text('Utf-8'))
+            local_data['project']['version'] = new_version
+            if new_webui_version:
+                unibot_data = local_data.setdefault('tool', {}).setdefault('unibot', {})
+                unibot_data['webui_version'] = new_webui_version
+            local_path.write_text(tomlkit.dumps(local_data), encoding='Utf-8')
+            self.version = str(new_version)
+            config_manager.webui_version = str(new_webui_version)
+            logger.info(f'已将项目版本同步为 {new_version}，WebUI 版本同步为 {new_webui_version}！')
+        except Exception as error:
+            logger.warning(f'同步版本号失败：{error}')
 
 
 version_manager = VersionManager()
