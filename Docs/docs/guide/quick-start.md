@@ -36,7 +36,7 @@
 
 :::
 
-如需先了解整体架构及各组件间的通信方式，可参阅 [架构速览](/unibot/架构设计.html)。
+如需先了解整体架构及各组件间的通信方式，可参阅 [架构速览](/unibot/architecture.html)。
 
 ## 前置要求
 
@@ -75,7 +75,7 @@
 接下来按照引导即可快速完成整个配置流程，**全程无需再手动编辑 `.env` 或 `Config.toml`，也无需对照文档。**
 
 ::: note
-WebUI 的完整功能介绍（各页面详解、配置中心、日志查看、令牌授权等）见 [WebUI 管理面板](/guide/WebUI.html)。
+WebUI 的完整功能介绍（各页面详解、配置中心、日志查看、令牌授权等）见 [WebUI 管理面板](/guide/webui.html)。
 :::
 
 ### 手动安装（可选）
@@ -92,7 +92,7 @@ uv sync --extra webui
 uv run Watchdog.py
 ```
 
-~~也可使用 pip + venv 安装~~，具体命令可参考 [配置说明](/unibot/配置说明.html)，但更推荐使用 uv 进行管理。
+~~也可使用 pip + venv 安装~~，具体命令可参考 [配置说明](/unibot/configuration.html)，但更推荐使用 uv 进行管理。
 
 ### Docker 安装
 安装 Docker 之后 在终端运行
@@ -119,7 +119,7 @@ docker compose up -d
 
 此外，还需安装并配置对应的适配器，才能让机器人账号连接上核心。
 
-各平台适配器的具体配置项，请参阅 [配置说明](/unibot/配置说明.html)。
+各平台适配器的具体配置项，请参阅 [配置说明](/unibot/configuration.html)。
 
 ## 第四步：验证启动
 
@@ -130,7 +130,7 @@ docker compose up -d
 登录 WebUI 仪表盘，在「快速开始」引导卡片中点击 **令牌授权** 即可完成超级用户授权（也可在任意平台群聊中发送控制台打印的认证令牌）。
 
 ::: note
-令牌授权的完整说明（操作步骤、令牌即用即刷机制、无需 WebUI 的授权方式）见 [WebUI 管理面板 · 令牌授权](/guide/WebUI.html#令牌授权)。
+令牌授权的完整说明（操作步骤、令牌即用即刷机制、无需 WebUI 的授权方式）见 [WebUI 管理面板 · 令牌授权](/guide/webui.html#令牌授权)。
 :::
 
 ### 验证功能
@@ -148,4 +148,4 @@ docker compose up -d
 - **机器人不响应指令？** 请检查 `COMMAND_START` 前缀、`command_groups` 中是否包含当前群，以及 `SUPERUSERS` 中是否包含你的账号。
 - **连不上服务器？** 请确认两端的 `access_token` 一致、WebSocket 地址与端口可达，并查看 MCDR 与机器人的日志。
 
-更多配置项，详见 *[配置说明](/unibot/配置说明.html)*。
+更多配置项，详见 *[配置说明](/unibot/configuration.html)*。

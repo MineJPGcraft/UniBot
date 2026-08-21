@@ -100,7 +100,7 @@ ONEBOT_WS_URLS=["ws://127.0.0.1:6700"]
 :::
 
 ::: note 更快的授权方式
-`command_groups` / `message_groups` / `SUPERUSERS` 也可以通过 WebUI「快速开始」引导的**令牌授权**自动完成：在任意平台群聊中发送认证令牌即可。详见 [功能特性](/guide/功能特性.html)。
+`command_groups` / `message_groups` / `SUPERUSERS` 也可以通过 WebUI「快速开始」引导的**令牌授权**自动完成：在任意平台群聊中发送认证令牌即可。详见 [功能特性](/guide/features.html)。
 :::
 
 ### 消息同步

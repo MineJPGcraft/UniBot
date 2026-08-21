@@ -13,11 +13,11 @@ config:
         -
           theme: brand
           text: 了解项目
-          link: /guide/功能特性.html
+          link: /guide/features.html
         -
           theme: alt
           text: 快速开始
-          link: /guide/快速开始.html
+          link: /guide/quick-start.html
   -
     type: features
     features:
@@ -41,7 +41,7 @@ config:
         title: WebUI 管理面板
         icon: fluent-color:laptop-24
         details: 现代化管理界面，可视化配置、实时监控、日志查看，开箱即用。
-        link: /guide/WebUI.html
+        link: /guide/webui.html
       -
         title: NoneBot2 生态
         icon: fluent-color:bot-24
@@ -82,11 +82,11 @@ import MachineStats from './.vuepress/components/MachineStats.vue'
 
 ## ::fluent-color:send-24:: 快速导航
 
-- [开始使用](/guide/快速开始.html) — 从零开始部署你的 UniBot
-- [WebUI 管理面板](/guide/WebUI.html) — 可视化配置、实时监控、日志查看
-- [配置说明](/unibot/配置说明.html) — 全部配置项详解
-- [指令手册](/guide/指令手册.html) — 全部内置指令一览
-- [功能特性](/guide/功能特性.html) — 群服互通、图片渲染、扩展系统等
-- [扩展系统](/unibot/扩展系统.html) — 扩展类型、渲染体系与可视化管理
-- [架构设计](/unibot/架构设计.html) — 深入了解项目架构
+- [开始使用](/guide/quick-start.html) — 从零开始部署你的 UniBot
+- [WebUI 管理面板](/guide/webui.html) — 可视化配置、实时监控、日志查看
+- [配置说明](/unibot/configuration.html) — 全部配置项详解
+- [指令手册](/guide/command-reference.html) — 全部内置指令一览
+- [功能特性](/guide/features.html) — 群服互通、图片渲染、扩展系统等
+- [扩展系统](/unibot/extension-system.html) — 扩展类型、渲染体系与可视化管理
+- [架构设计](/unibot/architecture.html) — 深入了解项目架构
 - [MC 适配器](/adapter/) — 鹊桥协议与服务器端接入方式

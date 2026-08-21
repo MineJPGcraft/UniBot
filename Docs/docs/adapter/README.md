@@ -43,13 +43,13 @@ UniBot 基于 **NoneBot2** 框架，通过安装不同的 **NoneBot 适配器** 
 
 ## 快速导航
 
-<LinkCard title="接入聊天平台" href="/adapter/接入聊天平台.html" icon="fluent-color:chat-24">
+<LinkCard title="接入聊天平台" href="/adapter/connect-chat-platforms.html" icon="fluent-color:chat-24">
 
 各平台适配器的配置字段与对接方式。
 
 </LinkCard>
 
-<LinkCard title="Minecraft 适配器" href="/adapter/使用说明.html" icon="fluent-color:link-24">
+<LinkCard title="Minecraft 适配器" href="/adapter/usage.html" icon="fluent-color:link-24">
 
 MC 协议适配器的配置、连接模式与服务器端接入。
 
@@ -68,12 +68,12 @@ MC 协议适配器的配置、连接模式与服务器端接入。
 ::: table title="接入方式" copy="all" hl-rows="tip:2"
 | 服务端类型 | 实现端 | 说明 |
 |------------|--------|------|
-| MCDReforged（Java 版） | [MCDR 端插件](/adapter/使用说明.html#mcdr-端插件) | 运行于 MCDReforged 之上 |
-| MCDReforged（基岩版 BDS） | [MCDR 端插件](/adapter/使用说明.html#基岩版-bedrock-支持) | 配合 Bedrock Liteloader Handler |
-| Spigot / Paper / Folia / Forge / Fabric / NeoForge / Velocity / 原版 | [鹊桥官方实现](/adapter/使用说明.html#鹊桥官方实现) | 鹊桥官方实现 |
+| MCDReforged（Java 版） | [MCDR 端插件](/adapter/usage.html#mcdr-端插件) | 运行于 MCDReforged 之上 |
+| MCDReforged（基岩版 BDS） | [MCDR 端插件](/adapter/usage.html#基岩版-bedrock-支持) | 配合 Bedrock Liteloader Handler |
+| Spigot / Paper / Folia / Forge / Fabric / NeoForge / Velocity / 原版 | [鹊桥官方实现](/adapter/usage.html#鹊桥官方实现) | 鹊桥官方实现 |
 :::
 
-鹊桥协议本身并非本项目开发，它还支持 Spigot、Paper、Fabric、Forge、NeoForge 等多种服务端。基岩版服务器可通过 MCDR 的 [Bedrock Liteloader Handler](https://mcdreforged.com/zh-CN/plugin/bedrock_liteloader_handler) 处理器接入，详见 [MCDR 端插件 · 基岩版支持](/adapter/使用说明.html#基岩版-bedrock-支持)。
+鹊桥协议本身并非本项目开发，它还支持 Spigot、Paper、Fabric、Forge、NeoForge 等多种服务端。基岩版服务器可通过 MCDR 的 [Bedrock Liteloader Handler](https://mcdreforged.com/zh-CN/plugin/bedrock_liteloader_handler) 处理器接入，详见 [MCDR 端插件 · 基岩版支持](/adapter/usage.html#基岩版-bedrock-支持)。
 
 ### 协议概述
 
@@ -84,8 +84,8 @@ MC 协议适配器的配置、连接模式与服务器端接入。
 ::: table title="相关项目" copy="all"
 | 项目 | 说明 |
 |------|------|
-| [MCDR 端插件](/adapter/使用说明.html#mcdr-端插件) | MCDReforged 端的鹊桥实现 |
-| [鹊桥官方实现](/adapter/使用说明.html#鹊桥官方实现) | 其它服务端的鹊桥官方实现 |
+| [MCDR 端插件](/adapter/usage.html#mcdr-端插件) | MCDReforged 端的鹊桥实现 |
+| [鹊桥官方实现](/adapter/usage.html#鹊桥官方实现) | 其它服务端的鹊桥官方实现 |
 | [nonebot-plugin-mcqq](https://github.com/17TheWord/nonebot-plugin-mcqq) | 更完善的 MC 通信插件 |
 | [nonebot-plugin-mcping](https://github.com/17TheWord/nonebot-plugin-mcping) | 获取 MC 服务器 MOTD 并返回图片 |
 :::

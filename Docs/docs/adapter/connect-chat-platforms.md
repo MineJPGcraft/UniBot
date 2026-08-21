@@ -3,7 +3,7 @@
 UniBot 基于 NoneBot2，通过安装不同的适配器接入各聊天平台。本页介绍各平台适配器的配置字段与对接方式，所有配置均在 UniBot 根目录的 `.env` 中完成。
 
 ::: note 使用 WebUI 可直接创建机器人卡片填写
-若已启用 [WebUI](/guide/功能特性.html)，==无需手动编辑 `.env`==：登录后进入 **配置 → 环境变量**，各平台的机器人列表字段（如 `QQ_BOTS`、`TELEGRAM_BOTS`、`DISCORD_BOTS` 等）会以**机器人卡片**形式呈现。点击 **添加一项** 即可创建机器人卡片，逐项填写 `token`、`secret` 等字段，支持展开 / 折叠、拖动排序与删除。填写完成后保存，重启机器人生效。
+若已启用 [WebUI](/guide/features.html)，==无需手动编辑 `.env`==：登录后进入 **配置 → 环境变量**，各平台的机器人列表字段（如 `QQ_BOTS`、`TELEGRAM_BOTS`、`DISCORD_BOTS` 等）会以**机器人卡片**形式呈现。点击 **添加一项** 即可创建机器人卡片，逐项填写 `token`、`secret` 等字段，支持展开 / 折叠、拖动排序与删除。填写完成后保存，重启机器人生效。
 :::
 
 *注意：列表 / 对象类型的配置请使用 JSON 格式，并用双引号包裹整个值。* 未安装的适配器配置不会被加载。
@@ -217,7 +217,7 @@ SATORI_CLIENTS=[]
 
 ## Minecraft
 
-通过 [鹊桥](/adapter/) 协议与 Minecraft 服务器互通，具体对接见 [Minecraft 适配器](/adapter/使用说明.html)。
+通过 [鹊桥](/adapter/) 协议与 Minecraft 服务器互通，具体对接见 [Minecraft 适配器](/adapter/usage.html)。
 
 ```ini
 # Minecraft WebSocket 地址（支持多服）

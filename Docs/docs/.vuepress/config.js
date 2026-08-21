@@ -3,6 +3,7 @@ import { viteBundler } from '@vuepress/bundler-vite'
 import { plumeTheme } from 'vuepress-theme-plume'
 
 export default defineUserConfig({
+  // 默认语言
   lang: 'zh-CN',
   title: 'MC-UniBot Docs',
   description: '跨平台 · 多服互联 · 即插即用 —— 让 Minecraft 与你的聊天世界无缝相连',
@@ -10,6 +11,20 @@ export default defineUserConfig({
   head: [
     ['link', { rel: 'icon', href: '/icon.svg' }],
   ],
+
+  // 多语言支持（路径键需与主题 locales 保持一致）
+  locales: {
+    '/': {
+      lang: 'zh-CN',
+      title: 'MC-UniBot Docs',
+      description: '跨平台 · 多服互联 · 即插即用 —— 让 Minecraft 与你的聊天世界无缝相连',
+    },
+    '/en/': {
+      lang: 'en-US',
+      title: 'MC-UniBot Docs',
+      description: 'Cross-platform · Multi-server · Plug-and-Play — seamlessly connect Minecraft with your chat world',
+    },
+  },
 
   theme: plumeTheme({
     // 部署域名：用于 SEO（OGP / JSON-LD / canonical）与 sitemap.xml 的生成
@@ -50,53 +65,113 @@ export default defineUserConfig({
 
     navbarSocialInclude: ['github', 'mcjpg', 'qq'],
 
-    navbar: [
-      { text: '首页', link: '/' },
-      { text: '指南', link: '/guide/' },
-      { text: 'UniBot', link: '/unibot/' },
-      { text: '适配器', link: '/adapter/' },
-    ],
+    // 主题级多语言配置（路径键与 VuePress locales 一致）
+    locales: {
+      '/': {
+        selectLanguageName: '简体中文',
 
-    sidebar: {
-      '/guide/': [
-        {
-          text: '指南',
-          collapsed: false,
-          items: [
-            '/guide/',
-            '/guide/快速开始.md',
-            '/guide/功能特性.md',
-            '/guide/WebUI.md',
-            '/guide/指令手册.md',
+        navbar: [
+          { text: '首页', link: '/' },
+          { text: '指南', link: '/guide/' },
+          { text: 'UniBot', link: '/unibot/' },
+          { text: '适配器', link: '/adapter/' },
+        ],
+
+        sidebar: {
+          '/guide/': [
+            {
+              text: '指南',
+              collapsed: false,
+              items: [
+                '/guide/',
+                '/guide/quick-start.md',
+                '/guide/features.md',
+                '/guide/webui.md',
+                '/guide/command-reference.md',
+              ],
+            },
+          ],
+          '/unibot/': [
+            {
+              text: 'UniBot',
+              collapsed: false,
+              items: [
+                '/unibot/',
+                '/unibot/configuration.md',
+                '/unibot/extension-system.md',
+                '/unibot/architecture.md',
+                '/unibot/api-reference.md',
+                '/unibot/developing-extensions.md',
+                '/unibot/marketplace.md',
+              ],
+            },
+          ],
+          '/adapter/': [
+            {
+              text: 'MC 适配器',
+              collapsed: false,
+              items: [
+                '/adapter/',
+                '/adapter/connect-chat-platforms.md',
+                '/adapter/usage.md',
+              ],
+            },
           ],
         },
-      ],
-      '/unibot/': [
-        {
-          text: 'UniBot',
-          collapsed: false,
-          items: [
-            '/unibot/',
-            '/unibot/配置说明.md',
-            '/unibot/扩展系统.md',
-            '/unibot/架构设计.md',
-            '/unibot/接口文档.md',
-            '/unibot/开发插件.md',
-            '/unibot/上传市场.md',
+      },
+
+      '/en/': {
+        selectLanguageName: 'English',
+
+        navbar: [
+          { text: 'Home', link: '/en/' },
+          { text: 'Guide', link: '/en/guide/' },
+          { text: 'UniBot', link: '/en/unibot/' },
+          { text: 'Adapters', link: '/en/adapter/' },
+        ],
+
+        sidebar: {
+          '/guide/': [
+            {
+              text: 'Guide',
+              collapsed: false,
+              items: [
+                '/en/guide/',
+                '/en/guide/quick-start.md',
+                '/en/guide/features.md',
+                '/en/guide/webui.md',
+                '/en/guide/command-reference.md',
+              ],
+            },
+          ],
+          '/unibot/': [
+            {
+              text: 'UniBot',
+              collapsed: false,
+              items: [
+                '/en/unibot/',
+                '/en/unibot/configuration.md',
+                '/en/unibot/extension-system.md',
+                '/en/unibot/architecture.md',
+                '/en/unibot/api-reference.md',
+                '/en/unibot/developing-extensions.md',
+                '/en/unibot/marketplace.md',
+              ],
+            },
+          ],
+          '/adapter/': [
+            {
+              text: 'MC Adapter',
+              collapsed: false,
+              items: [
+                '/en/adapter/',
+                '/en/adapter/connect-chat-platforms.md',
+                '/en/adapter/usage.md',
+              ],
+            },
           ],
         },
-      ],
-      '/adapter/': [
-        {
-          text: 'MC 适配器',
-          collapsed: false,
-          items: [
-            '/adapter/',
-            '/adapter/接入聊天平台.md',
-            '/adapter/使用说明.md',
-          ],
-        },
-      ],
+      },
     },
 
     plugins: {

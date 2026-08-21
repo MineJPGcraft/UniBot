@@ -103,7 +103,7 @@ UniBot 内置了基于 **Vue 3 + Vite** 构建的 Web 管理面板，通过 REST
 - **登录认证**：JWT + HttpOnly Cookie，管理员账户体系
 
 ::: note
-各页面功能详解、启用方式、初始化管理员与常见问题，见 **[WebUI 管理面板](/guide/WebUI.html)**。
+各页面功能详解、启用方式、初始化管理员与常见问题，见 **[WebUI 管理面板](/guide/webui.html)**。
 :::
 
 ---
@@ -118,7 +118,7 @@ UniBot 基于 **NoneBot2** 构建，可无缝接入 [NB 插件商店](https://re
 - **依赖感知**：扩展间的依赖关系自动解析，缺失或版本不兼容时会明确提示。
 - **可视化管理**：WebUI 中即可完成扩展的启停、配置与渲染引擎 / 模板切换。
 
-更详细的说明见 [扩展系统](/unibot/扩展系统.html)。
+更详细的说明见 [扩展系统](/unibot/extension-system.html)。
 
 ---
 

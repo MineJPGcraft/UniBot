@@ -1,6 +1,6 @@
 # 开发扩展
 
-本文档面向扩展开发者，从零开始介绍如何编写、配置并分发一个 UniBot 扩展。开始之前，建议先阅读 [扩展系统](/unibot/扩展系统.html) 了解整体设计。
+本文档面向扩展开发者，从零开始介绍如何编写、配置并分发一个 UniBot 扩展。开始之前，建议先阅读 [扩展系统](/unibot/extension-system.html) 了解整体设计。
 
 ## 扩展开发总览
 
@@ -832,7 +832,7 @@ enabled = true
 ### 市场分发
 
 通过市场分发扩展的完整流程（打包、发布 Release、提交元数据 PR、SHA-256 校验与自动更新）
-请参见 [上传市场](/unibot/上传市场.html)。
+请参见 [上传市场](/unibot/marketplace.html)。
 
 ## 开发环境
 
@@ -863,4 +863,4 @@ enabled = true
 
 - 模板仓库提供打包脚本：把扩展目录压缩为 zip（zip 根即扩展目录，内含 `Extension.toml`）。
 - 将 zip 上传到 GitHub Release，并向扩展注册表提交收录申请。
-- 完整发布流程见 [上传市场](/unibot/上传市场.html)。
+- 完整发布流程见 [上传市场](/unibot/marketplace.html)。

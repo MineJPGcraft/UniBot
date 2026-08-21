@@ -96,9 +96,9 @@ enabled = true
 
 | 引导卡片步骤 | 对应文档章节 |
 |------|------|
-| 连接聊天平台 | [快速开始 · 第三步](/guide/快速开始.html#第三步-接入聊天平台) |
-| 接入 Minecraft 服务器 | [快速开始 · 第二步](/guide/快速开始.html#第二步-安装鹊桥插件并配置) |
-| 添加超级用户 | [快速开始 · 第四步](/guide/快速开始.html#第四步-验证启动) |
+| 连接聊天平台 | [快速开始 · 第三步](/guide/quick-start.html#第三步-接入聊天平台) |
+| 接入 Minecraft 服务器 | [快速开始 · 第二步](/guide/quick-start.html#第二步-安装鹊桥插件并配置) |
+| 添加超级用户 | [快速开始 · 第四步](/guide/quick-start.html#第四步-验证启动) |
 
 ::: tip
 引导卡片的完成状态由 WebUI 自动检测（有在线适配器 / 有在线服务器 / `SUPERUSERS` 非空），==无需手动勾选==。
@@ -134,7 +134,7 @@ enabled = true
 - 核心适配器（如 Minecraft）标记为**受保护**，禁止操作。
 
 ::: note
-通过 WebUI 安装平台适配器时，UniBot 会自动完成依赖安装与注册。详见 [接入聊天平台](/adapter/接入聊天平台.html)。
+通过 WebUI 安装平台适配器时，UniBot 会自动完成依赖安装与注册。详见 [接入聊天平台](/adapter/connect-chat-platforms.html)。
 :::
 
 ### 插件管理
@@ -150,7 +150,7 @@ UniBot 扩展系统的管理入口（需管理员权限）：
 - 切换渲染引擎与模板（模板切换即时生效）。
 - 访问**扩展市场**，搜索并一键安装 / 升级 / 卸载扩展。
 
-详见 [扩展系统](/unibot/扩展系统.html) 的「WebUI 管理」一节。
+详见 [扩展系统](/unibot/extension-system.html) 的「WebUI 管理」一节。
 
 ### 配置中心
 
@@ -193,7 +193,7 @@ UniBot 扩展系统的管理入口（需管理员权限）：
 ### 登录提示密码错误 / 忘记管理员密码
 
 - 确认初始化管理员时设置的账号密码。
-- 若遗忘，可在服务端数据中重置（详见 [用户管理](/unibot/接口文档.html) 相关接口）。
+- 若遗忘，可在服务端数据中重置（详见 [用户管理](/unibot/api-reference.html) 相关接口）。
 
 ### WebUI 修改配置后没生效
 
@@ -207,6 +207,6 @@ UniBot 扩展系统的管理入口（需管理员权限）：
 
 ## 更多
 
-- **接口文档**：WebUI 后端 REST API 参考见 [接口文档](/unibot/接口文档.html)。
-- **部署流程**：从零部署请参阅 [快速开始](/guide/快速开始.html)。
-- **配置说明**：`.env` 与 `Config.toml` 全部配置项见 [配置说明](/unibot/配置说明.html)。
+- **接口文档**：WebUI 后端 REST API 参考见 [接口文档](/unibot/api-reference.html)。
+- **部署流程**：从零部署请参阅 [快速开始](/guide/quick-start.html)。
+- **配置说明**：`.env` 与 `Config.toml` 全部配置项见 [配置说明](/unibot/configuration.html)。

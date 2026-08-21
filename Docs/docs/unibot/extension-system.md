@@ -258,5 +258,5 @@ WebUI 提供完整的扩展管理能力（需管理员权限）：
 
 ## 更多
 
-- 面向开发者的完整指南，请参阅 [开发插件](/unibot/开发插件.html)。
-- 扩展相关的 WebUI 接口，请参阅 [REST API](/unibot/接口文档.html)。
+- 面向开发者的完整指南，请参阅 [开发插件](/unibot/developing-extensions.html)。
+- 扩展相关的 WebUI 接口，请参阅 [REST API](/unibot/api-reference.html)。

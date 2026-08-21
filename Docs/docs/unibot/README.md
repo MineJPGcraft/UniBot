@@ -4,37 +4,37 @@
 
 ## 快速导航
 
-<LinkCard title="配置说明" href="/unibot/配置说明.html" icon="fluent-color:settings-24">
+<LinkCard title="配置说明" href="/unibot/configuration.html" icon="fluent-color:settings-24">
 
   `.env` 与 `Config.toml` 等全部配置项
 
 </LinkCard>
 
-<LinkCard title="扩展系统" href="/unibot/扩展系统.html" icon="fluent-color:puzzle-piece-24">
+<LinkCard title="扩展系统" href="/unibot/extension-system.html" icon="fluent-color:puzzle-piece-24">
 
   扩展类型、清单、状态与渲染体系
 
 </LinkCard>
 
-<LinkCard title="架构设计" href="/unibot/架构设计.html" icon="fluent-color:apps-24">
+<LinkCard title="架构设计" href="/unibot/architecture.html" icon="fluent-color:apps-24">
 
   深入了解项目结构
 
 </LinkCard>
 
-<LinkCard title="REST API" href="/unibot/接口文档.html" icon="fluent-color:code-24">
+<LinkCard title="REST API" href="/unibot/api-reference.html" icon="fluent-color:code-24">
 
   WebUI 后端 API 参考
 
 </LinkCard>
 
-<LinkCard title="开发扩展" href="/unibot/开发插件.html" icon="fluent-color:wrench-screwdriver-24">
+<LinkCard title="开发扩展" href="/unibot/developing-extensions.html" icon="fluent-color:wrench-screwdriver-24">
 
   编写自己的 UniBot 扩展
 
 </LinkCard>
 
-<LinkCard title="上传市场" href="/unibot/上传市场.html" icon="fluent-color:building-store-24">
+<LinkCard title="上传市场" href="/unibot/marketplace.html" icon="fluent-color:building-store-24">
 
   把你的扩展发布到扩展市场
 
