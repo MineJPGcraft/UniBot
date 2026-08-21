@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  app:
+    image: "ghcr.io/minejpgcraft/unibot:latest"
+    container_name: unibot
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - data_volume:/data
+    environment:
+      - TZ=Asia/Shanghai
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/status"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    networks:
+      - unibot
+
+networks:
+  unibot:
+    driver: bridge
+
+volumes:
+  data_volume:
+    driver: local
