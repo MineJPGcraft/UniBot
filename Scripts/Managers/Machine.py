@@ -25,7 +25,7 @@ class MachineManager:
         """初始化机器 ID 与 IP，供启动/关闭时上报。"""
         self.machine_id = self.generate_machine_id()
         self.machine_ip = self.get_machine_ip()
-        logger.info('本机机器标识已初始化。')
+        logger.info('Machine identifier initialized.')
 
     def generate_machine_id(self) -> str:
         """基于固定机器标识生成机器 ID（每次启动重新计算，防止篡改）。"""
@@ -108,9 +108,9 @@ class MachineManager:
         if data is None:
             return False
         if data.get('code') == 0:
-            logger.success('机器登记成功，已标记在线！')
+            logger.success('Machine registered and marked online.')
             return True
-        logger.warning(f'机器登记被拒绝：{data.get("message", "未知原因")}')
+        logger.warning(f'Machine registration rejected: {data.get("message", "unknown reason")}')
         return False
 
     async def mark_offline(self) -> bool:
@@ -121,9 +121,9 @@ class MachineManager:
         if data is None:
             return False
         if data.get('code') == 0:
-            logger.success('机器已标记离线！')
+            logger.success('Machine marked offline.')
             return True
-        logger.warning(f'机器离线标记失败：{data.get("message", "未知原因")}')
+        logger.warning(f'Failed to mark machine offline: {data.get("message", "unknown reason")}')
         return False
 
 

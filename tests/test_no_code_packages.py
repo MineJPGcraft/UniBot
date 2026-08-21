@@ -125,7 +125,7 @@ class TestTemplatePackage:
 
     def test_commit_template_package_missing_entry_raises(self, tmp_path):
         loader = ExtensionLoader(extension_manager)
-        with pytest.raises(ManifestError, match='入口目录'):
+        with pytest.raises(ManifestError, match='entry directory'):
             loader._commit_template_package('TestTemplate', _info(tmp_path, _TEMPLATE_TOML))
 
     def test_config_schema_rejects_bad_field_name(self):
@@ -140,7 +140,7 @@ class TestTemplatePackage:
         schema = parse_manifest(_TEMPLATE_TOML).template.config_schema
         bad = dict(schema)
         bad['card_radius'] = TemplateFieldConfig(type='integer', default='12')
-        with pytest.raises(ExtensionError, match='default 必须是'):
+        with pytest.raises(ExtensionError, match='default must be'):
             build_template_config_model('TestTemplate', bad)
 
 
@@ -153,14 +153,14 @@ class TestResourcesPackage:
 
     def test_commit_resources_package_missing_root_raises(self, tmp_path):
         loader = ExtensionLoader(extension_manager)
-        with pytest.raises(ManifestError, match='根目录'):
+        with pytest.raises(ManifestError, match='root directory'):
             loader._commit_resources_package('TestResources', _info(tmp_path, _RESOURCES_TOML))
 
 
 class TestCommitNoCodePackage:
     def test_mixed_code_and_no_code_rejected(self, tmp_path):
         # 代码类型与无代码类型混用在清单解析阶段即被 model_validator 拦截
-        with pytest.raises(ManifestError, match='不能与代码能力'):
+        with pytest.raises(ManifestError, match='cannot be mixed with code capabilities'):
             parse_manifest(_MIXED_TOML)
 
     def test_combined_template_resources_registers_both(self, tmp_path):

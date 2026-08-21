@@ -125,7 +125,7 @@ class TestServices:
         registry = ServiceRegistry(extension_manager)
         registry.register(_TypedService.name, object())
 
-        with pytest.raises(TypeError, match='API 服务 typed 的类型不是 _TypedService'):
+        with pytest.raises(TypeError, match='API service typed is not of type _TypedService'):
             registry.get(_TypedService)
 
 

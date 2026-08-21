@@ -36,9 +36,9 @@ async def request(url: str):
         response = await client.get(url)
         if response.status_code == 200:
             return response.json()
-        logger.warning(f'请求 {url} 失败：错误的状态代码 {response.status_code}')
+        logger.warning(f'Request to {url} failed: unexpected status code {response.status_code}')
     except Exception as error:
-        logger.warning(f'请求 {url} 失败：{error}')
+        logger.warning(f'Request to {url} failed: {error}')
 
 
 async def post_request(url: str, payload: dict) -> dict | None:
@@ -47,9 +47,9 @@ async def post_request(url: str, payload: dict) -> dict | None:
         response = await client.post(url, json=payload)
         if response.status_code == 200:
             return response.json()
-        logger.warning(f'请求 {url} 失败：错误的状态代码 {response.status_code}')
+        logger.warning(f'Request to {url} failed: unexpected status code {response.status_code}')
     except Exception as error:
-        logger.warning(f'请求 {url} 失败：{error}')
+        logger.warning(f'Request to {url} failed: {error}')
     return None
 
 
@@ -59,14 +59,14 @@ async def download(url: str) -> BytesIO | None:
         download_bytes = BytesIO()
         async with client.stream('GET', url) as stream:
             if stream.status_code != 200:
-                logger.warning(f'下载 {url} 失败：错误的状态代码 {stream.status_code}')
+                logger.warning(f'Download of {url} failed: unexpected status code {stream.status_code}')
                 return
             async for chunk in stream.aiter_bytes():
                 download_bytes.write(chunk)
         download_bytes.seek(0)
         return download_bytes
     except Exception as error:
-        logger.warning(f'下载 {url} 失败：{error}')
+        logger.warning(f'Download of {url} failed: {error}')
         return
 
 

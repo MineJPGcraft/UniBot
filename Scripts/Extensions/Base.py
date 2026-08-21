@@ -175,11 +175,11 @@ class ExtensionManifest(BaseModel):
         code = types & _CODE_TYPES
         if no_code and code:
             raise ValueError(
-                f'无代码扩展类型 {sorted(t.value for t in no_code)} '
-                f'不能与代码能力 {sorted(t.value for t in code)} 混用！'
+                f'No-code extension types {sorted(t.value for t in no_code)} '
+                f'cannot be mixed with code capabilities {sorted(t.value for t in code)}!'
             )
         if types == {ExtensionType.renderer} and not self.renderer.name:
-            raise ValueError('renderer 扩展必须在 [renderer] 段声明 name！')
+            raise ValueError('renderer extensions must declare name in the [renderer] section!')
         return self
 
 
@@ -233,11 +233,11 @@ def parse_manifest(content: str) -> ExtensionManifest:
     try:
         data = tomllib.loads(content)
     except Exception as error:
-        raise ManifestError(f'扩展清单解析失败：{error}') from error
+        raise ManifestError(f'Failed to parse extension manifest: {error}') from error
     try:
         return ExtensionManifest.model_validate(data)
     except Exception as error:
-        raise ManifestError(f'扩展清单校验失败：{error}') from error
+        raise ManifestError(f'Extension manifest validation failed: {error}') from error
 
 
 def manifest_from_attributes(extension: Extension) -> ExtensionManifest:
@@ -250,15 +250,15 @@ def manifest_from_attributes(extension: Extension) -> ExtensionManifest:
     # id 是普通类属性，单文件扩展在类上声明或构造时传入；未声明时取到缺省空串
     extension_id = extension.id
     if not isinstance(extension_id, str) or not extension_id:
-        raise ManifestError('单文件扩展必须声明 id！')
+        raise ManifestError('Single-file extensions must declare an id!')
     if not extension.name:
-        raise ManifestError(f'扩展 {extension_id} 必须声明 name 类属性！')
+        raise ManifestError(f'Extension {extension_id} must declare a name class attribute!')
     if not extension.version:
-        raise ManifestError(f'扩展 {extension_id} 必须声明 version 类属性！')
+        raise ManifestError(f'Extension {extension_id} must declare a version class attribute!')
     try:
         types = [ExtensionType(entry) for entry in extension.types]
     except ValueError as error:
-        raise ManifestError(f'扩展 {extension_id} 存在非法类型：{extension.types}！') from error
+        raise ManifestError(f'Extension {extension_id} has invalid types: {extension.types}') from error
     return ExtensionManifest(
         extension=ExtensionMeta(
             id=extension_id,
@@ -372,7 +372,7 @@ class Extension(Generic[ConfigModelT]):
     def metadata(self) -> ExtensionMetadata:
         """返回扩展元数据，尚未完成发现时抛出明确错误。"""
         if self._metadata is None:
-            raise ExtensionNotBoundError(f'扩展 {self.id or "<unknown>"} 尚无元数据！')
+            raise ExtensionNotBoundError(f'Extension {self.id or "<unknown>"} has no metadata yet!')
         return self._metadata
 
     @property
@@ -489,7 +489,7 @@ class Extension(Generic[ConfigModelT]):
     ) -> None:
         """Loader 一次性注入绑定能力；只能调用一次，扩展代码不得直接调用。"""
         if self._bound:
-            raise ExtensionError(f'扩展 {self.id} 重复绑定！')
+            raise ExtensionError(f'Extension {self.id} bound twice!')
         self._metadata = metadata
         self._config = config_store
         self._data = data_store
@@ -504,7 +504,7 @@ class Extension(Generic[ConfigModelT]):
     def _require_bound(self) -> None:
         """访问绑定能力前校验是否已绑定，否则抛错。"""
         if not self._bound:
-            raise ExtensionNotBoundError(f'扩展 {self.id or "<unknown>"} 尚未绑定，无法访问该能力！')
+            raise ExtensionNotBoundError(f'Extension {self.id or "<unknown>"} is not bound yet, cannot access this capability!')
 
     # ===== 状态机 =====
 
@@ -512,12 +512,12 @@ class Extension(Generic[ConfigModelT]):
         """按状态机迁移扩展状态，非法迁移抛出错误。"""
         allowed = _STATE_TRANSITIONS.get(self.state, set())
         if target not in allowed:
-            raise ExtensionError(f'扩展 {self.id} 状态迁移非法：{self.state.value} -> {target.value}')
+            raise ExtensionError(f'Extension {self.id} invalid state transition: {self.state.value} -> {target.value}')
         self.state = target
 
     def mark_failed(self, reason: str) -> None:
         """将扩展标记为失败状态，并记录原因。"""
-        self.logger.error(f'扩展 {self.id} 加载失败：{reason}！')
+        self.logger.error(f'Extension {self.id} failed to load: {reason}')
         self.state = ExtensionState.failed
         self.failure_reason = reason
 

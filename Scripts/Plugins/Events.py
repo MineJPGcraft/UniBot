@@ -69,7 +69,7 @@ async def handle_player_join(event: PlayerJoinEvent):
     """处理玩家加入服务器事件。"""
     name = event.server_name
     player = event.player.nickname
-    logger.info(f'收到玩家 {player} 加入服务器 [{name}] 通知！')
+    logger.info(f'Player {player} joined server [{name}].')
 
     if config.list_compatible_mode:
         if name not in player_list_cache:
@@ -100,7 +100,7 @@ async def handle_player_quit(event: PlayerQuitEvent):
     """处理玩家离开服务器事件。"""
     name = event.server_name
     player = event.player.nickname
-    logger.info(f'收到玩家 {player} 离开服务器 [{name}] 通知！')
+    logger.info(f'Player {player} left server [{name}].')
 
     if config.list_compatible_mode and name in player_list_cache and player in player_list_cache[name]:
         player_list_cache[name].remove(player)
@@ -127,7 +127,7 @@ async def handle_player_death(event: PlayerDeathEvent):
     name = event.server_name
     player = event.player.nickname
     death_message = event.death.text or f'{player} 死亡了'
-    logger.debug(f'收到玩家死亡消息：{death_message}')
+    logger.debug(f'Player death message received: {death_message}')
 
     if (not config.bot_prefix) or (not player.upper().startswith(config.bot_prefix)):
         broadcast_message = message_config.events.player_death.format(player=player, death=death_message)
@@ -152,7 +152,7 @@ async def handle_player_achievement(event: PlayerAchievementEvent):
         achievement_message = f'{player} 达成了成就 [{achievement.display.title.text}]'
     else:
         achievement_message = f'{player} 达成了成就 [{achievement.key or "未知成就"}]'
-    logger.debug(f'收到玩家成就消息：{achievement_message}')
+    logger.debug(f'Player achievement message received: {achievement_message}')
 
     if (not config.bot_prefix) or (not player.upper().startswith(config.bot_prefix)):
         broadcast_message = message_config.events.player_achievement.format(
@@ -172,7 +172,7 @@ async def handle_player_chat(event: PlayerChatEvent):
     name = event.server_name
     player = event.player.nickname
     chat_message = event.message.extract_plain_text().strip()
-    logger.debug(f'收到玩家 {player} 在服务器 [{name}] 发送消息！')
+    logger.debug(f'Player {player} sent a message on server [{name}].')
 
     if config.sync_message_between_servers:
         server_service = Globals.server_service
@@ -181,7 +181,7 @@ async def handle_player_chat(event: PlayerChatEvent):
 
     if config.sync_all_game_message:
         if check_message(chat_message):
-            logger.warning(f'检测到消息 {chat_message} 包含敏感词，已丢弃！')
+            logger.warning(f'Message {chat_message} contains sensitive words, discarded.')
             return
 
         await send_message_to_groups(
@@ -189,7 +189,7 @@ async def handle_player_chat(event: PlayerChatEvent):
         )
         return
 
-    logger.debug(f'收到服务器消息：{chat_message}')
+    logger.debug(f'Server message received: {chat_message}')
     if ' ' not in chat_message:
         return
     start, content = chat_message.split(' ', maxsplit=1)

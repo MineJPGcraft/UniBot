@@ -61,12 +61,12 @@ def register_adapters(driver, adapters: list[dict]) -> None:
             module = importlib.import_module(module_name)
             adapter_class = getattr(module, 'Adapter', None)
             if adapter_class is None:
-                logger.warning(f'适配器模块 {module_name} 未包含 Adapter 类，已跳过！')
+                logger.warning(f'Adapter module {module_name} does not contain an Adapter class, skipped.')
                 continue
-            logger.info(f'正在注册 <cyan>{adapter_class}</cyan> 适配器。')
+            logger.info(f'Registering <cyan>{adapter_class}</cyan> adapter.')
             driver.register_adapter(adapter_class)
         except Exception as error:
-            logger.warning(f'适配器 {module_name} 加载失败，已跳过！原因：{error}')
+            logger.warning(f'Failed to load adapter {module_name}, skipped. Reason: {error}')
 
 
 def load_plugins(plugins: list[str | dict]) -> None:

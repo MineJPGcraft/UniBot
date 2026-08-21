@@ -45,13 +45,13 @@ def sync_dependencies() -> None:
     # 扩展依赖统一收口到 extensions 可选组
     command.extend(('--extra', 'extensions'))
 
-    logger.info(f'检测到依赖声明变化，正在执行：{" ".join(command)}')
+    logger.info(f'Dependency declaration changed, running: {" ".join(command)}')
     try:
         subprocess.run(command, check=True)
     except (FileNotFoundError, subprocess.CalledProcessError) as error:
-        logger.error(f'同步项目依赖失败：{error}')
+        logger.error(f'Failed to sync project dependencies: {error}')
         raise SystemExit(1) from error
-    logger.success('同步项目依赖完成！')
+    logger.success('Project dependencies synced.')
 
 
 def get_dependency_fingerprint() -> str:
@@ -78,7 +78,7 @@ def sync_if_changed() -> bool:
             if HASH_FILE.read_text('Utf-8').strip() == current:
                 return False
         except Exception as error:
-            logger.warning(f'依赖指纹文件读取失败，将重新同步：{error}')
+            logger.warning(f'Failed to read dependency fingerprint file, will resync: {error}')
     sync_dependencies()
     HASH_FILE.parent.mkdir(parents=True, exist_ok=True)
     HASH_FILE.write_text(current, encoding='Utf-8')
@@ -119,11 +119,11 @@ def run() -> None:
             sync_if_changed()
             restart_attempts = 0
             restart_window_started_at = time.monotonic()
-            logger.info('收到 WebUI 重启请求，正在重新启动机器人！')
+            logger.info('WebUI restart requested, restarting the bot.')
             continue
 
         if shutdown_requested or exit_code in (0, -signal.SIGINT, -signal.SIGTERM):
-            logger.info('机器人已正常退出，不再重启！')
+            logger.info('Bot exited normally, not restarting.')
             return
 
         current_time = time.monotonic()
@@ -132,11 +132,11 @@ def run() -> None:
             restart_attempts = 0
 
         if restart_attempts >= MAX_RESTART_ATTEMPTS:
-            logger.error(f'机器人在 {RESTART_WINDOW_SECONDS} 秒内已重试 {MAX_RESTART_ATTEMPTS} 次，停止重启！')
+            logger.error(f'Bot retried {MAX_RESTART_ATTEMPTS} times within {RESTART_WINDOW_SECONDS}s, giving up restarting.')
             raise SystemExit(exit_code)
 
         restart_attempts += 1
-        logger.warning(f'机器人异常退出（退出码 {exit_code}），正在进行第 {restart_attempts} 次自动重启！')
+        logger.warning(f'Bot exited abnormally (exit code {exit_code}), auto-restart attempt {restart_attempts}.')
 
 
 if __name__ == '__main__':

@@ -81,7 +81,7 @@ class ServerService(Service):
         try:
             result = await server.send_rcon_command(command=command)
         except Exception as error:
-            logger.warning(f'向服务器 [{server.self_id}] 发送指令失败：{error}')
+            logger.warning(f'Failed to send command to server [{server.self_id}]: {error}')
             return None
         return strip_minecraft_color(result) if result else ''
 
@@ -90,7 +90,7 @@ class ServerService(Service):
         try:
             status = await server.get_status()
         except Exception as error:
-            logger.warning(f'获取服务器 [{server.self_id}] 状态失败：{error}')
+            logger.warning(f'Failed to get status of server [{server.self_id}]: {error}')
             return {
                 'online': False,
                 'server_type': '',
@@ -128,7 +128,7 @@ class ServerService(Service):
         try:
             result = await server.send_rcon_command(command='list')
         except Exception as error:
-            logger.warning(f'获取服务器 [{server.self_id}] 玩家列表失败：{error}')
+            logger.warning(f'Failed to get player list of server [{server.self_id}]: {error}')
             return [], 0
         result = strip_minecraft_color(result) if result else result
         if not result:
@@ -136,7 +136,7 @@ class ServerService(Service):
 
         match = re.search(r'^There are \d+ of (?:a )?max(?: of)? (\d+) players online:\s*(.*)$', result.strip())
         if match is None:
-            logger.warning(f'解析服务器 [{server.self_id}] 玩家列表失败：{result}')
+            logger.warning(f'Failed to parse player list of server [{server.self_id}]: {result}')
             return [], 0
         max_players = int(match.group(1))
         players = [player.strip() for player in match.group(2).split(',') if player.strip()]
@@ -150,4 +150,4 @@ class ServerService(Service):
         try:
             return await server.send_msg(message=message)
         except Exception as error:
-            logger.warning(f'向服务器 [{server.self_id}] 广播消息失败：{error}')
+            logger.warning(f'Failed to broadcast message to server [{server.self_id}]: {error}')

@@ -30,7 +30,7 @@ def _is_enabled(extension_id: str) -> bool:
     try:
         data = tomlkit.parse(CONFIG_EXTENSIONS_FILE.read_text('Utf-8'))
     except Exception as error:
-        logger.warning(f'扩展启停配置读取失败：{error}，默认全部启用！')
+        logger.warning(f'Failed to read extension enable/disable config: {error}, defaulting to all enabled.')
         return True
     return bool(data.get(extension_id, {}).get('enabled', True))
 

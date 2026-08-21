@@ -148,7 +148,7 @@ async def setup(body: SetupRequest):
         user_info = await data_manager.create_user(body.username, body.password, body.nickname, role='admin')
         if user_info is None:
             return {'code': 1, 'data': None, 'message': '创建失败！'}
-    logger.success(f'WebUI 管理员账户 [{body.username}] 创建成功！')
+    logger.success(f'WebUI admin account [{body.username}] created.')
     return {'code': 0, 'data': {'user_id': user_info['user_id']}, 'message': '初始化成功'}
 
 

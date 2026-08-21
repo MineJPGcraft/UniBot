@@ -48,7 +48,7 @@ class ConfigManager:
     def load_env(self):
         """加载 .env 配置文件（可重复调用，会重置内存缓存）。"""
         if not self.env_path.exists():
-            logger.error('没有找到配置文件！请重新下载后重试。')
+            logger.error('Config file not found! Please re-download and try again.')
             sys.exit(1)
         self.mapping = []
         self.environment = {}
@@ -68,19 +68,19 @@ class ConfigManager:
                 # 变量值跨行：续行追加到上一个值（保留换行符）
                 self.environment[last_key] += '\n' + line
                 continue
-            logger.warning(f'忽略 .env 中无法解析的行: {line!r}')
+            logger.warning(f'Ignoring unparsable line in .env: {line!r}')
         # 先合并原始值，再统一解析，保证引号多行值完整
         self.environment = {key: self._parse_value(raw) for key, raw in self.environment.items()}
-        logger.success('加载 .env 配置完毕！')
+        logger.success('.env configuration loaded.')
 
     def load_pyproject(self):
         """加载 pyproject.toml 配置（版本号、NoneBot 适配器/插件等）。"""
         if not self.pyproject_path.exists():
-            logger.error('没有找到 pyproject.toml！请重新下载后重试。')
+            logger.error('pyproject.toml not found! Please re-download and try again.')
             sys.exit(1)
         self.pyproject_data = tomlkit.parse(self.pyproject_path.read_text('Utf-8'))
         self.update_pyproject_cache()
-        logger.success('加载 pyproject.toml 完毕！')
+        logger.success('pyproject.toml loaded.')
 
     def update_pyproject_cache(self):
         """更新 pyproject.toml 派生配置缓存。"""
@@ -97,7 +97,7 @@ class ConfigManager:
 
     def update_env(self, new: dict):
         """更新 .env 配置并写回文件。"""
-        logger.info(f'正在更新配置 {new}')
+        logger.info(f'Updating configuration: {new}')
         for key, value in new.items():
             self.environment[key] = value
             if key not in self.mapping:
@@ -113,13 +113,13 @@ class ConfigManager:
                 continue
             lines.append(f'{line}={dumps(self.environment[line], ensure_ascii=False)}')
         self.env_path.write_text('\n'.join(lines), encoding='Utf-8')
-        logger.success('写入配置成功！手动重启机器人后修改才会生效。')
+        logger.success('Configuration saved. Restart the bot manually for changes to take effect.')
 
     def write_env_raw(self, content: str):
         """以原始文本内容写回 .env 文件，并同步内存缓存。"""
         self.env_path.write_text(content, encoding='Utf-8')
         self.load_env()
-        logger.success('写入配置成功！手动重启机器人后修改才会生效。')
+        logger.success('Configuration saved. Restart the bot manually for changes to take effect.')
 
     # ===== pyproject.toml 操作 =====
 
@@ -262,7 +262,7 @@ class ConfigManager:
         from Scripts.Messages import reload_messages
 
         reload_messages()
-        logger.success('消息文本已保存并重新载入！')
+        logger.success('Message texts saved and reloaded.')
 
 
 config_manager = ConfigManager()

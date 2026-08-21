@@ -68,14 +68,14 @@ def _read_manifest_from_dir(target_dir: Path) -> ExtensionManifest:
     """从解压目录读取并解析 Extension.toml。"""
     manifest_files = [path for path in target_dir.rglob('Extension.toml')]
     if not manifest_files:
-        raise ManifestError('扩展包内缺少 Extension.toml 清单！')
+        raise ManifestError('Extension package is missing the Extension.toml manifest!')
     manifest_path = manifest_files[0]
     relative = manifest_path.relative_to(target_dir)
     # 清单必须位于包根目录（根级 Extension.toml 或 <id>/Extension.toml），
     # 不允许嵌套在更深层级
     if len(relative.parts) > 2:
-        raise ManifestError('Extension.toml 必须位于扩展包根目录！')
+        raise ManifestError('Extension.toml must be located at the extension package root!')
     try:
         return parse_manifest(manifest_path.read_text('Utf-8'))
     except Exception as error:
-        raise ManifestError(f'扩展包清单解析失败：{error}') from error
+        raise ManifestError(f'Failed to parse extension package manifest: {error}') from error

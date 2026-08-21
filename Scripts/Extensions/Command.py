@@ -20,7 +20,7 @@ from nonebot_plugin_alconna import on_alconna
 from nonebot_plugin_alconna.uniseg import Image, UniMessage
 
 from Scripts.Config import config
-from Scripts.Logging import logger
+from Scripts.Logging import exception_logger, logger
 from Scripts.Rules import command_group_rule
 from Scripts.Utils import turn_message_text
 
@@ -53,7 +53,7 @@ def _format_path(extension_id: str, path: list[str]) -> str:
 def _validate_name(value: str, extension_id: str, path: list[str]) -> None:
     """校验命令/别名/参数名合法。"""
     if not _NAME_PATTERN.match(value):
-        raise CommandFieldError(f'{_format_path(extension_id, path)} 名称不合法：{value}（仅允许小写字母/数字/下划线）')
+        raise CommandFieldError(f'{_format_path(extension_id, path)} has invalid name: {value} (only lowercase letters, digits and underscores are allowed)')
 
 
 # ===== 参数构建器 =====
@@ -116,7 +116,7 @@ class Command(Generic[ParentT], ABC):
     def parent(self) -> ParentT:
         """父命令实例（子命令必非 None，可放心访问父命令方法）。"""
         if self._parent is None:
-            raise CommandError('当前命令没有父命令！')
+            raise CommandError('Current command has no parent command!')
         return self._parent
 
     # ===== 声明 =====
@@ -261,11 +261,11 @@ class CommandManager:
                 扩展覆盖内置命令）；否则重复 `command_id` 视为冲突并报错。
         """
         if self._built:
-            raise CommandError('命令管理器已构建，不能再注册命令！')
+            raise CommandError('Command manager already built, no more commands can be registered!')
         if command_id in self._commands:
             if not override:
-                raise CommandError(f'命令 {command_id} 重复注册，冲突拒绝！')
-            logger.info(f'命令 {command_id} 被覆盖取代！')
+                raise CommandError(f'Command {command_id} registered twice, conflict rejected!')
+            logger.info(f'Command {command_id} has been overridden.')
         self._commands[command_id] = command
 
     def get_command(self, command_id: str) -> Command[Any] | None:
@@ -286,17 +286,17 @@ class CommandManager:
             argument_path = path + ['argument', argument.name]
             _validate_name(argument.name, extension_id, argument_path)
             if argument.name in seen_names:
-                raise CommandFieldError(f'{_format_path(extension_id, argument_path)} 参数名重复！')
+                raise CommandFieldError(f'{_format_path(extension_id, argument_path)} argument name duplicated!')
             seen_names.add(argument.name)
             if not argument.required and argument.default is UNSET:
-                raise CommandFieldError(f'{_format_path(extension_id, argument_path)} 可选参数必须提供默认值！')
+                raise CommandFieldError(f'{_format_path(extension_id, argument_path)} optional argument must provide a default value!')
 
         seen_subcommands: set[str] = set()
         for subcommand in command.subcommands:
             subcommand_path = path + ['subcommand', subcommand.name]
             _validate_name(subcommand.name, extension_id, subcommand_path)
             if subcommand.name in seen_subcommands:
-                raise CommandFieldError(f'{_format_path(extension_id, subcommand_path)} 子命令名重复！')
+                raise CommandFieldError(f'{_format_path(extension_id, subcommand_path)} subcommand name duplicated!')
             seen_subcommands.add(subcommand.name)
             self._validate_node(subcommand, extension_id, subcommand_path)
 
@@ -383,7 +383,7 @@ class CommandManager:
         for subcommand in command.subcommands:
             self._assign_subcommand(matcher, subcommand, subcommand.name)
         self._matchers.append(matcher)
-        logger.debug(f'构建命令 {command.name} 完毕！')
+        logger.debug(f'Command {command.name} built.')
 
     def _assign_subcommand(self, matcher, subcommand: Command[Any], path: str) -> None:
         """递归注册子命令分派处理器，路径用点路径（如 `superusers.add`）。"""
@@ -430,7 +430,7 @@ class CommandManager:
                 pass
             except Exception as error:
                 # 渲染/处理失败：记录日志并发送错误提示，不让异常中断机器人
-                logger.exception(f'命令 {command.name} 处理器执行失败：{error}')
+                exception_logger.error(f'Command {command.name} handler failed: {error}')
                 await matcher.finish(f'命令执行失败：{error}')
 
         return dispatched

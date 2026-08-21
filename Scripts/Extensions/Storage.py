@@ -32,7 +32,7 @@ def _check_relative(relative: str) -> Path:
     """校验相对路径不越界、为绝对路径时拒绝，并返回规范化后的 Path。"""
     path = Path(relative)
     if path.is_absolute() or '..' in path.parts:
-        raise StorageError(f'不允许的路径：{relative}')
+        raise StorageError(f'Disallowed path: {relative}')
     return path
 
 
@@ -52,8 +52,8 @@ def _atomic_write(file_path: Path, content: str | bytes) -> None:
             temp_path = Path(temp_file.name)
         temp_path.replace(file_path)
     except Exception as error:
-        logger.error(f'写入文件失败：{file_path}！错误：{error}')
-        raise StorageError(f'写入文件失败：{error}') from error
+        logger.error(f'Failed to write file: {file_path}! Error: {error}')
+        raise StorageError(f'Failed to write file: {error}') from error
 
 
 class ExtensionConfigStore(Generic[ConfigModelT]):
@@ -94,7 +94,7 @@ class ExtensionConfigStore(Generic[ConfigModelT]):
                 data = tomllib.loads(content)
                 return self._model.model_validate(data)
             except Exception as error:
-                raise StorageError(f'扩展配置加载失败：{error}') from error
+                raise StorageError(f'Failed to load extension config: {error}') from error
 
     @property
     def value(self) -> ConfigModelT:
@@ -130,7 +130,7 @@ class ExtensionDataStore:
         """将相对路径解析为根目录内的安全绝对路径。"""
         normalized = _check_relative(relative)
         if normalized.name == RESERVED_STATE_FILE or RESERVED_STATE_FILE in normalized.parts:
-            raise StorageError(f'不允许访问框架保留文件：{RESERVED_STATE_FILE}')
+            raise StorageError(f'Access to framework reserved file is not allowed: {RESERVED_STATE_FILE}')
         return self.root_dir / normalized
 
     def path(self, relative: str) -> Path:

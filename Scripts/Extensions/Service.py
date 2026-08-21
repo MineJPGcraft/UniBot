@@ -68,7 +68,7 @@ class ServiceRegistry:
                 await service.on_disable()
             except Exception as error:
                 name = service.name or type(service).__name__
-                logger.error(f'API 服务 {name} 关闭失败：{error}！')
+                logger.error(f'API service {name} failed to shut down: {error}')
 
     @overload
     def get(self, service_type: type[ServiceT], /) -> ServiceT | None: ...
@@ -85,5 +85,5 @@ class ServiceRegistry:
         if service is None:
             return None
         if not isinstance(service, service_type):
-            raise TypeError(f'API 服务 {name} 的类型不是 {service_type.__name__}！')
+            raise TypeError(f'API service {name} is not of type {service_type.__name__}!')
         return service

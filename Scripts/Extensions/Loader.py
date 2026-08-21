@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 import tomlkit
 from packaging.specifiers import SpecifierSet
 
-from Scripts.Logging import logger
+from Scripts.Logging import exception_logger, logger
 
 if TYPE_CHECKING:
     from .Manager import ExtensionManager
@@ -112,7 +112,7 @@ class ExtensionLoader:
         if EXTENSIONS_DIR.exists():
             self._scan_directory(EXTENSIONS_DIR, builtin=False)
             return
-        logger.info('用户扩展目录不存在，跳过用户扩展加载！')
+        logger.info('User extensions directory does not exist, skipping user extension loading.')
 
     def _scan_directory(self, directory: Path, builtin: bool) -> None:
         """扫描目录下的单文件扩展与扩展目录并解析清单。"""
@@ -128,17 +128,17 @@ class ExtensionLoader:
         """发现多文件扩展目录：读取 Extension.toml 并校验 id 与目录名一致。"""
         manifest_path = directory / MANIFEST_FILE
         if not manifest_path.exists():
-            logger.warning(f'扩展目录 {directory.name} 缺少 {MANIFEST_FILE}，已跳过！')
+            logger.warning(f'Extension directory {directory.name} is missing {MANIFEST_FILE}, skipped.')
             return
         try:
             manifest = parse_manifest(manifest_path.read_text('Utf-8'))
         except ManifestError as error:
-            logger.error(f'扩展 {directory.name} 清单解析失败：{error}，已跳过！')
+            logger.error(f'Failed to parse manifest of extension {directory.name}: {error}, skipped.')
             return
         extension_id = manifest.extension.id
         # 校验 id 与目录名完全一致（含大小写）
         if extension_id != directory.name:
-            logger.error(f'扩展 id {extension_id} 与目录名 {directory.name} 不一致，已跳过！')
+            logger.error(f'Extension id {extension_id} does not match directory name {directory.name}, skipped.')
             return
         enabled = self._read_enabled(directory.name)
         self._discovered[extension_id] = DiscoveredExtension(
@@ -147,7 +147,7 @@ class ExtensionLoader:
             single_file=False,
             enabled=enabled,
         )
-        logger.debug(f'发现扩展 {extension_id} v{manifest.extension.version}！')
+        logger.debug(f'Discovered extension {extension_id} v{manifest.extension.version}.')
 
     def _discover_single_file(self, file: Path, builtin: bool = False) -> None:
         """
@@ -163,15 +163,15 @@ class ExtensionLoader:
         try:
             extension = self._import_single_file(module_path, extension_id)
         except Exception as error:
-            logger.error(f'单文件扩展 {extension_id} 导入失败：{error}，已跳过！')
+            logger.error(f'Failed to import single-file extension {extension_id}: {error}, skipped.')
             return
         try:
             manifest = manifest_from_attributes(extension)
         except ManifestError as error:
-            logger.error(f'单文件扩展 {extension_id} 元数据校验失败：{error}，已跳过！')
+            logger.error(f'Metadata validation failed for single-file extension {extension_id}: {error}, skipped.')
             return
         if manifest.extension.id != extension_id:
-            logger.error(f'单文件扩展 id {manifest.extension.id} 与文件名 {extension_id} 不一致，已跳过！')
+            logger.error(f'Single-file extension id {manifest.extension.id} does not match file name {extension_id}, skipped.')
             return
         enabled = self._read_enabled(extension_id)
         self._discovered[extension_id] = DiscoveredExtension(
@@ -182,7 +182,7 @@ class ExtensionLoader:
             builtin=builtin,
             module_path=module_path,
         )
-        logger.debug(f'发现单文件扩展 {extension_id} v{manifest.extension.version}！')
+        logger.debug(f'Discovered single-file extension {extension_id} v{manifest.extension.version}.')
 
     def _read_enabled(self, extension_id: str) -> bool:
         """读取 Config/Extensions.toml 中扩展的启停标志，缺失时默认启用。"""
@@ -193,7 +193,7 @@ class ExtensionLoader:
                 try:
                     self._enabled_config = tomlkit.parse(CONFIG_EXTENSIONS_FILE.read_text('Utf-8'))
                 except Exception as error:
-                    logger.warning(f'扩展启停配置读取失败：{error}，全部默认启用！')
+                    logger.warning(f'Failed to read extension enable/disable config: {error}, defaulting to all enabled.')
         return bool(self._enabled_config.get(extension_id, {}).get('enabled', True))
 
     # ===== 校验 =====
@@ -213,7 +213,7 @@ class ExtensionLoader:
                 # 单个扩展校验失败不阻断整体加载：标记为 blocked 并跳过导入
                 info.blocked_reason = str(error)
                 self._register_display(extension_id, info, ExtensionState.blocked, str(error))
-                logger.error(f'校验不通过，已阻止加载：<red>{error}</red>')
+                logger.error(f'Validation failed, loading blocked: <red>{error}</red>')
                 continue
 
     @staticmethod
@@ -230,17 +230,17 @@ class ExtensionLoader:
         try:
             specifier = SpecifierSet(constraint)
         except Exception as error:
-            raise CompatibilityError(f'扩展 {extension_id} 的版本约束非法：{constraint}（{error}）') from error
+            raise CompatibilityError(f'Extension {extension_id} has invalid version constraint: {constraint} ({error})') from error
         current_version = get_unibot_version()
         if current_version and current_version not in specifier:
-            raise CompatibilityError(f'扩展 {extension_id} 需要 UniBot {constraint}，当前为 {current_version}！')
+            raise CompatibilityError(f'Extension {extension_id} requires UniBot {constraint}, current is {current_version}!')
 
     @staticmethod
     def _validate_entry_module(extension_id: str, directory: Path) -> None:
         """校验多文件扩展目录存在 __init__.py 入口。"""
         entry_module = directory / '__init__.py'
         if not entry_module.exists():
-            raise ManifestError(f'扩展 {extension_id} 缺少入口模块 __init__.py！')
+            raise ManifestError(f'Extension {extension_id} is missing the entry module __init__.py!')
 
     # ===== 拓扑排序 =====
 
@@ -260,13 +260,13 @@ class ExtensionLoader:
                 return
             if visited.get(extension_id) == 0:
                 cycle = ' -> '.join(stack + [extension_id])
-                raise DependencyError(f'检测到循环依赖：{cycle}')
+                raise DependencyError(f'Circular dependency detected: {cycle}')
             visited[extension_id] = 0
             stack.append(extension_id)
             dependencies = self._discovered[extension_id].manifest.dependencies.extensions
             for dependency_id in dependencies:
                 if dependency_id not in extension_ids:
-                    raise DependencyError(f'扩展 {extension_id} 依赖缺失：{dependency_id}！')
+                    raise DependencyError(f'Extension {extension_id} has missing dependency: {dependency_id}!')
                 visit(dependency_id, stack)
             stack.pop()
             visited[extension_id] = 1
@@ -310,12 +310,12 @@ class ExtensionLoader:
                 try:
                     self._commit_no_code_package(extension_id, info)
                 except Exception as error:
-                    logger.exception(f'加载无代码扩展 {extension_id} 失败！')
+                    exception_logger.error(f'Failed to load no-code extension {extension_id}!')
                     blocked_reasons[extension_id] = f'无代码扩展加载失败：{error}'
                     self._register_no_code_display(extension_id, info, ExtensionState.failed, str(error))
                     continue
                 self._register_no_code_display(extension_id, info, ExtensionState.enabled, '')
-                logger.success(f'加载扩展包 <yellow>{extension_id} v{info.manifest.extension.version}</yellow> 完毕！')
+                logger.success(f'Loaded extension package <yellow>{extension_id} v{info.manifest.extension.version}</yellow>.')
                 continue
             # 依赖被禁用/失败：进入 blocked
             dependency_block = self._find_blocked_dependency(extension_id, blocked_reasons)
@@ -326,7 +326,7 @@ class ExtensionLoader:
             try:
                 extension = self._import_extension(extension_id, info)
             except Exception as error:
-                logger.error(f'导入扩展 {extension_id} 失败：{error}')
+                exception_logger.error(f'Failed to import extension {extension_id}: {error}')
                 blocked_reasons[extension_id] = f'导入失败：{error}'
                 self._register_display(extension_id, info, ExtensionState.failed, f'导入扩展失败：{error}')
                 continue
@@ -334,7 +334,7 @@ class ExtensionLoader:
             try:
                 self._bind(extension_id, extension, info.manifest, builtin=info.builtin)
             except Exception as error:
-                extension.mark_failed(f'绑定失败：{error}')
+                extension.mark_failed(f'Binding failed: {error}')
                 blocked_reasons[extension_id] = f'绑定失败：{error}'
                 continue
             extension.state = ExtensionState.loaded
@@ -344,12 +344,12 @@ class ExtensionLoader:
                 self._commit_commands(extension_id, extension, builtin=info.builtin)
                 self._commit_renderers(extension)
             except Exception as error:
-                extension.mark_failed(f'声明阶段失败：{error}')
+                extension.mark_failed(f'Declaration stage failed: {error}')
                 blocked_reasons[extension_id] = f'声明阶段失败：{error}'
                 continue
             self.extensions.append(extension)
             self.manager.registry[extension_id] = extension
-            logger.success(f'加载扩展 <yellow>{extension_id} v{extension.metadata.version}</yellow> 完毕！')
+            logger.success(f'Loaded extension <yellow>{extension_id} v{extension.metadata.version}</yellow>.')
 
     def _bind(
         self,
@@ -427,7 +427,7 @@ class ExtensionLoader:
         types = set(manifest.extension.types)
         allowed = {ExtensionType.template, ExtensionType.resources}
         if not types <= allowed:
-            raise ManifestError(f'无代码扩展 {extension_id} 类型组合非法：{sorted(t.value for t in types)}！')
+            raise ManifestError(f'No-code extension {extension_id} has invalid type combination: {sorted(t.value for t in types)}!')
         if ExtensionType.template in types:
             self._commit_template_package(extension_id, info)
         if ExtensionType.resources in types:
@@ -438,7 +438,7 @@ class ExtensionLoader:
         manifest = info.manifest
         templates_dir = info.directory / manifest.template.entry
         if not templates_dir.is_dir():
-            raise ManifestError(f'template 扩展 {extension_id} 入口目录 [{manifest.template.entry}] 不存在！')
+            raise ManifestError(f'template extension {extension_id} entry directory [{manifest.template.entry}] does not exist!')
         config_model = build_template_config_model(extension_id, manifest.template.config_schema)
         config_store = ExtensionConfigStore(CONFIG_ROOT, extension_id, config_model)
         registration = TemplateRegistration(
@@ -455,7 +455,7 @@ class ExtensionLoader:
         manifest = info.manifest
         resources_root = info.directory / manifest.resources.root
         if not resources_root.is_dir():
-            raise ManifestError(f'resources 扩展 {extension_id} 根目录 [{manifest.resources.root}] 不存在！')
+            raise ManifestError(f'resources extension {extension_id} root directory [{manifest.resources.root}] does not exist!')
         self.manager.register_resources(extension_id, resources_root)
 
     @staticmethod
@@ -477,9 +477,9 @@ class ExtensionLoader:
         """从模块中解析唯一 extension 实例并校验类型。"""
         extension = getattr(module, 'extension', None)
         if extension is None:
-            raise LoadError(f'扩展 {extension_id} 未导出 extension 实例！')
+            raise LoadError(f'Extension {extension_id} does not export an extension instance!')
         if not isinstance(extension, Extension):
-            raise LoadError(f'扩展 {extension_id} 的 extension 不是 Extension 子类！')
+            raise LoadError(f'Extension {extension_id} extension is not a subclass of Extension!')
         return extension
 
     def _commit_services(self, extension: Extension) -> None:

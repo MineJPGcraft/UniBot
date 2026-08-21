@@ -52,7 +52,7 @@ def normalize_token(text: str) -> str:
 def refresh_token() -> str:
     """刷新令牌：重新计算并覆盖当前令牌（即用即刷），返回新令牌。"""
     Globals.auth_token = generate_token()
-    logger.info(f'认证令牌：<red><b><u>{Globals.auth_token}</u></b></red>，直接复制发送在消息群和指令群即可完成配置。')
+    logger.info(f'Auth token: <red><b><u>{Globals.auth_token}</u></b></red>, copy and send it in message/command groups to complete setup.')
     return Globals.auth_token
 
 
@@ -96,7 +96,7 @@ def add_group(group_info: str) -> str:
         try:
             config_manager.update_config({field_name: updated})
         except Exception as error:
-            logger.warning(f'写入 Config.toml 失败：{error}')
+            logger.warning(f'Failed to write Config.toml: {error}')
             continue
         setattr(config, field_name, updated)
         added.append(field_name)
@@ -115,7 +115,7 @@ def add_superuser(session: Uninfo) -> str:
     try:
         config_manager.update_env({'SUPERUSERS': updated})
     except Exception as error:
-        logger.warning(f'写入 .env 失败：{error}')
+        logger.warning(f'Failed to write .env: {error}')
         return '超级用户写入失败'
     config.superusers = updated
     return '已将你设为超级用户'

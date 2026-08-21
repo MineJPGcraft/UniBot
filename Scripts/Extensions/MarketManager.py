@@ -16,7 +16,7 @@ from pathlib import Path
 import tomlkit
 from packaging.specifiers import SpecifierSet
 
-from Scripts.Logging import logger
+from Scripts.Logging import exception_logger, logger
 from Scripts.Network import github_download, request
 
 from .Base import ExtensionManifest, get_unibot_version, parse_manifest
@@ -52,7 +52,7 @@ class ExtensionMarketManager:
             return self._market_dicts()
         data = await request(MARKET_REGISTRY_URL)
         if not isinstance(data, list):
-            logger.warning('获取扩展市场数据失败，可能为网络问题！')
+            logger.warning('Failed to fetch extension market data, possibly a network issue.')
             return self._market_dicts()
         market: dict[str, MarketExtension] = {}
         for item in data:
@@ -61,12 +61,12 @@ class ExtensionMarketManager:
             try:
                 extension = MarketExtension.model_validate(item)
             except Exception as error:
-                logger.warning(f'市场条目校验失败：{error}，已跳过！')
+                logger.warning(f'Market entry validation failed: {error}, skipped.')
                 continue
             market[extension.id] = extension
         self.market_cache = market
         self.market_cache_time = now
-        logger.success(f'刷新扩展市场数据成功！共收录 {len(market)} 个扩展。')
+        logger.success(f'Extension market refreshed: {len(market)} extensions indexed.')
         return self._market_dicts()
 
     def _market_dicts(self) -> list[dict]:
@@ -105,7 +105,7 @@ class ExtensionMarketManager:
         try:
             data = tomlkit.parse(path.read_text('Utf-8'))
         except Exception as error:
-            logger.warning(f'扩展安装状态读取失败：{error}，视为空！')
+            logger.warning(f'Failed to read extension install states: {error}, treated as empty.')
             return {}
         states: dict[str, ExtensionInstallState] = {}
         for extension_id, raw in data.items():
@@ -114,7 +114,7 @@ class ExtensionMarketManager:
             try:
                 states[extension_id] = ExtensionInstallState.model_validate(raw)
             except Exception as error:
-                logger.warning(f'扩展 {extension_id} 安装状态校验失败：{error}，已跳过！')
+                logger.warning(f'Install state validation failed for extension {extension_id}: {error}, skipped.')
         return states
 
     def _write_states(self, states: dict[str, ExtensionInstallState]) -> None:
@@ -134,12 +134,12 @@ class ExtensionMarketManager:
         """下载扩展包并校验 SHA-256，失败抛 ManifestError。"""
         response = await github_download(asset_url)
         if response is None:
-            raise ManifestError(f'下载扩展包失败：{asset_url}')
+            raise ManifestError(f'Failed to download extension package: {asset_url}')
         archive_data = response.getvalue()
         if expected_sha256:
             actual = hashlib.sha256(archive_data).hexdigest()
             if actual.lower() != expected_sha256.lower():
-                raise ManifestError(f'扩展包 SHA-256 校验失败（期望 {expected_sha256}，实际 {actual}）！')
+                raise ManifestError(f'Extension package SHA-256 verification failed (expected {expected_sha256}, got {actual})!')
         return archive_data
 
     # ===== 安装事务 =====
@@ -166,7 +166,7 @@ class ExtensionMarketManager:
         except ManifestError as error:
             return False, str(error)
         except Exception as error:
-            logger.exception('扩展安装失败！')
+            exception_logger.error('Extension installation failed!')
             return False, f'扩展安装失败：{error}'
 
     @staticmethod
@@ -229,10 +229,10 @@ class ExtensionMarketManager:
         try:
             specifier = SpecifierSet(constraint)
         except Exception as error:
-            raise ManifestError(f'扩展 {extension_id} 的版本约束非法：{constraint}（{error}）') from error
+            raise ManifestError(f'Extension {extension_id} has invalid version constraint: {constraint} ({error})') from error
         current_version = get_unibot_version()
         if current_version and current_version not in specifier:
-            raise ManifestError(f'扩展 {extension_id} 需要 UniBot {constraint}，当前为 {current_version}！')
+            raise ManifestError(f'Extension {extension_id} requires UniBot {constraint}, current is {current_version}!')
 
     async def _record_install(
         self,
@@ -287,7 +287,7 @@ class ExtensionMarketManager:
             self._write_states(states)
         # 卸载后重新聚合扩展依赖：移除不再被任何已启用扩展需要的依赖（共享依赖保留）
         sync_extension_dependencies(remove=removed_dependencies)
-        logger.success(f'卸载扩展 {extension_id} 完毕，重启后生效！')
+        logger.success(f'Extension {extension_id} uninstalled, takes effect after restart.')
         return True, f'扩展 {extension_id} 卸载成功，重启后生效'
 
 

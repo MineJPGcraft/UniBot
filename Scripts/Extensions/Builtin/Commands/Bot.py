@@ -142,7 +142,7 @@ class BotCommand(Command):
         try:
             config_manager.update_env({'SUPERUSERS': current})
         except Exception as error:
-            logger.warning(f'写入 .env 失败：{error}')
+            logger.warning(f'Failed to write .env: {error}')
             return messages.commands.bot.write_failed
         # 热更新内存，使本项目权限检查立即生效（框架权限需重启后完全生效）
         config.superusers = current
@@ -198,7 +198,7 @@ class BotCommand(Command):
         error_message = await version_manager.update()
         if error_message:
             return f'更新失败：{error_message}'
-        logger.success('更新成功，准备重启机器人！')
+        logger.success('Update succeeded, preparing to restart the bot.')
         asyncio.create_task(self._delayed_restart())
         return '更新成功，机器人正在重启，请稍候……'
 

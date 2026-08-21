@@ -69,18 +69,18 @@ async def send_message_to_groups(message: str) -> bool:
         for group_info in config.message_groups:
             platform, separator, group_id = group_info.partition(':')
             if not separator or not group_id:
-                logger.warning(f'消息群配置格式错误：{group_info}！')
+                logger.warning(f'Invalid message group config: {group_info}')
                 continue
             scope = getattr(AlconnaSupportScope, platform.lower(), None)
             if scope is None:
-                logger.warning(f'不支持的平台类型：{platform}，请检查配置文件！')
+                logger.warning(f'Unsupported platform type: {platform}, please check the config file.')
                 continue
             send_tasks.append(Target.group(group_id, scope).send(message))
         if send_tasks:
             await asyncio.gather(*send_tasks)
         return True
     except Exception as error:
-        logger.warning(f'发送群消息失败：{error}')
+        logger.warning(f'Failed to send group message: {error}')
         return False
 
 
@@ -105,9 +105,9 @@ def _safe_relative(relative: str) -> Path:
     """校验 zip 内相对路径不越界、非绝对路径，返回规范化 Path。"""
     path = Path(relative)
     if path.is_absolute():
-        raise ArchiveError(f'压缩包内不允许绝对路径：{relative}')
+        raise ArchiveError(f'Absolute paths are not allowed in archives: {relative}')
     if '..' in path.parts:
-        raise ArchiveError(f'压缩包内不允许路径越界：{relative}')
+        raise ArchiveError(f'Path traversal is not allowed in archives: {relative}')
     return path
 
 
@@ -119,7 +119,7 @@ def safe_extract_zip(archive_data: bytes, target_dir: Path) -> None:
         任一步校验失败都会抛出 `ArchiveError`，且不向目标目录写入任何文件。
     """
     if not is_zipfile(BytesIO(archive_data)):
-        raise ArchiveError('压缩包不是有效的 zip 文件！')
+        raise ArchiveError('Archive is not a valid zip file!')
     with ZipFile(BytesIO(archive_data)) as zip_file:
         _validate_archive(zip_file)
         zip_file.extractall(target_dir)
@@ -129,15 +129,15 @@ def _validate_archive(zip_file: ZipFile) -> None:
     """校验 zip 全部成员：路径安全、符号链接、大小与数量限制。"""
     infos = zip_file.infolist()
     if len(infos) > MAX_ARCHIVE_FILES:
-        raise ArchiveError(f'压缩包内文件数量过多（{len(infos)} 超过 {MAX_ARCHIVE_FILES}），已拒绝！')
+        raise ArchiveError(f'Too many files in archive ({len(infos)} exceeds {MAX_ARCHIVE_FILES}), rejected!')
     total_size = 0
     for info in infos:
         _safe_relative(info.filename)
         mode = info.external_attr >> 16
         if mode & 0o170000 == 0o120000:
-            raise ArchiveError(f'压缩包内不允许符号链接：{info.filename}')
+            raise ArchiveError(f'Symbolic links are not allowed in archives: {info.filename}')
         if not info.is_dir():
             total_size += info.file_size
             if total_size > MAX_ARCHIVE_TOTAL:
-                raise ArchiveError(f'压缩包解压后体积过大（超过 {MAX_ARCHIVE_TOTAL // (1024 * 1024)} MB），已拒绝！')
-    logger.debug(f'压缩包校验通过：{len(infos)} 个文件，约 {total_size} 字节。')
+                raise ArchiveError(f'Archive is too large after extraction (exceeds {MAX_ARCHIVE_TOTAL // (1024 * 1024)} MB), rejected!')
+    logger.debug(f'Archive validation passed: {len(infos)} files, about {total_size} bytes.')

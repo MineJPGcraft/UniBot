@@ -105,7 +105,7 @@ async def execute_command(
     try:
         result = await bot.send_rcon_command(command=body.command)
     except Exception as error:
-        logger.warning(f'向服务器 [{name}] 发送指令失败：{error}')
+        logger.warning(f'Failed to send command to server [{name}]: {error}')
         return {'code': 1, 'data': None, 'message': f'指令执行失败：{error}'}
     response_text = strip_minecraft_color(result) if result else ''
     return {'code': 0, 'data': {'response': response_text}, 'message': 'ok'}
@@ -120,5 +120,5 @@ async def broadcast_message(body: BroadcastRequest, current_user: dict = Depends
     if server_service is None:
         return {'code': 1, 'data': None, 'message': 'Minecraft 服务器服务不可用'}
     await server_service.broadcast(body.message)
-    logger.info(f'WebUI 广播消息：{body.message}')
+    logger.info(f'WebUI broadcast message: {body.message}')
     return {'code': 0, 'data': None, 'message': 'ok'}

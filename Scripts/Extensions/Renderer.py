@@ -107,7 +107,7 @@ def _map_template_field(
     default = cfg.default
 
     def reject(reason: str) -> ExtensionError:
-        return ExtensionError(f'template {extension_id} 配置字段 {field_name} {reason}！')
+        return ExtensionError(f'template {extension_id} config field {field_name} {reason}')
 
     # 保留 title/description 与原始类型标记（color/select 编译后类型会丢失）
     field_kwargs: dict[str, Any] = {'json_schema_extra': {'template_type': field_type}}
@@ -120,71 +120,71 @@ def _map_template_field(
         target = int if field_type == 'integer' else float
         is_valid = isinstance(default, target) and not isinstance(default, bool)
         if not is_valid:
-            raise reject(f'default 必须是 {target.__name__}')
+            raise reject(f'default must be of type {target.__name__}')
         constraints: dict[str, Any] = {}
         if cfg.min is not None:
             if not isinstance(cfg.min, target) or isinstance(cfg.min, bool):
-                raise reject(f'min 必须是 {target.__name__}')
+                raise reject(f'min must be of type {target.__name__}')
             constraints['ge'] = cfg.min
         if cfg.max is not None:
             if not isinstance(cfg.max, target) or isinstance(cfg.max, bool):
-                raise reject(f'max 必须是 {target.__name__}')
+                raise reject(f'max must be of type {target.__name__}')
             constraints['le'] = cfg.max
         if cfg.min_length is not None or cfg.max_length is not None:
-            raise reject('min_length/max_length 仅适用于 string')
+            raise reject('min_length/max_length only apply to string')
         if cfg.options:
-            raise reject('options 仅适用于 select')
+            raise reject('options only apply to select')
         return (target, Field(default=default, **constraints, **field_kwargs))
 
     if field_type == 'string':
         if not isinstance(default, str):
-            raise reject('default 必须是 string')
+            raise reject('default must be a string')
         constraints: dict[str, Any] = {}
         if cfg.min_length is not None:
             if not isinstance(cfg.min_length, int) or isinstance(cfg.min_length, bool) or cfg.min_length < 0:
-                raise reject('min_length 必须是非负整数')
+                raise reject('min_length must be a non-negative integer')
             constraints['min_length'] = cfg.min_length
         if cfg.max_length is not None:
             if not isinstance(cfg.max_length, int) or isinstance(cfg.max_length, bool) or cfg.max_length < 0:
-                raise reject('max_length 必须是非负整数')
+                raise reject('max_length must be a non-negative integer')
             constraints['max_length'] = cfg.max_length
         if cfg.min is not None or cfg.max is not None:
-            raise reject('min/max 仅适用于 integer/number')
+            raise reject('min/max only apply to integer/number')
         if cfg.options:
-            raise reject('options 仅适用于 select')
+            raise reject('options only apply to select')
         return (str, Field(default=default, **constraints, **field_kwargs))
 
     if field_type == 'boolean':
         if not isinstance(default, bool):
-            raise reject('default 必须是 boolean')
+            raise reject('default must be a boolean')
         if cfg.min is not None or cfg.max is not None:
-            raise reject('min/max 仅适用于 integer/number')
+            raise reject('min/max only apply to integer/number')
         if cfg.min_length is not None or cfg.max_length is not None:
-            raise reject('min_length/max_length 仅适用于 string')
+            raise reject('min_length/max_length only apply to string')
         if cfg.options:
-            raise reject('options 仅适用于 select')
+            raise reject('options only apply to select')
         return (bool, Field(default=default, **field_kwargs))
 
     if field_type == 'color':
         if not isinstance(default, str) or not _COLOR_RE.match(default):
-            raise reject('default 必须是 #RRGGBB 或 #RRGGBBAA 颜色')
+            raise reject('default must be a #RRGGBB or #RRGGBBAA color')
         if cfg.min is not None or cfg.max is not None:
-            raise reject('min/max 仅适用于 integer/number')
+            raise reject('min/max only apply to integer/number')
         if cfg.min_length is not None or cfg.max_length is not None:
-            raise reject('min_length/max_length 仅适用于 string')
+            raise reject('min_length/max_length only apply to string')
         if cfg.options:
-            raise reject('options 仅适用于 select')
+            raise reject('options only apply to select')
         return (str, Field(default=default, **field_kwargs))
 
     # select
     if not cfg.options:
-        raise reject('select 类型必须提供非空 options')
+        raise reject('select type requires non-empty options')
     if default not in cfg.options:
-        raise reject('default 必须位于 options 中')
+        raise reject('default must be one of the options')
     if cfg.min is not None or cfg.max is not None:
-        raise reject('min/max 仅适用于 integer/number')
+        raise reject('min/max only apply to integer/number')
     if cfg.min_length is not None or cfg.max_length is not None:
-        raise reject('min_length/max_length 仅适用于 string')
+        raise reject('min_length/max_length only apply to string')
     return (Literal[tuple(cfg.options)], Field(default=default, **field_kwargs))
 
 
@@ -326,7 +326,7 @@ class RendererManager:
         """注册 template 无代码扩展；重复注册覆盖并失效缓存。"""
         self.templates[registration.extension_id] = registration
         self._environments.pop(registration.extension_id, None)
-        logger.info(f'模板扩展 {registration.extension_id} 已注册！')
+        logger.info(f'Template extension {registration.extension_id} registered.')
 
     def unregister_template(self, extension_id: str) -> None:
         """注销 template 扩展并清理缓存。"""
@@ -336,7 +336,7 @@ class RendererManager:
     def register_resources(self, extension_id: str, resources_dir: Path) -> None:
         """注册 resources 无代码扩展。"""
         self.resources[extension_id] = resources_dir
-        logger.info(f'资源扩展 {extension_id} 已注册！')
+        logger.info(f'Resource extension {extension_id} registered.')
 
     def unregister_resources(self, extension_id: str) -> None:
         """注销 resources 扩展。"""
@@ -365,7 +365,7 @@ class RendererManager:
         if default_reg is not None and default_reg.extension_id != template_id:
             loaders.append(FileSystemLoader(str(default_reg.templates_dir)))
         if not loaders:
-            raise RuntimeError(f'模板扩展 {template_id} 不存在且无默认模板可用，请确认默认模板扩展已启用！')
+            raise RuntimeError(f'Template extension {template_id} does not exist and no default template is available, please make sure the default template extension is enabled!')
         environment = Environment(loader=ChoiceLoader(loaders), enable_async=True)
         environment.globals['random'] = self.random_image
         environment.globals['resource_path'] = self.resource_path
@@ -396,8 +396,8 @@ class RendererManager:
         if fallback is None and self.templates:
             fallback = next(iter(self.templates.values()))
         if fallback is None:
-            raise RuntimeError('未找到可用模板扩展，请确认默认模板扩展已启用！')
-        logger.warning(f'模板扩展 {template_id} 不存在，回退默认模板 {fallback.extension_id}！')
+            raise RuntimeError('No usable template extension found, please make sure the default template extension is enabled!')
+        logger.warning(f'Template extension {template_id} not found, falling back to default template {fallback.extension_id}.')
         return fallback
 
     async def _config_context(self, registration: TemplateRegistration) -> Any:
@@ -444,7 +444,7 @@ class RendererManager:
         if configured:
             path = Path(configured).expanduser().resolve()
             if not path.is_file():
-                raise ExtensionError(f'配置的字体文件不存在：{configured}！')
+                raise ExtensionError(f'Configured font file does not exist: {configured}')
             return path
         for root in self.resources.values():
             candidate = (root / 'Font.ttf').resolve()
@@ -452,18 +452,18 @@ class RendererManager:
                 return candidate
         if FONT_PATH.is_file():
             return FONT_PATH
-        raise ExtensionError('默认字体 Font.ttf 未找到，请确认默认资源扩展已加载！')
+        raise ExtensionError('Default font Font.ttf not found, please make sure the default resource extension is loaded!')
 
     def _resolve_resource(self, extension_id: str, relative_path: str) -> Path:
         """解析资源文件，校验资源已注册、路径不越界且文件存在。"""
         root = self.resources.get(extension_id)
         if root is None:
-            raise ExtensionError(f'资源扩展 {extension_id} 未注册！')
+            raise ExtensionError(f'Resource extension {extension_id} is not registered!')
         path = (root / relative_path).resolve()
         if not path.is_relative_to(root.resolve()):
-            raise ExtensionError(f'资源路径越界：{extension_id}/{relative_path}！')
+            raise ExtensionError(f'Resource path out of bounds: {extension_id}/{relative_path}')
         if not path.is_file():
-            raise ExtensionError(f'资源文件不存在：{extension_id}/{relative_path}！')
+            raise ExtensionError(f'Resource file does not exist: {extension_id}/{relative_path}')
         return path
 
     def random_image(self, extension_id: str, directory: str) -> str:
@@ -478,16 +478,16 @@ class RendererManager:
         """
         root = self.resources.get(extension_id)
         if root is None:
-            raise ExtensionError(f'资源扩展 {extension_id} 未注册！')
+            raise ExtensionError(f'Resource extension {extension_id} is not registered!')
         path = (root / directory).resolve()
         if not path.is_relative_to(root.resolve()):
-            raise ExtensionError(f'资源路径越界：{extension_id}/{directory}！')
+            raise ExtensionError(f'Resource path out of bounds: {extension_id}/{directory}')
         if not path.is_dir():
-            logger.warning(f'RandomImage 错误！目录不存在: {extension_id}/{directory}')
+            logger.warning(f'RandomImage error: directory not found: {extension_id}/{directory}')
             return ''
         images = [p for p in path.iterdir() if p.is_file() and p.suffix.lower() in _IMAGE_SUFFIXES]
         if not images:
-            logger.warning(f'RandomImage 错误！目录中没有图片: {extension_id}/{directory}')
+            logger.warning(f'RandomImage error: no images found in directory: {extension_id}/{directory}')
             return ''
         return f'url("{FileAsset(choice(images))}")'
 
@@ -505,7 +505,7 @@ class RendererManager:
         data = path.read_bytes()
         if len(data) > _RESOURCE_MAX_BYTES:
             raise ExtensionError(
-                f'资源文件过大：{extension_id}/{relative_path}（{len(data)} 字节 > {_RESOURCE_MAX_BYTES}）！'
+                f'Resource file too large: {extension_id}/{relative_path} ({len(data)} bytes > {_RESOURCE_MAX_BYTES})!'
             )
         return data.decode(encoding)
 
@@ -515,7 +515,7 @@ class RendererManager:
         data = path.read_bytes()
         if len(data) > _RESOURCE_MAX_BYTES:
             raise ExtensionError(
-                f'资源文件过大：{extension_id}/{relative_path}（{len(data)} 字节 > {_RESOURCE_MAX_BYTES}）！'
+                f'Resource file too large: {extension_id}/{relative_path} ({len(data)} bytes > {_RESOURCE_MAX_BYTES})!'
             )
         return data
 
@@ -562,7 +562,7 @@ class RendererManager:
         # 资源依赖检查
         missing = [rid for rid in registration.resource_ids if rid not in self.resources]
         if missing:
-            raise ExtensionError(f'template {registration.extension_id} 声明了未注册的资源扩展：{missing}！')
+            raise ExtensionError(f'template {registration.extension_id} declares unregistered resource extensions: {missing}')
         # 解析渲染引擎：先激活，供资源包装转换使用
         renderer_name = renderer or config.image.renderer
         active_renderer = self._active.get(renderer_name)
@@ -600,7 +600,7 @@ class RendererManager:
         user_context = encode_context(self._resolve_assets(raw_user_context, active_renderer))
         conflicts = _RESERVED_CONTEXT_KEYS & set(user_context)
         if conflicts:
-            raise ExtensionError(f'template {registration.extension_id} 使用了保留上下文名称：{sorted(conflicts)}！')
+            raise ExtensionError(f'template {registration.extension_id} uses reserved context names: {sorted(conflicts)}')
         # 字体链接同样经渲染器处理（如 playwright 需 file:// 前缀）
         font_path = self._resolve_font_path()
         font_uri = (
@@ -617,7 +617,7 @@ class RendererManager:
         try:
             html_template = environment.get_template(f'{template}/{template}.html')
         except TemplateNotFound as error:
-            raise ExtensionError(f'template {registration.extension_id} 中不存在模板：{template}！') from error
+            raise ExtensionError(f'template {registration.extension_id} does not contain template: {template}') from error
         css_task = self._load_style(environment, template, **merged)
         html_content, css_content = await asyncio.gather(
             html_template.render_async(**merged),
@@ -641,11 +641,11 @@ class RendererManager:
     async def setup(self, name: str) -> BaseRenderer | None:
         """初始化并启用指定引擎，未选择或不存在时返回 None。"""
         if not name:
-            logger.error('没有选择渲染引擎！')
+            logger.error('No render engine selected!')
             return None
         renderer = self._get_renderer(name)
         if renderer is None:
-            logger.error(f'渲染引擎 {name} 不存在！')
+            logger.error(f'Render engine {name} does not exist!')
             return None
         if name in self._active:
             return renderer
@@ -653,7 +653,7 @@ class RendererManager:
         self._active[renderer.name] = renderer
         if renderer.name not in self._semaphores:
             self._semaphores[renderer.name] = asyncio.Semaphore(max(1, 1))
-        logger.info(f'渲染引擎 {renderer.name} 已就绪！')
+        logger.info(f'Render engine {renderer.name} is ready.')
         return renderer
 
     async def render(self, html: str, css: str, name: str | None = None, size: tuple[int, int] | None = None) -> bytes:
@@ -662,16 +662,16 @@ class RendererManager:
         size: (宽度, 高度)，透传给渲染器的 render，供布局视口使用。
         """
         if not name:
-            raise RuntimeError('没有选择渲染引擎！')
+            raise RuntimeError('No render engine selected!')
         renderer = self._active.get(name)
         if renderer is None:
             renderer = await self.setup(name)
         if renderer is None:
-            raise RuntimeError(f'渲染引擎 {name} 不可用！')
+            raise RuntimeError(f'Render engine {name} is unavailable!')
         semaphore = self._semaphores.get(renderer.name)
         timeout = self._timeouts.get(renderer.name, self._default_timeout)
         if semaphore is None:
-            raise RuntimeError(f'渲染引擎 {renderer.name} 的并发信号量未配置！')
+            raise RuntimeError(f'Semaphore for render engine {renderer.name} is not configured!')
         async with semaphore:
             return await asyncio.wait_for(renderer.render(html, css, size), timeout=timeout)
 
@@ -681,5 +681,5 @@ class RendererManager:
             try:
                 await renderer.shutdown()
             except Exception as error:
-                logger.error(f'渲染引擎 {renderer.name} 关闭失败：{error}！')
+                logger.error(f'Render engine {renderer.name} failed to shut down: {error}')
         self._active.clear()

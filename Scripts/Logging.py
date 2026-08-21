@@ -14,6 +14,9 @@ from nonebot.log import default_filter
 # 控制台渲染 ANSI 彩色，文件日志（colorize=False）自动剥离标签保持纯净文本。
 logger = default_logger.opt(colors=True)
 
+# 需要打印完整异常堆栈的日志直接使用此 logger（等价于 logger.opt(exception=True)）。
+exception_logger = logger.opt(exception=True)
+
 if TYPE_CHECKING:
     from loguru import HandlerConfig, Record
 

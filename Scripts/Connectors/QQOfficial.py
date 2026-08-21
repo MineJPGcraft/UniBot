@@ -170,8 +170,8 @@ class QQBotConnector:
     def _client_or_raise(self) -> httpx.AsyncClient:
         if self._client is None:
             raise RuntimeError(
-                'QQBotConnector 未初始化 client，请使用 `async with QQBotConnector() as c:`'
-                ' 或显式传入 client='
+                'QQBotConnector client not initialized, use `async with QQBotConnector() as c:`'
+                ' or pass client= explicitly'
             )
         return self._client
 
@@ -188,7 +188,7 @@ class QQBotConnector:
                 content=json.dumps(body, separators=(',', ':')).encode('Utf-8'),
             )
         except httpx.HTTPError as e:
-            raise QQBotConnectorError(f'HTTP 请求失败: {url} -> {e}') from e
+            raise QQBotConnectorError(f'HTTP request failed: {url} -> {e}') from e
 
         if resp.status_code != 200:
             raise QQBotConnectorError(f'HTTP {resp.status_code} from {url}')
@@ -196,7 +196,7 @@ class QQBotConnector:
         try:
             return resp.json()
         except Exception as e:
-            raise QQBotConnectorError(f'响应非 JSON: {resp.text!r}') from e
+            raise QQBotConnectorError(f'Response is not JSON: {resp.text!r}') from e
 
     # ---- 公开 API ---- #
 
@@ -355,8 +355,8 @@ async def qr_login(
                 task = await connector.create_bind_task()
                 qr_url = QQBotConnector.build_connect_url(task.task_id, source)
 
-                logger.info('QQ 扫码登录：请使用手机 QQ 扫描二维码完成绑定')
-                logger.info(f'扫码链接: {qr_url}')
+                logger.info('QQ QR code login: scan the QR code with your phone QQ to complete binding')
+                logger.info(f'QR code link: {qr_url}')
                 yield QrLoginState(
                     state='pending', qr_url=qr_url, qr_image=qr_image_data_url(qr_url)
                 )
@@ -368,7 +368,7 @@ async def qr_login(
                     cancel_event=cancel_event,
                 )
                 if outcome is not None:
-                    logger.info(f'QQ 扫码登录成功：app_id={outcome.app_id}')
+                    logger.info(f'QQ QR code login succeeded: app_id={outcome.app_id}')
                     yield QrLoginState(
                         state='completed',
                         app_id=outcome.app_id,
@@ -378,12 +378,12 @@ async def qr_login(
                     return
 
                 # 二维码过期，刷新后继续
-                logger.warning('QQ 扫码二维码已过期，正在刷新…')
+                logger.warning('QQ QR code expired, refreshing...')
     except QrConnectCancelled:
         yield QrLoginState(state='cancelled', error='用户取消')
         return
     except Exception as error:
-        logger.error(f'QQ 扫码登录失败：{error}')
+        logger.error(f'QQ QR code login failed: {error}')
         yield QrLoginState(state='failed', error=str(error) or error.__class__.__name__)
         return
 
@@ -407,7 +407,7 @@ async def _poll_until_settled(
             result = await connector.poll_bind_result(task.task_id)
         except PollBindResultError as e:
             # 单次轮询失败不应终止流程，与官方 SDK 行为一致
-            logger.warning(f'轮询扫码结果失败: {e}，{poll_interval}s 后重试')
+            logger.warning(f'Polling QR code result failed: {e}, retrying in {poll_interval}s')
             await _sleep_or_cancel(poll_interval, cancel_event)
             continue
 

@@ -79,7 +79,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     await websocket.accept()
     ws_clients[websocket] = set()
-    logger.debug('WebUI WebSocket 客户端已连接！')
+    logger.debug('WebUI WebSocket client connected.')
 
     async def status_pusher():
         """定期向订阅了 status 事件的当前客户端推送运行状态。"""
@@ -118,9 +118,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_json({'type': 'pong'})
 
     except WebSocketDisconnect:
-        logger.debug('WebUI WebSocket 客户端已断开！')
+        logger.debug('WebUI WebSocket client disconnected.')
     except Exception as error:
-        logger.warning(f'WebSocket 异常：{error}')
+        logger.warning(f'WebSocket error: {error}')
     finally:
         push_task.cancel()
         ws_clients.pop(websocket, None)

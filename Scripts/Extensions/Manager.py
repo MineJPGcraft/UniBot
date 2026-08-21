@@ -65,7 +65,7 @@ class ExtensionManager:
         # 图片模式开启时才初始化配置的渲染引擎
         if config.image.mode:
             await self.renderer_manager.setup(config.image.renderer)
-        logger.success('扩展启动完毕！')
+        logger.success('All extensions started.')
 
     async def _rollback(self, failed_extension: Extension) -> None:
         """当某个扩展启用失败时，按逆拓扑顺序回滚已启用扩展。"""
@@ -92,14 +92,14 @@ class ExtensionManager:
         try:
             await extension.on_disable()
         except Exception as error:
-            logger.error(f'扩展 {extension.id} 关闭失败：{error}！')
+            logger.error(f'Extension {extension.id} failed to shut down: {error}')
 
     # ===== 服务注册与获取 =====
 
     def register_service(self, name: str, service: object) -> None:
         """注册一个 API 服务。"""
         if name in self.services:
-            logger.warning(f'API 服务 {name} 重复注册，已覆盖！')
+            logger.warning(f'API service {name} registered twice, the latest one wins.')
         self.services[name] = service
 
     def get_service(self, name: str) -> object | None:
@@ -149,7 +149,7 @@ class ExtensionManager:
         extension_config['enabled'] = enabled
         data[extension_id] = extension_config
         config_path.write_text(tomlkit.dumps(data), encoding='Utf-8')
-        logger.info(f'扩展 {extension_id} 已设置为 {"启用" if enabled else "禁用"}，重启后生效！')
+        logger.info(f'Extension {extension_id} set to {"enabled" if enabled else "disabled"}, takes effect after restart.')
 
     # ===== 展示信息 =====
 

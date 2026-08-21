@@ -19,13 +19,13 @@ class MessageGroup:
         if key.startswith('_'):
             raise AttributeError(key)
         if key not in self._data:
-            raise AttributeError(f'Messages.toml 中缺少消息 [{key}]！')
+            raise AttributeError(f'Message [{key}] is missing from Messages.toml!')
         value = self._data[key]
         if isinstance(value, dict):
             return MessageGroup(value)
         if isinstance(value, (str, list)):
             return value
-        raise TypeError(f'Messages.toml 中 [{key}] 应为字符串或字符串列表！')
+        raise TypeError(f'[{key}] in Messages.toml should be a string or a list of strings!')
 
 
 MESSAGES_TOML_PATH = Path('Config') / 'Messages.toml'
@@ -34,7 +34,7 @@ MESSAGES_TOML_PATH = Path('Config') / 'Messages.toml'
 def load_messages() -> MessageGroup:
     """从 Messages.toml 加载消息配置，文件缺失则抛错。"""
     if not MESSAGES_TOML_PATH.exists():
-        raise FileNotFoundError(f'消息配置文件 {MESSAGES_TOML_PATH} 不存在，请创建后按需填写！')
+        raise FileNotFoundError(f'Message config file {MESSAGES_TOML_PATH} does not exist, please create it and fill in as needed!')
     toml_data = tomlkit.parse(MESSAGES_TOML_PATH.read_text('Utf-8'))
     return MessageGroup(dict(toml_data))
 

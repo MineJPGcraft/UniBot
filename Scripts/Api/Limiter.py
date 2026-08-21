@@ -128,20 +128,20 @@ class RateLimiter:
                 del self.records[ip]
 
             if expired_ips:
-                logger.debug(f'限流器清理了 {len(expired_ips)} 个过期 IP 记录。')
+                logger.debug(f'Rate limiter cleaned up {len(expired_ips)} expired IP records.')
 
     def start(self):
         """启动后台清理任务。"""
         if self.cleanup_task is None:
             self.cleanup_task = asyncio.create_task(self.cleanup_loop())
-            logger.debug('限流器后台清理任务已启动。')
+            logger.debug('Rate limiter background cleanup task started.')
 
     def stop(self):
         """停止后台清理任务。"""
         if self.cleanup_task is not None:
             self.cleanup_task.cancel()
             self.cleanup_task = None
-            logger.debug('限流器后台清理任务已停止。')
+            logger.debug('Rate limiter background cleanup task stopped.')
 
 
 rate_limiter = RateLimiter()

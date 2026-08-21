@@ -24,18 +24,18 @@ class DataManager:
     def load(self):
         """加载 WebUI 用户数据与 JWT 密钥。"""
         if not self.data_dir.exists():
-            logger.warning('数据文件目录不存在，正在创建数据目录……')
+            logger.warning('Data directory does not exist, creating it...')
             self.data_dir.mkdir(parents=True, exist_ok=True)
         # 加载 WebUI 用户数据
         if self.users_file.exists():
             try:
                 self.users = loads(self.users_file.read_text('Utf-8'))
             except Exception:
-                logger.warning('用户数据文件损坏，使用空数据！')
+                logger.warning('User data file is corrupted, falling back to empty data.')
                 self.users = {}
         # 生成或加载 JWT 签名密钥
         self.secret_key = self.load_secret_key()
-        logger.success('加载数据文件完毕！')
+        logger.success('Data files loaded successfully.')
 
     def load_secret_key(self) -> str:
         """生成或加载 JWT 签名密钥。"""
@@ -49,7 +49,7 @@ class DataManager:
         """持久化 WebUI 用户数据。"""
         async with self.lock:
             self.users_file.write_text(dumps(self.users, ensure_ascii=False, indent=2), encoding='Utf-8')
-            logger.success('保存数据文件完毕！')
+            logger.success('Data files saved successfully.')
 
     # ── WebUI 用户管理 ────────────────────────────────────────
 

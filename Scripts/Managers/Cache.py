@@ -47,7 +47,7 @@ class CacheManager:
         for file in self.cache_dir.iterdir():
             if file.is_file():
                 file.unlink()
-        logger.debug('清理缓存文件完毕！')
+        logger.debug('Cache files cleaned up.')
 
     def _write(self, file_name: str, content: bytes) -> str:
         """将单个文件写入缓存目录，返回文件完整路径。"""
