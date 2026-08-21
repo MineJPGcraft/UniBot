@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .Auth import router as auth_router
 from .Config import router as config_router
+from .Connectors.QQBot import router as qqbot_router
 from .Extensions import router as extensions_router
 from .Logs import router as logs_router
 from .Players import router as players_router
@@ -21,6 +22,7 @@ api_router.include_router(servers_router)
 api_router.include_router(players_router)
 api_router.include_router(logs_router)
 api_router.include_router(plugins_router)
+api_router.include_router(qqbot_router)
 api_router.include_router(extensions_router)
 api_router.include_router(ws_router)
 

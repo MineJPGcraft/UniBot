@@ -12,13 +12,14 @@ from nonebot.log import default_filter
 
 # 统一导出的 logger：默认开启消息颜色标签解析（等价于每次调用 opt(colors=True)），
 # 控制台渲染 ANSI 彩色，文件日志（colorize=False）自动剥离标签保持纯净文本。
-logger = default_logger.opt(colors=True, exception=True)
+logger = default_logger.opt(colors=True)
 
 if TYPE_CHECKING:
     from loguru import HandlerConfig, Record
 
 # 模块名前缀 → 展示名，按前缀长度从长到短排列
 MODULE_ALIASES: tuple[tuple[str, str], ...] = (
+    ('Scripts.Connectors', 'Conn'),
     ('Scripts.Extensions.Builtin', 'Builtin'),
     ('Scripts.Extensions', 'Ext'),
     ('Scripts.Managers', 'Mgr'),

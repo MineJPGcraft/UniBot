@@ -7,6 +7,7 @@ requires-python = ">=3.11, <4.0"
 dependencies = [
     "httpx>=0.28.1",
     "jinja2>=3.1.6",
+    "tomlkit>=0.13.0",
     "packaging>=24.0",
     "nonebot2[fastapi]>=2.2.1",
     "nonebot-adapter-minecraft>=1.8.2",
@@ -18,9 +19,9 @@ dependencies = [
 [project.optional-dependencies]
 webui = [
     "psutil>=6.0.0",
-    "tomlkit>=0.13.0",
     "PyJWT>=2.8.0",
     "bcrypt>=4.0.0",
+    "qrcode[pil]>=7.4",
 ]
 extensions = []
 
@@ -68,3 +69,6 @@ module_name = "nonebot.adapters.minecraft"
 [[tool.nonebot.adapters]]
 name = "OneBot V11"
 module_name = "nonebot.adapters.onebot.v11"
+[[tool.nonebot.adapters]]
+name = "QQ"
+module_name = "nonebot.adapters.qq"

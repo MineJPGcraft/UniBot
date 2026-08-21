@@ -192,7 +192,6 @@ QQ_INTENT_FIELDS = [
     {'key': 'direct_message', 'label': '频道私信事件', 'type': 'boolean', 'default': False},
     {'key': 'open_forum_event', 'label': '频道公域论坛事件', 'type': 'boolean', 'default': False},
     {'key': 'audio_live_member', 'label': '频道音频或直播成员事件', 'type': 'boolean', 'default': False},
-    {'key': 'group_members', 'label': '群成员变更事件', 'type': 'boolean', 'default': True},
     {
         'key': 'c2c_group_at_messages',
         'label': '私聊与群聊 @ 消息事件',
@@ -263,6 +262,13 @@ ENV_SCHEMA = [
         'form': {
             'kind': 'array',
             'item_title': '机器人',
+            # 扫码快速绑定：前端据此在机器人卡片上渲染「扫码」按钮，扫码成功回填 id / secret
+            'qr_connect': {
+                'id_key': 'id',
+                'secret_key': 'secret',
+                'source': 'qq_official',
+                'hint': '使用手机 QQ 扫码，自动填充 AppID 与 Secret',
+            },
             'fields': [
                 {
                     'key': 'id',
