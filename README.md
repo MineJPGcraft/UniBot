@@ -24,6 +24,18 @@
   <a href="https://github.com/MineJPGcraft/UniBot/issues">🐛 反馈问题</a>
 </p>
 
+<p align="center">
+  <b><i>Cross-platform · Multi-server interconnection · Plug-and-play — Seamlessly bridging Minecraft with your chat world.</i></b>
+</p>
+
+<p align="center">
+  <a href="https://bot.mcjpg.dev/en">📚 <i>Docs</i></a>
+  ·
+  <a href="https://qm.qq.com/q/B3kmvJl2xO">💬 <i>Contact us</i></a>
+  ·
+  <a href="https://github.com/MineJPGcraft/UniBot/issues">🐛 <i>Report Issues</i></a>
+</p>
+
 ---
 
 ## 简介
@@ -36,6 +48,17 @@
 - **扩展系统**：指令、服务、渲染引擎、模板与资源五类扩展，即插即用，失败自动隔离
 - **WebUI 管理面板**：现代化管理界面，可视化配置、实时监控、日志查看，开箱即用
 - **图片渲染模式**：将指令输出渲染为精美图片，支持自定义背景
+
+### *Introduction*
+
+* **Minecraft UniBot** is a cross-platform chat bot built on [NoneBot2](https://nonebot.dev/). It connects to Minecraft servers via the [QueQiao](https://github.com/17TheWord/QueQiao) protocol, seamlessly bridging Minecraft with your chat world.*
+
+- * **Truly cross‑platform** – Not just QQ, but also Telegram, Discord, Kook, QQ Guilds, and more – a single set of commands works everywhere.*
+- * **Multi‑server interconnection** – Connect to multiple Minecraft servers at the same time, with zero‑latency messaging between them.*
+- * **Full server compatibility** – Supports all major server types, including Fabric, Forge, Spigot, Paper, and even Bedrock editions – plug and play.*
+- * **Extension system** – Five kinds of extensions: commands, services, rendering engines, templates, and resources. All are plug‑and‑play, with automatic isolation if any fails.*
+- * **WebUI management panel** – A modern admin interface featuring visual configuration, real‑time monitoring, and log viewing – ready out of the box.*
+- * **Image rendering mode** – Renders command outputs as beautifully styled images, with full support for custom backgrounds.*
 
 ## 📸 效果展示
 
