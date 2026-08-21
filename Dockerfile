@@ -37,7 +37,7 @@ USER worker
 VOLUME ["/data/"]
 EXPOSE 8000
 
-ENTRYPOINT ["/sbin/tini", "--", "python", "/app/entrypoint.py"]
+ENTRYPOINT ["/sbin/tini", "--", "sh", "/app/entrypoint.sh"]
 CMD ["python", "/app/Watchdog.py"]
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s \
         CMD curl -f http://127.0.0.1:8000/api/status || exit 1
