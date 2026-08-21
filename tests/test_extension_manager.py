@@ -236,8 +236,9 @@ class TestValidationIsolation:
     def test_incompatible_extension_blocked_not_crash(self, monkeypatch):
         # 固定当前 UniBot 版本，使 ">=999.0.0" 约束必然不满足
         monkeypatch.setattr('Scripts.Extensions.Loader.get_unibot_version', lambda: '1.0.0')
-        loader = self._make_loader_with({
-            'Playwright': """
+        loader = self._make_loader_with(
+            {
+                'Playwright': """
 [extension]
 id = "Playwright"
 name = "Playwright 渲染引擎"
@@ -247,7 +248,8 @@ types = ["api"]
 [compatibility]
 unibot = ">=999.0.0"
 """,
-        })
+            }
+        )
         # 完整校验+排序+加载流程，不应抛异常
         loader._validate_all()
         loader._import_and_load(loader._topological_sort())
@@ -259,8 +261,9 @@ unibot = ">=999.0.0"
 
     def test_compatible_extension_still_loads_alongside_blocked(self, monkeypatch):
         monkeypatch.setattr('Scripts.Extensions.Loader.get_unibot_version', lambda: '1.0.0')
-        loader = self._make_loader_with({
-            'GoodExt': """
+        loader = self._make_loader_with(
+            {
+                'GoodExt': """
 [extension]
 id = "GoodExt"
 name = "正常扩展"
@@ -270,7 +273,7 @@ types = ["api"]
 [compatibility]
 unibot = "*"
 """,
-            'BadExt': """
+                'BadExt': """
 [extension]
 id = "BadExt"
 name = "不兼容扩展"
@@ -280,7 +283,8 @@ types = ["api"]
 [compatibility]
 unibot = ">=999.0.0"
 """,
-        })
+            }
+        )
         loader._validate_all()
         loader._import_and_load(loader._topological_sort())
         assert extension_manager.registry['BadExt'].state is ExtensionState.blocked

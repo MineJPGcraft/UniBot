@@ -149,7 +149,9 @@ class ExtensionManager:
         extension_config['enabled'] = enabled
         data[extension_id] = extension_config
         config_path.write_text(tomlkit.dumps(data), encoding='Utf-8')
-        logger.info(f'Extension {extension_id} set to {"enabled" if enabled else "disabled"}, takes effect after restart.')
+        logger.info(
+            f'Extension {extension_id} set to {"enabled" if enabled else "disabled"}, takes effect after restart.'
+        )
 
     # ===== 展示信息 =====
 

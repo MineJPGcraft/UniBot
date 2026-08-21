@@ -53,7 +53,9 @@ def _format_path(extension_id: str, path: list[str]) -> str:
 def _validate_name(value: str, extension_id: str, path: list[str]) -> None:
     """校验命令/别名/参数名合法。"""
     if not _NAME_PATTERN.match(value):
-        raise CommandFieldError(f'{_format_path(extension_id, path)} has invalid name: {value} (only lowercase letters, digits and underscores are allowed)')
+        raise CommandFieldError(
+            f'{_format_path(extension_id, path)} has invalid name: {value} (only lowercase letters, digits and underscores are allowed)'
+        )
 
 
 # ===== 参数构建器 =====
@@ -289,7 +291,9 @@ class CommandManager:
                 raise CommandFieldError(f'{_format_path(extension_id, argument_path)} argument name duplicated!')
             seen_names.add(argument.name)
             if not argument.required and argument.default is UNSET:
-                raise CommandFieldError(f'{_format_path(extension_id, argument_path)} optional argument must provide a default value!')
+                raise CommandFieldError(
+                    f'{_format_path(extension_id, argument_path)} optional argument must provide a default value!'
+                )
 
         seen_subcommands: set[str] = set()
         for subcommand in command.subcommands:

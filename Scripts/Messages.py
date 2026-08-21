@@ -34,7 +34,9 @@ MESSAGES_TOML_PATH = Path('Config') / 'Messages.toml'
 def load_messages() -> MessageGroup:
     """从 Messages.toml 加载消息配置，文件缺失则抛错。"""
     if not MESSAGES_TOML_PATH.exists():
-        raise FileNotFoundError(f'Message config file {MESSAGES_TOML_PATH} does not exist, please create it and fill in as needed!')
+        raise FileNotFoundError(
+            f'Message config file {MESSAGES_TOML_PATH} does not exist, please create it and fill in as needed!'
+        )
     toml_data = tomlkit.parse(MESSAGES_TOML_PATH.read_text('Utf-8'))
     return MessageGroup(dict(toml_data))
 

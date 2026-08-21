@@ -175,8 +175,7 @@ class ExtensionManifest(BaseModel):
         code = types & _CODE_TYPES
         if no_code and code:
             raise ValueError(
-                f'No-code extension types {sorted(t.value for t in no_code)} '
-                f'cannot be mixed with code capabilities {sorted(t.value for t in code)}!'
+                f'No-code extension types {sorted(t.value for t in no_code)} cannot be mixed with code capabilities {sorted(t.value for t in code)}!'
             )
         if types == {ExtensionType.renderer} and not self.renderer.name:
             raise ValueError('renderer extensions must declare name in the [renderer] section!')
@@ -504,7 +503,9 @@ class Extension(Generic[ConfigModelT]):
     def _require_bound(self) -> None:
         """访问绑定能力前校验是否已绑定，否则抛错。"""
         if not self._bound:
-            raise ExtensionNotBoundError(f'Extension {self.id or "<unknown>"} is not bound yet, cannot access this capability!')
+            raise ExtensionNotBoundError(
+                f'Extension {self.id or "<unknown>"} is not bound yet, cannot access this capability!'
+            )
 
     # ===== 状态机 =====
 

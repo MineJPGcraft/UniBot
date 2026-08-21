@@ -171,7 +171,9 @@ class ExtensionLoader:
             logger.error(f'Metadata validation failed for single-file extension {extension_id}: {error}, skipped.')
             return
         if manifest.extension.id != extension_id:
-            logger.error(f'Single-file extension id {manifest.extension.id} does not match file name {extension_id}, skipped.')
+            logger.error(
+                f'Single-file extension id {manifest.extension.id} does not match file name {extension_id}, skipped.'
+            )
             return
         enabled = self._read_enabled(extension_id)
         self._discovered[extension_id] = DiscoveredExtension(
@@ -193,7 +195,9 @@ class ExtensionLoader:
                 try:
                     self._enabled_config = tomlkit.parse(CONFIG_EXTENSIONS_FILE.read_text('Utf-8'))
                 except Exception as error:
-                    logger.warning(f'Failed to read extension enable/disable config: {error}, defaulting to all enabled.')
+                    logger.warning(
+                        f'Failed to read extension enable/disable config: {error}, defaulting to all enabled.'
+                    )
         return bool(self._enabled_config.get(extension_id, {}).get('enabled', True))
 
     # ===== 校验 =====
@@ -230,10 +234,14 @@ class ExtensionLoader:
         try:
             specifier = SpecifierSet(constraint)
         except Exception as error:
-            raise CompatibilityError(f'Extension {extension_id} has invalid version constraint: {constraint} ({error})') from error
+            raise CompatibilityError(
+                f'Extension {extension_id} has invalid version constraint: {constraint} ({error})'
+            ) from error
         current_version = get_unibot_version()
         if current_version and current_version not in specifier:
-            raise CompatibilityError(f'Extension {extension_id} requires UniBot {constraint}, current is {current_version}!')
+            raise CompatibilityError(
+                f'Extension {extension_id} requires UniBot {constraint}, current is {current_version}!'
+            )
 
     @staticmethod
     def _validate_entry_module(extension_id: str, directory: Path) -> None:
@@ -315,7 +323,9 @@ class ExtensionLoader:
                     self._register_no_code_display(extension_id, info, ExtensionState.failed, str(error))
                     continue
                 self._register_no_code_display(extension_id, info, ExtensionState.enabled, '')
-                logger.success(f'Loaded extension package <yellow>{extension_id} v{info.manifest.extension.version}</yellow>.')
+                logger.success(
+                    f'Loaded extension package <yellow>{extension_id} v{info.manifest.extension.version}</yellow>.'
+                )
                 continue
             # 依赖被禁用/失败：进入 blocked
             dependency_block = self._find_blocked_dependency(extension_id, blocked_reasons)
@@ -427,7 +437,9 @@ class ExtensionLoader:
         types = set(manifest.extension.types)
         allowed = {ExtensionType.template, ExtensionType.resources}
         if not types <= allowed:
-            raise ManifestError(f'No-code extension {extension_id} has invalid type combination: {sorted(t.value for t in types)}!')
+            raise ManifestError(
+                f'No-code extension {extension_id} has invalid type combination: {sorted(t.value for t in types)}!'
+            )
         if ExtensionType.template in types:
             self._commit_template_package(extension_id, info)
         if ExtensionType.resources in types:
@@ -438,7 +450,9 @@ class ExtensionLoader:
         manifest = info.manifest
         templates_dir = info.directory / manifest.template.entry
         if not templates_dir.is_dir():
-            raise ManifestError(f'template extension {extension_id} entry directory [{manifest.template.entry}] does not exist!')
+            raise ManifestError(
+                f'template extension {extension_id} entry directory [{manifest.template.entry}] does not exist!'
+            )
         config_model = build_template_config_model(extension_id, manifest.template.config_schema)
         config_store = ExtensionConfigStore(CONFIG_ROOT, extension_id, config_model)
         registration = TemplateRegistration(
@@ -455,7 +469,9 @@ class ExtensionLoader:
         manifest = info.manifest
         resources_root = info.directory / manifest.resources.root
         if not resources_root.is_dir():
-            raise ManifestError(f'resources extension {extension_id} root directory [{manifest.resources.root}] does not exist!')
+            raise ManifestError(
+                f'resources extension {extension_id} root directory [{manifest.resources.root}] does not exist!'
+            )
         self.manager.register_resources(extension_id, resources_root)
 
     @staticmethod
@@ -509,8 +525,7 @@ class ExtensionLoader:
                 command_id = f'{BUILTIN_PREFIX}:{command.name}'
                 command_manager.register_command(command, command_id, override=True)
                 logger.info(
-                    f'扩展 {extension_id} 用 {command_cls.__name__} 覆盖内置命令 '
-                    f'{builtin_cls.__name__}（{command_id}）！'
+                    f'扩展 {extension_id} 用 {command_cls.__name__} 覆盖内置命令 {builtin_cls.__name__}（{command_id}）！'
                 )
                 continue
             command_id = f'extension:{extension_id}:{command.name}'

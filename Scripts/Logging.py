@@ -74,12 +74,7 @@ def console_format(record: Record) -> str:
     """控制台日志格式：时间、级别、模块名渲染（接近 NoneBot 默认风格）。"""
     # NoneBot init() 期间内置 patcher 会把模块名截断为小写 nonebot，这里兜底统一
     name = 'NoneBot' if record['name'] == 'nonebot' else record['name']
-    return (
-        '<dim>{time:MM-DD HH:mm:ss}</dim> '
-        '[<lvl>{level}</lvl>] '
-        f'<light-cyan><u>{name}</u></light-cyan> '
-        '| {message}\n'
-    )
+    return f'<dim>{{time:MM-DD HH:mm:ss}}</dim> [<lvl>{{level}}</lvl>] <light-cyan><u>{name}</u></light-cyan> | {{message}}\n'
 
 
 def file_format(record: Record) -> str:

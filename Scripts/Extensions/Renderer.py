@@ -86,8 +86,7 @@ def build_template_config_model(
     for field_name, field_cfg in schema.items():
         if not _IDENTIFIER_RE.match(field_name) or field_name.startswith('_'):
             raise ExtensionError(
-                f'template {extension_id} 配置字段名非法：{field_name}！'
-                '字段名必须是合法 Python 标识符且不能以下划线开头！'
+                f'template {extension_id} 配置字段名非法：{field_name}！字段名必须是合法 Python 标识符且不能以下划线开头！'
             )
         fields[field_name] = _map_template_field(extension_id, field_name, field_cfg)
     return create_model(
@@ -365,7 +364,9 @@ class RendererManager:
         if default_reg is not None and default_reg.extension_id != template_id:
             loaders.append(FileSystemLoader(str(default_reg.templates_dir)))
         if not loaders:
-            raise RuntimeError(f'Template extension {template_id} does not exist and no default template is available, please make sure the default template extension is enabled!')
+            raise RuntimeError(
+                f'Template extension {template_id} does not exist and no default template is available, please make sure the default template extension is enabled!'
+            )
         environment = Environment(loader=ChoiceLoader(loaders), enable_async=True)
         environment.globals['random'] = self.random_image
         environment.globals['resource_path'] = self.resource_path
@@ -396,8 +397,12 @@ class RendererManager:
         if fallback is None and self.templates:
             fallback = next(iter(self.templates.values()))
         if fallback is None:
-            raise RuntimeError('No usable template extension found, please make sure the default template extension is enabled!')
-        logger.warning(f'Template extension {template_id} not found, falling back to default template {fallback.extension_id}.')
+            raise RuntimeError(
+                'No usable template extension found, please make sure the default template extension is enabled!'
+            )
+        logger.warning(
+            f'Template extension {template_id} not found, falling back to default template {fallback.extension_id}.'
+        )
         return fallback
 
     async def _config_context(self, registration: TemplateRegistration) -> Any:
@@ -452,7 +457,9 @@ class RendererManager:
                 return candidate
         if FONT_PATH.is_file():
             return FONT_PATH
-        raise ExtensionError('Default font Font.ttf not found, please make sure the default resource extension is loaded!')
+        raise ExtensionError(
+            'Default font Font.ttf not found, please make sure the default resource extension is loaded!'
+        )
 
     def _resolve_resource(self, extension_id: str, relative_path: str) -> Path:
         """解析资源文件，校验资源已注册、路径不越界且文件存在。"""
@@ -562,7 +569,9 @@ class RendererManager:
         # 资源依赖检查
         missing = [rid for rid in registration.resource_ids if rid not in self.resources]
         if missing:
-            raise ExtensionError(f'template {registration.extension_id} declares unregistered resource extensions: {missing}')
+            raise ExtensionError(
+                f'template {registration.extension_id} declares unregistered resource extensions: {missing}'
+            )
         # 解析渲染引擎：先激活，供资源包装转换使用
         renderer_name = renderer or config.image.renderer
         active_renderer = self._active.get(renderer_name)
@@ -600,7 +609,9 @@ class RendererManager:
         user_context = encode_context(self._resolve_assets(raw_user_context, active_renderer))
         conflicts = _RESERVED_CONTEXT_KEYS & set(user_context)
         if conflicts:
-            raise ExtensionError(f'template {registration.extension_id} uses reserved context names: {sorted(conflicts)}')
+            raise ExtensionError(
+                f'template {registration.extension_id} uses reserved context names: {sorted(conflicts)}'
+            )
         # 字体链接同样经渲染器处理（如 playwright 需 file:// 前缀）
         font_path = self._resolve_font_path()
         font_uri = (
@@ -617,7 +628,9 @@ class RendererManager:
         try:
             html_template = environment.get_template(f'{template}/{template}.html')
         except TemplateNotFound as error:
-            raise ExtensionError(f'template {registration.extension_id} does not contain template: {template}') from error
+            raise ExtensionError(
+                f'template {registration.extension_id} does not contain template: {template}'
+            ) from error
         css_task = self._load_style(environment, template, **merged)
         html_content, css_content = await asyncio.gather(
             html_template.render_async(**merged),

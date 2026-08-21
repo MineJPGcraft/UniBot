@@ -13,7 +13,6 @@ dependencies = [
     "nonebot-adapter-minecraft>=1.8.2",
     "nonebot-plugin-alconna>=0.62.0",
     "nonebot-plugin-uninfo>=0.11.0",
-    "nonebot-adapter-onebot>=2.4.6",
 ]
 
 [project.optional-dependencies]
@@ -23,7 +22,7 @@ webui = [
     "bcrypt>=4.0.0",
     "qrcode[pil]>=7.4",
 ]
-extensions = ["playwright"]
+extensions = []
 
 [dependency-groups]
 dev = [
@@ -65,10 +64,3 @@ plugins = [
 [[tool.nonebot.adapters]]
 name = "Minecraft"
 module_name = "nonebot.adapters.minecraft"
-
-[[tool.nonebot.adapters]]
-name = "OneBot V11"
-module_name = "nonebot.adapters.onebot.v11"
-[[tool.nonebot.adapters]]
-name = "QQ"
-module_name = "nonebot.adapters.qq"

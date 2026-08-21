@@ -139,7 +139,9 @@ class ExtensionMarketManager:
         if expected_sha256:
             actual = hashlib.sha256(archive_data).hexdigest()
             if actual.lower() != expected_sha256.lower():
-                raise ManifestError(f'Extension package SHA-256 verification failed (expected {expected_sha256}, got {actual})!')
+                raise ManifestError(
+                    f'Extension package SHA-256 verification failed (expected {expected_sha256}, got {actual})!'
+                )
         return archive_data
 
     # ===== 安装事务 =====
@@ -229,7 +231,9 @@ class ExtensionMarketManager:
         try:
             specifier = SpecifierSet(constraint)
         except Exception as error:
-            raise ManifestError(f'Extension {extension_id} has invalid version constraint: {constraint} ({error})') from error
+            raise ManifestError(
+                f'Extension {extension_id} has invalid version constraint: {constraint} ({error})'
+            ) from error
         current_version = get_unibot_version()
         if current_version and current_version not in specifier:
             raise ManifestError(f'Extension {extension_id} requires UniBot {constraint}, current is {current_version}!')

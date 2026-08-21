@@ -132,7 +132,9 @@ def run() -> None:
             restart_attempts = 0
 
         if restart_attempts >= MAX_RESTART_ATTEMPTS:
-            logger.error(f'Bot retried {MAX_RESTART_ATTEMPTS} times within {RESTART_WINDOW_SECONDS}s, giving up restarting.')
+            logger.error(
+                f'Bot retried {MAX_RESTART_ATTEMPTS} times within {RESTART_WINDOW_SECONDS}s, giving up restarting.'
+            )
             raise SystemExit(exit_code)
 
         restart_attempts += 1

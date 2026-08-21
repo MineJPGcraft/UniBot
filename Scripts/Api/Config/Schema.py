@@ -257,8 +257,7 @@ ENV_SCHEMA = [
         'label': 'QQ 机器人',
         'type': 'json',
         'default': [],
-        'description': 'QQ 开放平台官方机器人列表；每个机器人需配置 AppID、Secret，'
-        '并按需订阅事件（Intent）。使用 WebHook 连接时在开放平台配置回调地址。',
+        'description': 'QQ 开放平台官方机器人列表；每个机器人需配置 AppID、Secret，并按需订阅事件（Intent）。使用 WebHook 连接时在开放平台配置回调地址。',
         'form': {
             'kind': 'array',
             'item_title': '机器人',
@@ -321,8 +320,7 @@ ENV_SCHEMA = [
         'label': 'Telegram 机器人',
         'type': 'json',
         'default': [],
-        'description': 'Telegram 机器人列表；Token 向 @BotFather 申请（必填）。'
-        '默认使用 Long Polling 长轮询，开启 Webhook 需配合公网 HTTPS 地址。',
+        'description': 'Telegram 机器人列表；Token 向 @BotFather 申请（必填）。默认使用 Long Polling 长轮询，开启 Webhook 需配合公网 HTTPS 地址。',
         'form': {
             'kind': 'array',
             'item_title': '机器人',
@@ -365,8 +363,7 @@ ENV_SCHEMA = [
         'label': 'Discord 机器人',
         'type': 'json',
         'default': [],
-        'description': 'Discord 机器人列表；每个机器人需 Bot Token，并按需订阅事件（Intent）。'
-        'message_content 为特权 Intent，需在开发者平台开启。',
+        'description': 'Discord 机器人列表；每个机器人需 Bot Token，并按需订阅事件（Intent）。message_content 为特权 Intent，需在开发者平台开启。',
         'form': {
             'kind': 'array',
             'item_title': '机器人',
@@ -464,8 +461,7 @@ ENV_SCHEMA = [
         'label': 'DoDo 机器人',
         'type': 'json',
         'default': [],
-        'description': 'DoDo 开放平台机器人列表（仅支持 WebSocket 连接）；'
-        '在开放平台创建机器人获取 client_id 与 token。',
+        'description': 'DoDo 开放平台机器人列表（仅支持 WebSocket 连接）；在开放平台创建机器人获取 client_id 与 token。',
         'form': {
             'kind': 'array',
             'item_title': '机器人',

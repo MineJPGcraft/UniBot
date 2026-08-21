@@ -51,18 +51,18 @@ QR_LANDING_PATH = '/qqbot/openclaw/connect.html'
 CREATE_BIND_TASK_PATH = '/lite/create_bind_task'
 POLL_BIND_RESULT_PATH = '/lite/poll_bind_result'
 
-DEFAULT_HTTP_TIMEOUT = 10.0          # 单次 HTTP 请求超时（秒）
-DEFAULT_POLL_INTERVAL = 2.0          # 轮询间隔（秒）—— 与官方 SDK 保持一致
+DEFAULT_HTTP_TIMEOUT = 10.0  # 单次 HTTP 请求超时（秒）
+DEFAULT_POLL_INTERVAL = 2.0  # 轮询间隔（秒）—— 与官方 SDK 保持一致
 DEFAULT_HTTP_PER_REQUEST_TIMEOUT = 10  # 与 SDK 一致（10s）
 
 
 class BindStatus(IntEnum):
     """poll_bind_result.data.status 枚举"""
 
-    NONE = 0       # 未知/初始
-    PENDING = 1    # 已生成二维码，等待扫码 / 已扫码等待确认
+    NONE = 0  # 未知/初始
+    PENDING = 1  # 已生成二维码，等待扫码 / 已扫码等待确认
     COMPLETED = 2  # 用户确认完成
-    EXPIRED = 3    # 二维码过期
+    EXPIRED = 3  # 二维码过期
 
 
 # --------------------------------------------------------------------------- #
@@ -170,8 +170,7 @@ class QQBotConnector:
     def _client_or_raise(self) -> httpx.AsyncClient:
         if self._client is None:
             raise RuntimeError(
-                'QQBotConnector client not initialized, use `async with QQBotConnector() as c:`'
-                ' or pass client= explicitly'
+                'QQBotConnector client not initialized, use `async with QQBotConnector() as c:` or pass client= explicitly'
             )
         return self._client
 
@@ -247,12 +246,7 @@ class QQBotConnector:
         """
         from urllib.parse import quote
 
-        return (
-            f"https://{QR_LANDING_HOST}{QR_LANDING_PATH}"
-            f"?task_id={quote(task_id, safe='')}"
-            f"&source={quote(source, safe='')}"
-            f"&_wv=2"
-        )
+        return f'https://{QR_LANDING_HOST}{QR_LANDING_PATH}?task_id={quote(task_id, safe="")}&source={quote(source, safe="")}&_wv=2'
 
     @staticmethod
     def decrypt_secret(encrypted_base64: str, key_base64: str) -> str:
@@ -357,9 +351,7 @@ async def qr_login(
 
                 logger.info('QQ QR code login: scan the QR code with your phone QQ to complete binding')
                 logger.info(f'QR code link: {qr_url}')
-                yield QrLoginState(
-                    state='pending', qr_url=qr_url, qr_image=qr_image_data_url(qr_url)
-                )
+                yield QrLoginState(state='pending', qr_url=qr_url, qr_image=qr_image_data_url(qr_url))
 
                 outcome = await _poll_until_settled(
                     connector,
@@ -415,9 +407,7 @@ async def _poll_until_settled(
             if not result.bot_app_id or not result.bot_encrypt_secret:
                 # 后端异常，重新发起
                 return None
-            app_secret = QQBotConnector.decrypt_secret(
-                result.bot_encrypt_secret, task.key_base64
-            )
+            app_secret = QQBotConnector.decrypt_secret(result.bot_encrypt_secret, task.key_base64)
             return QrConnectCredentials(
                 app_id=result.bot_app_id,
                 app_secret=app_secret,
@@ -433,9 +423,7 @@ async def _poll_until_settled(
     raise QrConnectCancelled('用户取消')
 
 
-async def _sleep_or_cancel(
-    seconds: float, cancel_event: asyncio.Event | None
-) -> None:
+async def _sleep_or_cancel(seconds: float, cancel_event: asyncio.Event | None) -> None:
     """等待指定秒数，期间若收到取消信号则抛出 QrConnectCancelled。"""
     if cancel_event is None:
         await asyncio.sleep(seconds)
@@ -570,9 +558,7 @@ def _save_credentials_to_env(app_id: str, app_secret: str) -> None:
     config_manager.update_env({'QQ_BOTS': bots})
 
 
-async def _run_login(
-    state: QrLoginState, cancel_event: asyncio.Event, source: str, env: str
-) -> None:
+async def _run_login(state: QrLoginState, cancel_event: asyncio.Event, source: str, env: str) -> None:
     """驱动后台扫码登录，生成器产出的每个状态写入 state。"""
     try:
         async for snapshot in qr_login(

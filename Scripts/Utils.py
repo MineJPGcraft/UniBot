@@ -139,5 +139,7 @@ def _validate_archive(zip_file: ZipFile) -> None:
         if not info.is_dir():
             total_size += info.file_size
             if total_size > MAX_ARCHIVE_TOTAL:
-                raise ArchiveError(f'Archive is too large after extraction (exceeds {MAX_ARCHIVE_TOTAL // (1024 * 1024)} MB), rejected!')
+                raise ArchiveError(
+                    f'Archive is too large after extraction (exceeds {MAX_ARCHIVE_TOTAL // (1024 * 1024)} MB), rejected!'
+                )
     logger.debug(f'Archive validation passed: {len(infos)} files, about {total_size} bytes.')

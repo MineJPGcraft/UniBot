@@ -152,9 +152,7 @@ def test_qr_login_generator_cancel_yields_cancelled():
             return_value=connector,
         ):
             states = []
-            async for state in qr_login(
-                source='test', env='production', cancel_event=cancel_event
-            ):
+            async for state in qr_login(source='test', env='production', cancel_event=cancel_event):
                 states.append(state)
 
         assert len(states) == 1
