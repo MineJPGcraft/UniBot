@@ -11,7 +11,7 @@ UniBot's commands are parsed with [Alconna](https://github.com/ArcletProject/Alc
 |------|------|------|
 | `/list` | Query online players on all servers | All users |
 | `/server` | View the list of currently connected servers | All users |
-| `/luck` | Daily fortune fortune-telling (for entertainment only) | All users |
+| `/luck` | Daily fortune fortune-telling / fortune ranking (for entertainment only) | All users |
 | `/send` | Send a message into the game | All users |
 | `/command` | Execute Minecraft commands remotely | <Badge type="danger" text="Admin" /> |
 | `/bound` | Bind / unbind / query game whitelist | All users |
@@ -43,11 +43,16 @@ View the list and status of currently connected servers.
 
 ### `/luck` — Daily Fortune
 
-Daily fortune fortune-telling, for entertainment only.
+Daily fortune fortune-telling, for entertainment only; the `rank` subcommand shows today's fortune leaderboard.
 
 ```
-/luck
+/luck              # View today's fortune
+/luck rank         # View today's fortune leaderboard
 ```
+
+- The result is derived from a seed based on the date, group, and user ID, so repeated queries on the same day return the same result.
+- The leaderboard only counts players with a bound whitelist, sorted by fortune score from high to low, and resets automatically each day.
+- When image mode is enabled, a fortune card / leaderboard image is rendered.
 
 ### `/send` — Send Message
 

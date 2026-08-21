@@ -68,11 +68,7 @@ Both forms produce exactly the same runtime contract. It is recommended to creat
 
 Suitable for simple commands; a single file is enough:
 
-```file-tree
-Extensions/Hello.py
-```
-
-```python
+```python title="Extensions/Hello.py"
 from Scripts.Extensions import Command, Extension
 
 extension = Extension(id='Hello', name='你好', version='1.0.0', types=('command',))
@@ -93,25 +89,15 @@ The `extension.id` of a single-file extension must match the file name. Single-f
 
 Suitable for complete extensions with multiple modules, configuration, and dependencies:
 
-```file-tree
-Extensions/WeatherExt/
-├── Extension.toml      # Manifest (required)
-├── __init__.py         # Entry point (required)
-├── Commands.py         # Command definitions (optional)
-├── Services.py         # Service definitions (optional)
-└── ...                 # Other modules
-```
-
-The directory name of a directory extension must match `extension.id` exactly (including case). The entry point is fixed at `__init__.py`; if a capability module uses decorators, it should be imported after the `extension` is created, and obtain the instance via `from . import extension`:
-
-```python
-# Extensions/WeatherExt/__init__.py
+```python title="Extensions/WeatherExt/__init__.py"
 from Scripts.Extensions import Extension
 
 extension = Extension()
 
 from . import Commands, Services  # noqa: E402,F401
 ```
+
+The directory name of a directory extension must match `extension.id` exactly (including case). The entry point is fixed at `__init__.py`; if a capability module uses decorators, it should be imported after the `extension` is created, and obtain the instance via `from . import extension`:
 
 > This import order is part of the entry contract: create `extension` first, then import the capability modules that use it.
 
@@ -450,14 +436,8 @@ Extension id `Servers`; encapsulates server query, command execution, and messag
 
 A complete directory extension example demonstrating how to combine built-in services in a command:
 
-```file-tree
-Extensions/BroadcastExt/
-├── Extension.toml
-└── __init__.py
-```
-
-```toml
-# Extensions/BroadcastExt/Extension.toml
+::: code-tree title="Broadcast Extension" height="400px" entry="Extensions/BroadcastExt/__init__.py"
+```toml title="Extensions/BroadcastExt/Extension.toml"
 [manifest]
 schema_version = 1
 
@@ -468,8 +448,7 @@ version = "1.0.0"
 types = ["command"]
 ```
 
-```python
-# Extensions/BroadcastExt/__init__.py
+```python title="Extensions/BroadcastExt/__init__.py"
 from Scripts.Extensions import Command, Extension, SubCommand
 from Scripts.Extensions.Builtin.Services.Servers import ServerService
 
@@ -512,6 +491,7 @@ class BroadcastCommand(Command):
             results = await server_service.execute(' '.join(command.result))
             return '\n'.join(f'[{name}] {result or "执行失败"}' for name, result in results.items())
 ```
+:::
 
 Key points:
 
@@ -744,7 +724,7 @@ UniBot ships 8 command extensions with the framework; all are ordinary `Command`
 | `Command` | `CommandCommand` | `/command` | `builtin:command` | Send console commands to a specific server |
 | `Help` | `HelpCommand` | `/help` | `builtin:help` | Command help |
 | `List` | `ListCommand` | `/list` | `builtin:list` | Online player list |
-| `Luck` | `LuckCommand` | `/luck` | `builtin:luck` | Daily fortune |
+| `Luck` | `LuckCommand` | `/luck [rank]` | `builtin:luck` | Daily fortune / fortune ranking |
 | `Send` | `SendCommand` | `/send` | `builtin:send` | Send a message to a server |
 | `Server` | `ServerCommand` | `/server` | `builtin:server` | Server list |
 :::

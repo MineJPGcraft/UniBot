@@ -64,7 +64,7 @@ The rendering system consists of three mutually independent parts that can be fr
 |------|----------|
 | `/list` | Online player list (including player avatars) |
 | `/server` | Server connection status |
-| `/luck` | Daily fortune card |
+| `/luck` / `/luck rank` | Daily fortune card / fortune leaderboard |
 | `/bound` | Whitelist binding information |
 | `/help` | Help information |
 | `/bot about` | About page |

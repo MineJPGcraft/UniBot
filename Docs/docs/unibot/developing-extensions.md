@@ -68,11 +68,7 @@ extension = WeatherExtension()
 
 适合简单指令，一个文件即可：
 
-```file-tree
-Extensions/Hello.py
-```
-
-```python
+```python title="Extensions/Hello.py"
 from Scripts.Extensions import Command, Extension
 
 extension = Extension(id='Hello', name='你好', version='1.0.0', types=('command',))
@@ -93,25 +89,15 @@ class HelloCommand(Command):
 
 适合多模块、含配置与依赖的完整扩展：
 
-```file-tree
-Extensions/WeatherExt/
-├── Extension.toml      # 清单（必填）
-├── __init__.py         # 入口（必填）
-├── Commands.py         # 指令定义（可选）
-├── Services.py         # 服务定义（可选）
-└── ...                 # 其它模块
-```
-
-目录型扩展的目录名与 `extension.id` 必须完全一致（含大小写）。入口固定为 `__init__.py`；能力模块若使用装饰器，应在 `extension` 创建之后导入，并通过 `from . import extension` 获取实例：
-
-```python
-# Extensions/WeatherExt/__init__.py
+```python title="Extensions/WeatherExt/__init__.py"
 from Scripts.Extensions import Extension
 
 extension = Extension()
 
 from . import Commands, Services  # noqa: E402,F401
 ```
+
+目录型扩展的目录名与 `extension.id` 必须完全一致（含大小写）。入口固定为 `__init__.py`；能力模块若使用装饰器，应在 `extension` 创建之后导入，并通过 `from . import extension` 获取实例：
 
 > 这条导入顺序是入口契约的一部分：先创建 `extension`，再导入使用它的能力模块。
 
@@ -450,14 +436,9 @@ if player_service is None:
 
 一个完整的目录型扩展示例，演示如何在命令中组合使用内置服务：
 
-```file-tree
-Extensions/BroadcastExt/
-├── Extension.toml
-└── __init__.py
-```
+::: code-tree title="广播扩展" height="400px"
 
-```toml
-# Extensions/BroadcastExt/Extension.toml
+```toml title="Extensions/Broadcast/Extension.toml"
 [manifest]
 schema_version = 1
 
@@ -468,8 +449,7 @@ version = "1.0.0"
 types = ["command"]
 ```
 
-```python
-# Extensions/BroadcastExt/__init__.py
+```python title="Extensions/Broadcast/__init__.py" :active
 from Scripts.Extensions import Command, Extension, SubCommand
 from Scripts.Extensions.Builtin.Services.Servers import ServerService
 
@@ -512,6 +492,8 @@ class BroadcastCommand(Command):
             results = await server_service.execute(' '.join(command.result))
             return '\n'.join(f'[{name}] {result or "执行失败"}' for name, result in results.items())
 ```
+
+:::
 
 要点：
 
@@ -744,7 +726,7 @@ UniBot 随框架内置 8 个命令扩展，全部都是普通 `Command` 类，==
 | `Command` | `CommandCommand` | `/command` | `builtin:command` | 向指定服务器发送控制台命令 |
 | `Help` | `HelpCommand` | `/help` | `builtin:help` | 命令帮助 |
 | `List` | `ListCommand` | `/list` | `builtin:list` | 在线玩家列表 |
-| `Luck` | `LuckCommand` | `/luck` | `builtin:luck` | 今日人品 |
+| `Luck` | `LuckCommand` | `/luck [rank]` | `builtin:luck` | 今日人品 / 运势排行 |
 | `Send` | `SendCommand` | `/send` | `builtin:send` | 向服务器发送消息 |
 | `Server` | `ServerCommand` | `/server` | `builtin:server` | 服务器列表 |
 :::

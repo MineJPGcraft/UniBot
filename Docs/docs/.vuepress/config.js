@@ -49,6 +49,8 @@ export default defineUserConfig({
       abbr: true,
       // 隐秘文本
       plot: true,
+      // 代码树：::: code-tree（文件树 + 代码块合并展示）
+      codeTree: true,
     },
 
     social: [
