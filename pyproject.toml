@@ -22,7 +22,7 @@ webui = [
     "bcrypt>=4.0.0",
     "qrcode[pil]>=7.4",
 ]
-extensions = []
+extensions = ["playwright"]
 
 [dependency-groups]
 dev = [

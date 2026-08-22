@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from Scripts.Config import config, reload_config
 from Scripts.Extensions import EXTENSIONS_DIR, ExtensionType, extension_manager, market_manager
 from Scripts.Managers import config_manager
+from Scripts.Managers.Studio import studio_manager
 
 from .Auth import get_current_user, require_role
 
@@ -102,6 +103,35 @@ async def get_image_requirements(current_user: dict = Depends(get_current_user))
         },
         'message': 'ok',
     }
+
+
+@router.get('/studio', summary='Extension Studio 状态')
+async def get_studio_status(current_user: dict = Depends(get_current_user)):
+    """返回 Extension Studio 的下载与运行状态。"""
+    return {'code': 0, 'data': studio_manager.status(), 'message': 'ok'}
+
+
+@router.post('/studio/launch', summary='下载并启动 Extension Studio')
+async def launch_studio(user: dict = Depends(require_role('admin'))):
+    """确保 Studio 已下载到 .studio 目录，随后启动（数据目录 .studio，UniBot 目录为根）。"""
+    success, message = await studio_manager.ensure_downloaded()
+    if not success:
+        return {'code': 1, 'data': None, 'message': message}
+    success, message = await studio_manager.launch()
+    return {'code': 0 if success else 1, 'data': {'url': message if success and message.startswith('http') else ''}, 'message': message}
+
+
+@router.post('/studio/stop', summary='停止 Extension Studio')
+async def stop_studio(user: dict = Depends(require_role('admin'))):
+    """停止 Studio 进程并清理状态文件。"""
+    success, message = studio_manager.stop()
+    return {'code': 0 if success else 1, 'data': None, 'message': message}
+
+
+@router.get('/studio/log', summary='Extension Studio 日志')
+async def get_studio_log(tail: int = 200, current_user: dict = Depends(get_current_user)):
+    """返回 Studio 进程日志（默认末尾 200 行）。"""
+    return {'code': 0, 'data': {'content': studio_manager.read_log(tail=tail)}, 'message': 'ok'}
 
 
 @router.get('/items/{extension_id}', summary='扩展详情与配置 schema')

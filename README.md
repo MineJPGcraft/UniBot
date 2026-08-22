@@ -51,14 +51,18 @@
 
 ### *Introduction*
 
-* **Minecraft UniBot** is a cross-platform chat bot built on [NoneBot2](https://nonebot.dev/). It connects to Minecraft servers via the [QueQiao](https://github.com/17TheWord/QueQiao) protocol, seamlessly bridging Minecraft with your chat world.*
+<i>
 
-- * **Truly cross‑platform** – Not just QQ, but also Telegram, Discord, Kook, QQ Guilds, and more – a single set of commands works everywhere.*
-- * **Multi‑server interconnection** – Connect to multiple Minecraft servers at the same time, with zero‑latency messaging between them.*
-- * **Full server compatibility** – Supports all major server types, including Fabric, Forge, Spigot, Paper, and even Bedrock editions – plug and play.*
-- * **Extension system** – Five kinds of extensions: commands, services, rendering engines, templates, and resources. All are plug‑and‑play, with automatic isolation if any fails.*
-- * **WebUI management panel** – A modern admin interface featuring visual configuration, real‑time monitoring, and log viewing – ready out of the box.*
-- * **Image rendering mode** – Renders command outputs as beautifully styled images, with full support for custom backgrounds.*
+**Minecraft UniBot** is a cross-platform chat bot built on [NoneBot2](https://nonebot.dev/). It connects to Minecraft servers via the [QueQiao](https://github.com/17TheWord/QueQiao) protocol, seamlessly bridging Minecraft with your chat world.
+
+- **Truly cross‑platform** – Not just QQ, but also Telegram, Discord, Kook, QQ Guilds, and more – a single set of commands works everywhere.
+- **Multi‑server interconnection** – Connect to multiple Minecraft servers at the same time, with zero‑latency messaging between them.
+- **Full server compatibility** – Supports all major server types, including Fabric, Forge, Spigot, Paper, and even Bedrock editions – plug and play.
+- **Extension system** – Five kinds of extensions: commands, services, rendering engines, templates, and resources. All are plug‑and‑play, with automatic isolation if any fails.
+- **WebUI management panel** – A modern admin interface featuring visual configuration, real‑time monitoring, and log viewing – ready out of the box.
+- **Image rendering mode** – Renders command outputs as beautifully styled images, with full support for custom backgrounds.
+
+</i>
 
 ## 📸 效果展示
 
