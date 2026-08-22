@@ -74,13 +74,18 @@ def console_format(record: Record) -> str:
     """控制台日志格式：时间、级别、模块名渲染（接近 NoneBot 默认风格）。"""
     # NoneBot init() 期间内置 patcher 会把模块名截断为小写 nonebot，这里兜底统一
     name = 'NoneBot' if record['name'] == 'nonebot' else record['name']
-    return f'<dim>{{time:MM-DD HH:mm:ss}}</dim> [<lvl>{{level}}</lvl>] <light-cyan><u>{name}</u></light-cyan> | {{message}}\n'
+    # 函数格式不会像字符串格式那样自动追加异常占位符，必须显式包含 {exception}，
+    # 否则带堆栈的日志（如 uvicorn 的 Exception in ASGI application）只输出消息行
+    return (
+        f'<dim>{{time:MM-DD HH:mm:ss}}</dim> [<lvl>{{level}}</lvl>] '
+        f'<light-cyan><u>{name}</u></light-cyan> | {{message}}\n{{exception}}'
+    )
 
 
 def file_format(record: Record) -> str:
     """文件日志格式：无色彩，保留模块定位信息。"""
     name = 'NoneBot' if record['name'] == 'nonebot' else record['name']
-    return f'{{time:MM-DD HH:mm:ss}} [{{level}}] {name} | {{message}}\n'
+    return f'{{time:MM-DD HH:mm:ss}} [{{level}}] {name} | {{message}}\n{{exception}}'
 
 
 def setup_level_colors() -> None:

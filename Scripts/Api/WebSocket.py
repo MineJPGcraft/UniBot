@@ -47,8 +47,9 @@ def log_sink(message):
         'time': datetime.fromtimestamp(record['time'].timestamp()).strftime('%H:%M:%S.%f')[:-3],
         'message': record['message'],
         'module': record['name'],
-        # 完整 ANSI 彩色行（含级别/模块名/消息内着色），前端解析渲染
-        'ansi': str(message),
+        # 完整 ANSI 彩色行（含级别/模块名/消息内着色），前端解析渲染；
+        # 去掉格式模板自带的尾部换行，避免前端 pre-wrap 渲染出空行
+        'ansi': str(message).rstrip('\n'),
     }
     log_cache.append(log_data)
     if len(log_cache) > LOG_CACHE_SIZE:
