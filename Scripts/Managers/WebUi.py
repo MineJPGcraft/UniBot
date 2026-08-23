@@ -57,7 +57,7 @@ class WebUiManager:
             if self.webui_dir.exists():
                 await asyncio.to_thread(shutil.rmtree, self.webui_dir)
             self.webui_dir.mkdir(parents=True, exist_ok=True)
-            await asyncio.to_thread(safe_extract_zip, response, self.webui_dir)
+            await asyncio.to_thread(safe_extract_zip, response.getvalue(), self.webui_dir)
             self.version_file.write_text(self.version, encoding='Utf-8')
         except Exception as error:
             logger.warning(f'Failed to extract WebUI static assets: {error}')
