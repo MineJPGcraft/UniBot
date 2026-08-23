@@ -45,12 +45,12 @@ class WebUiManager:
             logger.warning('No WebUI version configured, skipping download.')
             return False
         if self.is_ready():
-            logger.info(f'WebUI static assets ready (v{self.version}).')
+            logger.info(f'WebUI static assets ready ({self.version}).')
             return True
-        logger.info(f'Downloading WebUI static assets (v{self.version})...')
+        logger.info(f'Downloading WebUI static assets ({self.version})...')
         url = f'https://github.com/MineJPGcraft/UniBot.WebUi/releases/download/{self.version}/WebUi.zip'
         if not (response := await github_download(url)):
-            logger.warning(f'Failed to download WebUI (v{self.version}), check your network and retry later.')
+            logger.warning(f'Failed to download WebUI ({self.version}), check your network and retry later.')
             return False
         try:
             # 清理旧目录与解压属于重 IO，放入线程执行避免阻塞事件循环

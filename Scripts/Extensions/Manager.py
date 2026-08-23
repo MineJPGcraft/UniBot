@@ -6,7 +6,7 @@ import tomlkit
 
 from Scripts.Config import config
 from Scripts.Constants import CONFIG_EXTENSIONS_FILE
-from Scripts.Logging import logger
+from Scripts.Logging import exception_logger, logger
 
 from . import (
     Extension,
@@ -60,7 +60,7 @@ class ExtensionManager:
         self.loader.load()
 
     async def start(self) -> None:
-        """按拓扑顺序调用 on_load 与 on_enable，失败时回滚已启用扩展。"""
+        """按拓扑顺序调用 on_load 与 on_enable，失败时回滚已启用扩展；渲染引擎失败仅降级图片功能。"""
         for extension in self.loader.extensions:
             if extension.state is not ExtensionState.loaded:
                 continue
@@ -73,9 +73,14 @@ class ExtensionManager:
                 extension.mark_failed(str(error))
                 await self._disable_extension(extension)
                 await self._rollback(extension)
-        # 图片模式开启时才初始化配置的渲染引擎
+        # 图片模式开启时才初始化配置的渲染引擎；初始化失败仅降级图片功能，不阻断启动
         if config.image.mode:
-            await self.renderer_manager.setup(config.image.renderer)
+            try:
+                await self.renderer_manager.setup(config.image.renderer)
+            except Exception as error:
+                exception_logger.error(
+                    f'Render engine setup failed, image output has been disabled automatically: {error}'
+                )
         logger.success('All extensions started.')
 
     async def _rollback(self, failed_extension: Extension) -> None:

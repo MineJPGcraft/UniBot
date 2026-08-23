@@ -157,6 +157,21 @@ class TestLifecycle:
         # rollback disables already-enabled extensions
         assert good.disabled is True
 
+    def test_renderer_setup_failure_degrades_not_crash(self, monkeypatch):
+        """渲染引擎初始化失败仅降级图片功能，不阻断扩展启动。"""
+        from Scripts.Config import config as app_config
+
+        async def _boom(name: str):
+            raise RuntimeError('尚未选择浏览器内核')
+
+        monkeypatch.setattr(app_config.image, 'mode', True)
+        monkeypatch.setattr(extension_manager.renderer_manager, 'setup', _boom)
+        ext = _GoodExt('Render')
+        ext.state = ExtensionState.loaded
+        extension_manager.loader.extensions = [ext]
+        asyncio.run(extension_manager.start())
+        assert ext.state is ExtensionState.enabled
+
     def test_shutdown_disables_in_reverse_order(self):
         a = _GoodExt('A')
         b = _GoodExt('B')
