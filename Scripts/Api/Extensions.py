@@ -116,7 +116,11 @@ async def launch_studio(user: dict = Depends(require_role('admin'))):
     if not success:
         return {'code': 1, 'data': None, 'message': message}
     success, message = await studio_manager.launch()
-    return {'code': 0 if success else 1, 'data': {'url': message if success and message.startswith('http') else ''}, 'message': message}
+    return {
+        'code': 0 if success else 1,
+        'data': {'url': message if success and message.startswith('http') else ''},
+        'message': message,
+    }
 
 
 @router.post('/studio/stop', summary='停止 Extension Studio')

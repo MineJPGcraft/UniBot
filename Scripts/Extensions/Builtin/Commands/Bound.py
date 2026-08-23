@@ -168,9 +168,7 @@ class BoundCommand(Command):
         async def handler(self, session: Uninfo, user_id: At | str, player: str):
             if not get_permission(session):
                 return messages.commands.bound.no_permission
-            return await self.append_handler(
-                user_id.target if isinstance(user_id, At) else user_id, player
-            )
+            return await self.append_handler(user_id.target if isinstance(user_id, At) else user_id, player)
 
         async def append_handler(self, target_user: str, player: str):
             """为指定用户添加玩家绑定。"""

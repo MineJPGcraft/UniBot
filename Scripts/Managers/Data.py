@@ -38,7 +38,7 @@ class DataManager:
             except Exception:
                 logger.warning('User data file is corrupted, falling back to empty data.')
                 stored_data = {}
-        self.users = stored_data['users']
+        self.users = stored_data.get('users') or {}
         self.revoked_tokens = stored_data.get('revoked_tokens') or {}
         # 生成或加载 JWT 签名密钥
         self.secret_key = self.load_secret_key()

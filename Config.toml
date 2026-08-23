@@ -69,7 +69,7 @@ qq_bound_max_number = 1
 [webui]
 # 是否启用 WebUI 管理面板。
 # 启用后将在机器人端口上挂载 Web API 与 WebSocket，配合 WebUi 前端使用。
-enabled = false
+enabled = true
 
 [image]
 # 是否启用图片模式。

@@ -38,7 +38,7 @@ class VersionManager:
         async with self._notify_lock:
             if self.notified_version == self.latest_version:
                 return
-            
+
             # 函数内导入：本模块位于插件加载前的早期导入链，禁止顶层引入插件托管包（alconna / uninfo）
             from Scripts.Utils import send_message_to_groups
 

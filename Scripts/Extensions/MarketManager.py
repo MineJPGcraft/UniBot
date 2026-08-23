@@ -157,9 +157,7 @@ class ExtensionMarketManager:
         try:
             archive_data = await self._download_release(release.asset_url, release.sha256)
             # 安装事务：解压到临时目录，校验清单后原子替换（重 IO 放入线程，避免阻塞事件循环）
-            success, message = await asyncio.to_thread(
-                self._install_transaction, extension_id, archive_data, release
-            )
+            success, message = await asyncio.to_thread(self._install_transaction, extension_id, archive_data, release)
             if not success:
                 return False, message
             # 记录安装状态（来源/版本/sha256/依赖归属）

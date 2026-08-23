@@ -54,7 +54,7 @@ async def shutdown() -> None:
     if config.webui.enabled:
         from Scripts.Api.Limiter import rate_limiter
         from Scripts.Managers.Data import data_manager
-        
+
         rate_limiter.stop()
         await data_manager.save()
 
