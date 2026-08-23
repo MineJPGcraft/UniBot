@@ -147,5 +147,6 @@ docker compose up -d
 
 - **机器人不响应指令？** 请检查 `COMMAND_START` 前缀、`command_groups` 中是否包含当前群，以及 `SUPERUSERS` 中是否包含你的账号。
 - **连不上服务器？** 请确认两端的 `access_token` 一致、WebSocket 地址与端口可达，并查看 MCDR 与机器人的日志。
+- **不会写代码，怎么给机器人加功能？** 使用内置 **AiStudio（创意工坊）**：在 WebUI 扩展管理页右上角点击「创意工坊」，即可自动下载并启动，用自然语言描述需求就能自动生成、校验并安装扩展。详见 [使用 AiStudio 零代码开发扩展](/unibot/developing-extensions.html#使用-aistudio-零代码开发扩展)。
 
 更多配置项，详见 *[配置指南](/guide/configuration.html)*。
