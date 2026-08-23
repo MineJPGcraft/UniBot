@@ -842,9 +842,22 @@ import AiStudioDownload from '../.vuepress/components/AiStudioDownload.vue'
 - **支持多种扩展类型**：除了常见的指令、服务类扩展，AiStudio 同样支持图片渲染模板、资源包等无代码扩展。
 - **安全与隐私**：AiStudio 在本地运行，所有数据保存在你自己的电脑上；AI 的操作被限制在独立的草稿工作区，涉及敏感操作会先征询你的确认，不会影响正在运行的机器人。
 
+#### 界面速览
+
+::: table title="界面速览" copy="all"
+| 场景 | 截图 |
+|------|------|
+| **草稿列表**：管理你的扩展草稿，继续开发或查看已发布项目 | ![草稿列表](/images/studio/dashboard.png) |
+| **新建扩展**：选择扩展类型、代码类型与目标 MC 服务器后创建 | ![新建扩展](/images/studio/server-referrance.png) |
+| **AI 规划**：动工前 AI 向你提问，确认需求方向 | ![AI 规划](/images/studio/ai-plan.png) |
+| **编码与自测**：AI 自动部署、运行测试并汇总结果 | ![编码与自测](/images/studio/ai-test.png) |
+| **模板开发**：可视化工作台实时展示 AI 的进度 | ![模板开发](/images/studio/template-develop.png) |
+| **模板预览**：发布前可放大预览模板渲染效果 | ![模板预览](/images/studio/template-preview.png) |
+:::
+
 #### 使用步骤
 
-1. **获取 AiStudio**：在上方表格中下载对应你系统的安装包（表格下方会自动识别你的系统与架构）。也可以直接在 UniBot WebUI 的扩展页面点击「开发扩展」按钮，由 UniBot 自动下载并启动。
+1. **获取 AiStudio**：在上方表格中下载对应你系统的安装包（表格下方会自动识别你的系统与架构）。也可以直接在 UniBot WebUI 的扩展页面点击右上角「创意工坊」按钮，由 UniBot 自动下载并启动。
 2. **打开工作台**：启动后，用浏览器打开 AiStudio 提供的访问地址，即可进入工作台。
 3. **描述需求**：用自然语言描述你想要的扩展，尽量说清楚功能与使用方式。
 4. **等待完成**：AiStudio 依次完成规划、编码、测试与校验，全程可在界面中查看进度。
