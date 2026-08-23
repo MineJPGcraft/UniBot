@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 
-from Scripts.Managers import data_manager
+from Scripts.Managers.Data import data_manager
 
 from .Auth import require_role
 from .Schemas import CreateUserRequest, ResetPasswordRequest, UpdateUserRequest

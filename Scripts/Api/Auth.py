@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from Scripts.Constants import DATA_DIR
 from Scripts.Logging import logger
-from Scripts.Managers import data_manager
+from Scripts.Managers.Data import data_manager
 
 from .Limiter import rate_limiter
 from .Schemas import (

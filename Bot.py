@@ -18,39 +18,45 @@ driver = nonebot.get_driver()
 
 @driver.on_startup
 async def startup() -> None:
-    from Scripts.Api.Limiter import rate_limiter
     from Scripts.Config import config
     from Scripts.Extensions import extension_manager
     from Scripts.Managers import (
-        data_manager,
         machine_manager,
         version_manager,
         webui_manager,
     )
 
-    data_manager.load()
     machine_manager.init()
 
     asyncio.create_task(version_manager.init())
     asyncio.create_task(machine_manager.register())
 
-    if config.webui.enabled:
-        await webui_manager.init()
-        rate_limiter.start()
-
     await extension_manager.start()
+
+    if config.webui.enabled:
+        from Scripts.Api.Limiter import rate_limiter
+        from Scripts.Managers.Data import data_manager
+
+        data_manager.load()
+        rate_limiter.start()
+        await webui_manager.init()
 
 
 @driver.on_shutdown
 async def shutdown() -> None:
-    from Scripts.Api.Limiter import rate_limiter
     from Scripts.Extensions import extension_manager
-    from Scripts.Managers import data_manager, machine_manager
+    from Scripts.Managers import machine_manager
+    from Scripts.Config import config
 
     await machine_manager.mark_offline()
     await extension_manager.shutdown()
-    rate_limiter.stop()
-    await data_manager.save()
+
+    if config.webui.enabled:
+        from Scripts.Api.Limiter import rate_limiter
+        from Scripts.Managers.Data import data_manager
+        
+        rate_limiter.stop()
+        await data_manager.save()
 
 
 def register_adapters(driver, adapters: list[dict]) -> None:
