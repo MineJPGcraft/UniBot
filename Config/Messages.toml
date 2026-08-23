@@ -127,5 +127,6 @@ rank_empty = "今天还没有人查看过运势哦~"
 [commands.server]
 # 服务器列表相关提示
 no_server = "当前没有已连接的服务器！"
-server_line = "[{index}] {name}"
+server_line = "[{index}] {name}（CPU {cpu_percent}% · 内存 {memory_percent}% · {memory_used:.0f}/{memory_max:.0f}MB）"
+server_offline_line = "[{index}] {name}（离线或状态查询失败）"
 

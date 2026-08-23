@@ -63,9 +63,9 @@ class LuckCommand(Command):
         seed_hash = md5(f'{date.today()} {scene_id} {user_id}'.encode())
         random.seed(seed := int(seed_hash.hexdigest(), 16))
         luck_point = random.randint(10, 100)
-        # 仅记录已绑定玩家的用户到排行，避免陌生人刷榜
-        if Globals.player_service and user_id in Globals.player_service.players:
-            record_luck(user_id, session.user.name or user_id, luck_point)
+        # 查询即记录排行：已绑定用户显示绑定玩家名，未绑定用户显示昵称
+        bound_players = Globals.player_service.players.get(user_id, []) if Globals.player_service else []
+        record_luck(user_id, bound_players[0] if bound_players else session.user.name or user_id, luck_point)
         tips = messages.commands.luck.tip_low
         if luck_point > 90:
             tips = messages.commands.luck.tip_max
@@ -107,7 +107,7 @@ class LuckCommand(Command):
             """渲染今日运势排行图片，返回 PNG 字节（由框架在图像模式发送）。"""
             # 查询排行时也记录当前用户今日人品
             self.parent.get_luck_data(session)
-            return await extension.render_image('Luck-Rank', (500, 0), context={'rank': self.get_rank_data()})
+            return await extension.render_image('Luck/Rank', (500, 0), context={'rank': self.get_rank_data()})
 
         def get_rank_data(self) -> list[dict[str, str | int]]:
             """返回今日运势排行数据（按人品值从高到低）。"""

@@ -425,20 +425,18 @@ class RendererManager:
                 data[field_name] = await environment.from_string(value).render_async(**data)
         return _wrap_readonly(copy.deepcopy(data))
 
-    def _load_style(self, environment: Environment, name: str, **context):
+    async def _load_style(self, environment: Environment, path: str, **context):
         """加载 base.css + 模板专属 css，并通过 Jinja2 异步渲染。"""
 
-        async def _render() -> str:
-            parts = []
-            for css_name in ('Base.css', f'{name}/{name}.css'):
-                try:
-                    template = environment.get_template(css_name)
-                    parts.append(await template.render_async(**context))
-                except TemplateNotFound:
-                    continue
-            return '\n'.join(parts)
-
-        return _render()
+        parts = []
+        name = path.split('/')[-1]
+        for css_name in ('Base.css', f'{path}/{name}.css'):
+            try:
+                template = environment.get_template(css_name)
+                parts.append(await template.render_async(**context))
+            except TemplateNotFound:
+                continue
+        return '\n'.join(parts)
 
     # ---------- 资源访问（模板可调用的资源函数） ----------
 
@@ -626,9 +624,10 @@ class RendererManager:
             'font_uri': font_uri,
         }
         merged = {**injected, **user_context}
+        template_name = template.split('/')[-1]
         # 渲染 HTML 与 CSS
         try:
-            html_template = environment.get_template(f'{template}/{template}.html')
+            html_template = environment.get_template(f'{template}/{template_name}.html')
         except TemplateNotFound as error:
             raise ExtensionError(
                 f'template {registration.extension_id} does not contain template: {template}'
