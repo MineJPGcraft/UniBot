@@ -52,6 +52,19 @@ def node_args(command: Command) -> list[dict]:
     ]
 
 
+def node_arg_rows(command: Command) -> list[dict]:
+    """提取命令全部参数的结构化行（含必填标记），供图片模板渲染。"""
+    return [
+        {
+            'name': argument.name,
+            'notice': argument.description,
+            'required': argument.required,
+            'required_text': '必填' if argument.required else '可选',
+        }
+        for argument in command.arguments
+    ]
+
+
 def _walk_subcommands(subcommands: list[Command], path_prefix: list[str], indent: str = '') -> list[str]:
     """递归展开子命令树为展示行（完整路径 + 嵌套子命令 + 参数描述）。"""
     lines: list[str] = []
@@ -69,6 +82,23 @@ def _walk_subcommands(subcommands: list[Command], path_prefix: list[str], indent
         if subcommand.subcommands:
             lines.extend(_walk_subcommands(subcommand.subcommands, path, f'{indent}{continuation}    '))
     return lines
+
+
+def _collect_subcommand_rows(subcommands: list[Command], path_prefix: list[str], depth: int = 0) -> list[dict]:
+    """递归收集子命令树为结构化行（完整路径用法、描述、层级与参数），供图片模板渲染。"""
+    rows: list[dict] = []
+    for subcommand in subcommands:
+        path = path_prefix + [subcommand.name]
+        rows.append(
+            {
+                'usage': gen_path_usage(path, subcommand),
+                'description': subcommand.description or '',
+                'depth': depth,
+                'args': [row for row in node_arg_rows(subcommand) if row['notice']],
+            }
+        )
+        rows.extend(_collect_subcommand_rows(subcommand.subcommands, path, depth + 1))
+    return rows
 
 
 @extension.register_command
@@ -108,7 +138,7 @@ class HelpCommand(Command):
                 {
                     'usage': usage,
                     'description': description,
-                    'subcommands': _walk_subcommands(command.subcommands, [command.name]),
+                    'subcommands': _collect_subcommand_rows(command.subcommands, [command.name]),
                 }
             )
         return commands
@@ -120,10 +150,11 @@ class HelpCommand(Command):
             return None
         return {
             'name': name,
+            'aliases': list(command.aliases),
             'usage': command.usage or gen_usage(command),
             'description': command.description or '',
-            'args': node_args(command),
-            'subcommands': _walk_subcommands(command.subcommands, [command.name]),
+            'args': node_arg_rows(command),
+            'subcommands': _collect_subcommand_rows(command.subcommands, [command.name]),
         }
 
     def help_handler(self):
