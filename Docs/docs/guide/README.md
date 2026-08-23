@@ -32,6 +32,12 @@
 → [了解 WebUI](/guide/webui.html)
 :::
 
+::: card title="图片渲染" icon="fluent-color:image-24"
+把指令输出渲染成精美的图片卡片，由渲染引擎、模板、资源扩展组合而成。
+
+→ [查看图片渲染](/guide/image-rendering.html)
+:::
+
 ::: card title="配置指南" icon="fluent-color:settings-24"
 需要深入调整配置？`.env` 与 `Config.toml` 全部配置项尽在其中。
 
@@ -61,6 +67,7 @@
 | [指令手册](/guide/command-reference.html) | 全部内置指令及用法 | 所有用户 |
 | [功能特性](/guide/features.html) | 群服互通、图片渲染、WebUI、扩展系统等能力 | 想了解全部能力的用户 |
 | [WebUI 管理面板](/guide/webui.html) | WebUI 各页面功能、启用方式与常见问题 | 使用 WebUI 的用户 |
+| [图片渲染](/guide/image-rendering.html) | 图片模式的启用、配置与外观调整 | 想用图片输出的用户 |
 | [配置指南](/guide/configuration.html) | `.env`、`Config.toml` 等全部配置项的详细说明 | 需要深入调整配置的用户 |
 :::
 

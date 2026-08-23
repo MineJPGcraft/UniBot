@@ -39,39 +39,11 @@ Through the `sync_sensitive_words` configuration, messages that hit a sensitive 
 
 ---
 
-## Image Rendering Mode
+## Image Rendering
 
-After setting `[image] mode` to ==`true`== in `Config.toml`, the bot's command output will be sent in **image** form.
+Image rendering sends the bot's command output as **images**, supporting commands such as list, fortune, and status. It is provided by **rendering engine**, **template**, and **resource** extensions.
 
-Image rendering is provided by ==**three types of extensions**== — rendering engine, template, and resource — all distributed as extensions via the **extension marketplace**. Install and combine them freely:
-
-::: table title="Rendering System Components" copy="all"
-| Component | Extension Type | Role |
-|------|---------|------|
-| **Rendering engine** | `renderer` extension | Renders a page into an image and determines the rendering implementation (e.g. Html2Pic) |
-| **Template** | `template` extension | Determines the layout and style of the image; each template is an image style that can be switched at any time |
-| **Resource** | `resources` extension | Provides static assets such as images and fonts, applied together with the template |
-:::
-
-The official marketplace provides a ready-to-use combination: ==**`Html2Pic`**== (rendering engine) and ==**`Default`**== (default template & resources); once installed, you can enable image mode.
-
-### Commands with Image Rendering Support
-
-::: table title="Commands with Image Rendering Support" copy="all"
-| Command | Rendered Content |
-|------|----------|
-| `/list` | Online player list (including player avatars) |
-| `/server` | Server connection status |
-| `/luck` / `/luck rank` | Daily fortune card / fortune leaderboard |
-| `/bound` | Whitelist binding information |
-| `/help` | Help information |
-| `/bot about` | About page |
-| `/bot check` | Version check result |
-:::
-
-::: note Usage Tip
-For the complete steps to enable and configure image mode (installing extensions, `[image]` configuration, adjusting appearance), see [Configuration Guide · Image Rendering Mode](/en/guide/configuration.html#image-rendering-mode).
-:::
+Image rendering is a fairly independent feature — see [Image Rendering](/en/guide/image-rendering.html) for the complete steps to enable, configure, and customize it.
 
 ---
 

@@ -32,6 +32,12 @@ Visual configuration, real-time monitoring, server / player management, and log 
 → [Learn about WebUI](/en/guide/webui.html)
 :::
 
+::: card title="Image Rendering" icon="fluent-color:image-24"
+Render command output into beautiful image cards, powered by rendering engine, template, and resource extensions.
+
+→ [View Image Rendering](/en/guide/image-rendering.html)
+:::
+
 ::: card title="Configuration Guide" icon="fluent-color:settings-24"
 Need to dig deeper into configuration? All configuration items for `.env` and `Config.toml` are covered here.
 
@@ -61,6 +67,7 @@ Learn about the extension mechanism and combine bot capabilities like building b
 | [Command Reference](/en/guide/command-reference.html) | All built-in commands and usage | All users |
 | [Features](/en/guide/features.html) | Group-server interop, image rendering, WebUI, extension system and more | Users who want to know all capabilities |
 | [WebUI Admin Panel](/en/guide/webui.html) | WebUI page functions, how to enable it, and FAQ | Users of WebUI |
+| [Image Rendering](/en/guide/image-rendering.html) | Enabling, configuring, and customizing image mode | Users who want image output |
 | [Configuration Guide](/en/guide/configuration.html) | Detailed reference for all configuration items such as `.env` and `Config.toml` | Users who need deeper configuration |
 :::
 
