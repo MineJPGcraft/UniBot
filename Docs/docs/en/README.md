@@ -84,7 +84,7 @@ import MachineStats from '../.vuepress/components/MachineStats.vue'
 
 - [Get Started](/en/guide/quick-start.html) — deploy your UniBot from scratch
 - [WebUI Admin Panel](/en/guide/webui.html) — visual configuration, real-time monitoring, log viewing
-- [Configuration](/en/unibot/configuration.html) — detailed reference for all configuration options
+- [Configuration Guide](/en/guide/configuration.html) — detailed reference for all configuration options
 - [Command Reference](/en/guide/command-reference.html) — all built-in commands at a glance
 - [Features](/en/guide/features.html) — group-server interop, image rendering, extension system and more
 - [Extension System](/en/unibot/extension-system.html) — extension types, rendering system and visual management

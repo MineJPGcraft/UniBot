@@ -1,6 +1,6 @@
 # Guide
 
-Welcome to **Minecraft UniBot**. This guide serves as the **user manual**, helping you install the bot and get started quickly. For deeper configuration, jump to the [Configuration Documentation](/en/unibot/configuration.html).
+Welcome to **Minecraft UniBot**. This guide serves as the **user manual**, helping you install the bot and get started quickly. For deeper configuration, jump to the [Configuration Guide](/en/guide/configuration.html).
 
 ==If you're a first-time user, start with the "Quick Start"==, follow the steps to complete deployment; consult the other pages as needed.
 
@@ -32,6 +32,12 @@ Visual configuration, real-time monitoring, server / player management, and log 
 → [Learn about WebUI](/en/guide/webui.html)
 :::
 
+::: card title="Configuration Guide" icon="fluent-color:settings-24"
+Need to dig deeper into configuration? All configuration items for `.env` and `Config.toml` are covered here.
+
+→ [View Configuration Guide](/en/guide/configuration.html)
+:::
+
 ::: card title="Architecture Design" icon="fluent-color:apps-24"
 Understand the overall architecture and how components communicate with each other.
 
@@ -42,12 +48,6 @@ Understand the overall architecture and how components communicate with each oth
 Learn about the extension mechanism and combine bot capabilities like building blocks.
 
 → [View Extension System](/en/unibot/extension-system.html)
-:::
-
-::: card title="Configuration Documentation" icon="fluent-color:settings-24"
-Need to dig deeper into configuration? All configuration items are covered here.
-
-→ [View Configuration Documentation](/en/unibot/configuration.html)
 :::
 
 ::::
@@ -61,9 +61,10 @@ Need to dig deeper into configuration? All configuration items are covered here.
 | [Command Reference](/en/guide/command-reference.html) | All built-in commands and usage | All users |
 | [Features](/en/guide/features.html) | Group-server interop, image rendering, WebUI, extension system and more | Users who want to know all capabilities |
 | [WebUI Admin Panel](/en/guide/webui.html) | WebUI page functions, how to enable it, and FAQ | Users of WebUI |
+| [Configuration Guide](/en/guide/configuration.html) | Detailed reference for all configuration items such as `.env` and `Config.toml` | Users who need deeper configuration |
 :::
 
-> ::fluent-color:link-24:: **Configuration Documentation**: detailed reference for all configuration items such as `.env` and `Config.toml`, see [UniBot Configuration Documentation](/en/unibot/configuration.html).
+> ::fluent-color:link-24:: **Configuration Guide**: detailed reference for all configuration items such as `.env` and `Config.toml`, see [Configuration Guide](/en/guide/configuration.html).
 
 ## Project Components
 

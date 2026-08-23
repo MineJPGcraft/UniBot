@@ -51,7 +51,7 @@ UniBot
 │   ├── Network.py                # Network request utilities
 │   └── Utils.py                  # Utility functions
 ├── Extensions/                   # Extension packages (local / marketplace)
-│   ├── Html2Pic/                 # Built-in rendering engine (default / fallback)
+│   ├── Html2Pic/                 # Rendering engine extension (distributed via official marketplace)
 │   ├── Default/                  # Default template + resources combined package
 │   └── ...
 └── WebUi/                        # Vue 3 admin panel frontend

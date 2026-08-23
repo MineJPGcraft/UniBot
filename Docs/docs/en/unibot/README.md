@@ -4,7 +4,7 @@
 
 ## Quick Navigation
 
-<LinkCard title="Configuration" href="/en/unibot/configuration.html" icon="fluent-color:settings-24">
+<LinkCard title="Configuration Guide" href="/en/guide/configuration.html" icon="fluent-color:settings-24">
 
   All configuration items including `.env` and `Config.toml`
 

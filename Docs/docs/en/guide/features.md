@@ -41,21 +41,19 @@ Through the `sync_sensitive_words` configuration, messages that hit a sensitive 
 
 ## Image Rendering Mode
 
-After setting `[image] mode` to `true` in `Config.toml`, the bot's command output will be sent in **image** form.
+After setting `[image] mode` to ==`true`== in `Config.toml`, the bot's command output will be sent in **image** form.
 
-The rendering system consists of three mutually independent parts that can be freely combined:
+Image rendering is provided by ==**three types of extensions**== — rendering engine, template, and resource — all distributed as extensions via the **extension marketplace**. Install and combine them freely:
 
 ::: table title="Rendering System Components" copy="all"
-| Component | Role | Description |
-|------|------|------|
-| **Rendering engine** | Renders a page into an image | Determines the rendering implementation, e.g. the built-in rendering engine (default) |
-| **Template** | Determines the layout and style of the image | Each template is an image style that can be switched at any time |
-| **Resource** | Provides the static assets needed for images | Background images, avatar placeholders, etc., applied together with the template |
+| Component | Extension Type | Role |
+|------|---------|------|
+| **Rendering engine** | `renderer` extension | Renders a page into an image and determines the rendering implementation (e.g. Html2Pic) |
+| **Template** | `template` extension | Determines the layout and style of the image; each template is an image style that can be switched at any time |
+| **Resource** | `resources` extension | Provides static assets such as images and fonts, applied together with the template |
 :::
 
-- **Template switching takes effect immediately**: after switching templates in WebUI or the config, you can see the new style without restarting.
-- **Rendering engine switching requires a restart**: after changing the rendering engine, restart the bot; it falls back to the default engine until the restart.
-- **Default fallback supported**: when the current template or engine is unavailable, it automatically falls back to the built-in default, so usage is not affected.
+The official marketplace provides a ready-to-use combination: ==**`Html2Pic`**== (rendering engine) and ==**`Default`**== (default template & resources); once installed, you can enable image mode.
 
 ### Commands with Image Rendering Support
 
@@ -71,24 +69,9 @@ The rendering system consists of three mutually independent parts that can be fr
 | `/bot check` | Version check result |
 :::
 
-### Image Appearance Configuration
-
-You can adjust the image appearance in the `[image]` section of `Config.toml`:
-
-```toml
-[image]
-mode = true
-# Use a local image
-background = 'url("./Resources/Backgrounds/dirt.png")'
-
-# Use a gradient
-background = 'linear-gradient(150deg, #2e4a30 0%, #1d3524 55%, #12241a 100%)'
-
-# Pick a random image from the directory
-background = 'random("./Resources/Backgrounds/")'
-```
-
-You can also use the `renderer` and `template` config items to specify the rendering engine and template to use (they automatically appear in the selection list once the corresponding extensions are installed). *Note: image mode slightly increases response time.*
+::: note Usage Tip
+For the complete steps to enable and configure image mode (installing extensions, `[image]` configuration, adjusting appearance), see [Configuration Guide · Image Rendering Mode](/en/guide/configuration.html#image-rendering-mode).
+:::
 
 ---
 

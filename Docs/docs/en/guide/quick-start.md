@@ -92,7 +92,7 @@ uv sync --extra webui
 uv run Watchdog.py
 ```
 
-~~You can also install with pip + venv~~, see the [Configuration Documentation](/en/unibot/configuration.html) for the exact commands, but uv is recommended for management.
+~~You can also install with pip + venv~~, see the [Configuration Guide](/en/guide/configuration.html) for the exact commands, but uv is recommended for management.
 
 ### Docker Installation
 After installing Docker, run the following in a terminal
@@ -119,7 +119,7 @@ After installation, you also need to configure it so the server and the bot can 
 
 In addition, you need to install and configure the corresponding adapter so that the bot account can connect to the core.
 
-For the specific configuration items of each platform's adapter, refer to the [Configuration Documentation](/en/unibot/configuration.html).
+For the specific configuration items of each platform's adapter, refer to the [Configuration Guide](/en/guide/configuration.html).
 
 ## Step 4: Verify Startup
 
@@ -148,4 +148,4 @@ If everything is normal, the bot will return the available command list, and you
 - **Bot not responding to commands?** Check the `COMMAND_START` prefix, whether `command_groups` contains the current group, and whether `SUPERUSERS` includes your account.
 - **Can't connect to the server?** Confirm that the `access_token` on both ends matches, that the WebSocket address and port are reachable, and check the MCDR and bot logs.
 
-For more configuration items, see *[Configuration Documentation](/en/unibot/configuration.html)*.
+For more configuration items, see *[Configuration Guide](/en/guide/configuration.html)*.

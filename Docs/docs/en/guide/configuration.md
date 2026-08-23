@@ -1,4 +1,4 @@
-# Configuration
+# Configuration Guide
 
 UniBot uses a **dual-config-file** system, separately managing the framework layer and the business layer configuration, each serving its own purpose.
 
@@ -159,27 +159,64 @@ enabled = true
 
 ### Image Rendering Mode
 
-::: collapse expand
-- Example configuration
+Image rendering is provided by **rendering engine**, **template**, and **resource** extensions, all distributed as extensions via the **extension marketplace**. Install and combine them freely. The official marketplace provides a ready-to-use combination:
 
-  ```toml
-  [image]
-  # Whether to enable image mode (requires the image dependency to be installed)
-  mode = false
-
-  # Background of the generated image (CSS background-image property)
-  # Supports the random function, picking one at random from a local directory
-  background = 'random("./Resources/Backgrounds/")'
-
-  # Rendering engine to use (corresponds to an installed rendering engine extension; empty uses the default engine)
-  # Takes effect after restart; automatically falls back to the default engine when unavailable
-  renderer = ""
-
-  # Template to use (corresponds to an installed template extension; empty uses the default template)
-  # Takes effect immediately, no restart required
-  template = ""
-  ```
+::: table title="Official Rendering Extensions" copy="all"
+| Extension | Type | Description |
+|------|------|------|
+| `Html2Pic` | Rendering engine | HTML-to-image rendering engine |
+| `Default` | Template & resource | Image templates and resource pack for built-in commands |
 :::
+
+#### Enabling Image Mode
+
+::: steps
+
+1. **Install the rendering extensions**
+
+   Install ==**`Html2Pic`**== (rendering engine) and ==**`Default`**== (default template & resources) from the WebUI marketplace. If they are missing when image mode is enabled, WebUI will guide you to download them automatically.
+
+2. **Enable and choose the rendering configuration**
+
+   Set `mode = true` in the `[image]` section of `Config.toml`, and specify the rendering engine and template to use:
+
+   ```toml
+   [image]
+   # Whether to enable image mode (requires the rendering extensions above)
+   mode = false
+
+   # Rendering engine to use (corresponds to an installed rendering engine extension, e.g. Html2Pic)
+   # Takes effect after restart; rendering reports an error if the engine is missing or unavailable
+   renderer = ""
+
+   # Template pack to use (corresponds to an installed template extension; default "Default")
+   # Takes effect immediately, no restart required; falls back to the default template when missing
+   template = "Default"
+
+   # Optional: custom font file path; if empty, Font.ttf is looked up in resource extension roots
+   # font = ""
+   ```
+
+3. **Restart the bot**
+
+   Changes to `mode` and `renderer` take effect after a ==**restart**==; `template` switching takes effect ==**immediately**== without restarting.
+
+:::
+
+You can also switch the rendering engine and template directly in **WebUI → Extensions**.
+
+- ==Template auto-fallback==: when the selected template pack is missing or unavailable, it falls back to the default template (`Default` or the first available one).
+- ==Rendering engine must be selected==: image mode requires an installed and selected rendering engine extension; if the engine is missing or unavailable, rendering reports an error.
+
+#### Adjusting Image Appearance
+
+The background, colors, fonts, and other appearance of images are provided by **template extensions**, not configured in the core `Config.toml`:
+
+- A template extension can declare appearance config items (such as primary color, font, layout, etc.) in its manifest.
+- In **WebUI → Extensions**, select the corresponding template extension and edit it through the form; changes take effect **immediately** after saving. You can also edit `Config/Extensions/<template-id>.toml` directly.
+- Switching the template pack changes the overall image style.
+
+*Note: image mode slightly increases response time.*
 
 ---
 
@@ -191,7 +228,7 @@ This file records whether each extension is enabled, maintained automatically by
 [Default]
 enabled = true
 
-# The built-in rendering engine Html2Pic is gated by [image].mode and loads automatically when image mode is enabled
+# Rendering engine and default template extensions required by image mode (distributed via the official marketplace; auto-registered after installation)
 [Html2Pic]
 enabled = true
 ```
@@ -231,16 +268,15 @@ result = "你今天的人品为 {point}，{tips}"
 Different optional features require additional dependencies, so sync the corresponding extra before enabling:
 
 ```bash
-# Image rendering mode
-uv sync --extra image --inexact
-
 # WebUI admin panel
 uv sync --extra webui --inexact
 
-# Extension dependencies (Python dependencies of installed extensions)
+# Extension dependencies (Python dependencies declared by enabled extensions)
 uv sync --extra extensions --inexact
 ```
 
 ==Before enabling a feature, first confirm that the corresponding extra is installed==, otherwise the feature cannot work properly.
+
+Image rendering's Python dependencies are declared by the **rendering engine extension itself** (`[dependencies].python` in `Extension.toml`) and synced via the `extensions` extra after installation — ==no separate image extra is needed==.
 
 *Watchdog automatically detects configuration changes and syncs the corresponding dependencies.*

@@ -1,6 +1,6 @@
 # 指南
 
-欢迎使用 **Minecraft UniBot**。本指南作为**用户手册**，帮助你安装机器人并快速上手使用。如需深入调整配置，请跳转到 [配置说明](/unibot/configuration.html)。
+欢迎使用 **Minecraft UniBot**。本指南作为**用户手册**，帮助你安装机器人并快速上手使用。如需深入调整配置，请跳转到 [配置指南](/guide/configuration.html)。
 
 ==首次使用请从「快速开始」开始==，按步骤完成部署即可；其余页面按需查阅。
 
@@ -32,6 +32,12 @@
 → [了解 WebUI](/guide/webui.html)
 :::
 
+::: card title="配置指南" icon="fluent-color:settings-24"
+需要深入调整配置？`.env` 与 `Config.toml` 全部配置项尽在其中。
+
+→ [查看配置指南](/guide/configuration.html)
+:::
+
 ::: card title="架构设计" icon="fluent-color:apps-24"
 了解整体架构及各组件间的通信方式。
 
@@ -42,12 +48,6 @@
 了解扩展机制，像积木一样组合机器人能力。
 
 → [查看扩展系统](/unibot/extension-system.html)
-:::
-
-::: card title="配置说明" icon="fluent-color:settings-24"
-需要深入调整配置？全部配置项尽在其中。
-
-→ [查看配置说明](/unibot/configuration.html)
 :::
 
 ::::
@@ -61,9 +61,10 @@
 | [指令手册](/guide/command-reference.html) | 全部内置指令及用法 | 所有用户 |
 | [功能特性](/guide/features.html) | 群服互通、图片渲染、WebUI、扩展系统等能力 | 想了解全部能力的用户 |
 | [WebUI 管理面板](/guide/webui.html) | WebUI 各页面功能、启用方式与常见问题 | 使用 WebUI 的用户 |
+| [配置指南](/guide/configuration.html) | `.env`、`Config.toml` 等全部配置项的详细说明 | 需要深入调整配置的用户 |
 :::
 
-> ::fluent-color:link-24:: **配置说明**：`.env` 与 `Config.toml` 等全部配置项的详细说明，见 [UniBot 配置说明](/unibot/configuration.html)。
+> ::fluent-color:link-24:: **配置指南**：`.env` 与 `Config.toml` 等全部配置项的详细说明，见 [配置指南](/guide/configuration.html)。
 
 ## 项目组成
 

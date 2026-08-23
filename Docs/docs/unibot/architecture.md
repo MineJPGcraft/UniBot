@@ -51,7 +51,7 @@ UniBot
 │   ├── Network.py                # 网络请求工具
 │   └── Utils.py                  # 工具函数
 ├── Extensions/                   # 扩展包（本地 / 市场）
-│   ├── Html2Pic/                 # 内置渲染引擎（默认 / 回退）
+│   ├── Html2Pic/                 # 渲染引擎扩展（随官方市场分发）
 │   ├── Default/                  # 默认模板 + 资源组合包
 │   └── ...
 └── WebUi/                        # Vue 3 管理面板前端

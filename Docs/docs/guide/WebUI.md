@@ -209,4 +209,4 @@ UniBot 扩展系统的管理入口（需管理员权限）：
 
 - **接口文档**：WebUI 后端 REST API 参考见 [接口文档](/unibot/api-reference.html)。
 - **部署流程**：从零部署请参阅 [快速开始](/guide/quick-start.html)。
-- **配置说明**：`.env` 与 `Config.toml` 全部配置项见 [配置说明](/unibot/configuration.html)。
+- **配置指南**：`.env` 与 `Config.toml` 全部配置项见 [配置指南](/guide/configuration.html)。

@@ -209,4 +209,4 @@ View the current account info and change your own password.
 
 - **API Documentation**: the WebUI backend REST API reference is in [API Documentation](/en/unibot/api-reference.html).
 - **Deployment flow**: for a from-scratch deployment, see [Quick Start](/en/guide/quick-start.html).
-- **Configuration Documentation**: all configuration items of `.env` and `Config.toml` are in [Configuration Documentation](/en/unibot/configuration.html).
+- **Configuration Guide**: all configuration items of `.env` and `Config.toml` are in [Configuration Guide](/en/guide/configuration.html).

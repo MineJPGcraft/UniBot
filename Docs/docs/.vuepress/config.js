@@ -90,6 +90,7 @@ export default defineUserConfig({
                 '/guide/features.md',
                 '/guide/webui.md',
                 '/guide/command-reference.md',
+                '/guide/configuration.md',
               ],
             },
           ],
@@ -99,7 +100,6 @@ export default defineUserConfig({
               collapsed: false,
               items: [
                 '/unibot/',
-                '/unibot/configuration.md',
                 '/unibot/extension-system.md',
                 '/unibot/architecture.md',
                 '/unibot/api-reference.md',
@@ -143,6 +143,7 @@ export default defineUserConfig({
                 '/en/guide/features.md',
                 '/en/guide/webui.md',
                 '/en/guide/command-reference.md',
+                '/en/guide/configuration.md',
               ],
             },
           ],
@@ -152,7 +153,6 @@ export default defineUserConfig({
               collapsed: false,
               items: [
                 '/en/unibot/',
-                '/en/unibot/configuration.md',
                 '/en/unibot/extension-system.md',
                 '/en/unibot/architecture.md',
                 '/en/unibot/api-reference.md',

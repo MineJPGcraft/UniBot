@@ -4,7 +4,7 @@
 
 ## 快速导航
 
-<LinkCard title="配置说明" href="/unibot/configuration.html" icon="fluent-color:settings-24">
+<LinkCard title="配置指南" href="/guide/configuration.html" icon="fluent-color:settings-24">
 
   `.env` 与 `Config.toml` 等全部配置项
 

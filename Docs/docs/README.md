@@ -84,7 +84,7 @@ import MachineStats from './.vuepress/components/MachineStats.vue'
 
 - [开始使用](/guide/quick-start.html) — 从零开始部署你的 UniBot
 - [WebUI 管理面板](/guide/webui.html) — 可视化配置、实时监控、日志查看
-- [配置说明](/unibot/configuration.html) — 全部配置项详解
+- [配置指南](/guide/configuration.html) — 全部配置项详解
 - [指令手册](/guide/command-reference.html) — 全部内置指令一览
 - [功能特性](/guide/features.html) — 群服互通、图片渲染、扩展系统等
 - [扩展系统](/unibot/extension-system.html) — 扩展类型、渲染体系与可视化管理
