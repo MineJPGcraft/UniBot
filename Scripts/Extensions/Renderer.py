@@ -21,6 +21,7 @@ import html
 import json
 import re
 from collections.abc import Callable
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from random import choice
@@ -96,6 +97,23 @@ def build_template_config_model(
     )
 
 
+def _reject_misplaced_constraints(
+    cfg: TemplateFieldConfig,
+    reject: Callable[[str], ExtensionError],
+    *,
+    allow_min_max: bool = False,
+    allow_length: bool = False,
+    allow_options: bool = False,
+) -> None:
+    """校验约束字段与当前类型匹配，错位约束（如数值字段的 options）一律拒绝。"""
+    if not allow_min_max and (cfg.min is not None or cfg.max is not None):
+        raise reject('min/max only apply to integer/number')
+    if not allow_length and (cfg.min_length is not None or cfg.max_length is not None):
+        raise reject('min_length/max_length only apply to string')
+    if not allow_options and cfg.options:
+        raise reject('options only apply to select')
+
+
 def _map_template_field(
     extension_id: str,
     field_name: str,
@@ -115,11 +133,8 @@ def _map_template_field(
     if cfg.description:
         field_kwargs['description'] = cfg.description
 
-    if field_type in ('integer', 'number'):
-        target = int if field_type == 'integer' else float
-        is_valid = isinstance(default, target) and not isinstance(default, bool)
-        if not is_valid:
-            raise reject(f'default must be of type {target.__name__}')
+    def typed_number_constraint(target: type) -> dict[str, Any]:
+        """构造数值范围约束，min/max 类型不符时拒绝。"""
         constraints: dict[str, Any] = {}
         if cfg.min is not None:
             if not isinstance(cfg.min, target) or isinstance(cfg.min, bool):
@@ -129,50 +144,43 @@ def _map_template_field(
             if not isinstance(cfg.max, target) or isinstance(cfg.max, bool):
                 raise reject(f'max must be of type {target.__name__}')
             constraints['le'] = cfg.max
-        if cfg.min_length is not None or cfg.max_length is not None:
-            raise reject('min_length/max_length only apply to string')
-        if cfg.options:
-            raise reject('options only apply to select')
-        return (target, Field(default=default, **constraints, **field_kwargs))
+        return constraints
+
+    def length_constraints() -> dict[str, Any]:
+        """构造字符串长度约束，取值非法时拒绝。"""
+        constraints: dict[str, Any] = {}
+        for attr, key in (('min_length', 'min_length'), ('max_length', 'max_length')):
+            value = getattr(cfg, attr)
+            if value is None:
+                continue
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                raise reject(f'{attr} must be a non-negative integer')
+            constraints[key] = value
+        return constraints
+
+    if field_type in ('integer', 'number'):
+        target = int if field_type == 'integer' else float
+        if not isinstance(default, target) or isinstance(default, bool):
+            raise reject(f'default must be of type {target.__name__}')
+        _reject_misplaced_constraints(cfg, reject, allow_min_max=True)
+        return (target, Field(default=default, **typed_number_constraint(target), **field_kwargs))
 
     if field_type == 'string':
         if not isinstance(default, str):
             raise reject('default must be a string')
-        constraints: dict[str, Any] = {}
-        if cfg.min_length is not None:
-            if not isinstance(cfg.min_length, int) or isinstance(cfg.min_length, bool) or cfg.min_length < 0:
-                raise reject('min_length must be a non-negative integer')
-            constraints['min_length'] = cfg.min_length
-        if cfg.max_length is not None:
-            if not isinstance(cfg.max_length, int) or isinstance(cfg.max_length, bool) or cfg.max_length < 0:
-                raise reject('max_length must be a non-negative integer')
-            constraints['max_length'] = cfg.max_length
-        if cfg.min is not None or cfg.max is not None:
-            raise reject('min/max only apply to integer/number')
-        if cfg.options:
-            raise reject('options only apply to select')
-        return (str, Field(default=default, **constraints, **field_kwargs))
+        _reject_misplaced_constraints(cfg, reject, allow_length=True)
+        return (str, Field(default=default, **length_constraints(), **field_kwargs))
 
     if field_type == 'boolean':
         if not isinstance(default, bool):
             raise reject('default must be a boolean')
-        if cfg.min is not None or cfg.max is not None:
-            raise reject('min/max only apply to integer/number')
-        if cfg.min_length is not None or cfg.max_length is not None:
-            raise reject('min_length/max_length only apply to string')
-        if cfg.options:
-            raise reject('options only apply to select')
+        _reject_misplaced_constraints(cfg, reject)
         return (bool, Field(default=default, **field_kwargs))
 
     if field_type == 'color':
         if not isinstance(default, str) or not _COLOR_RE.match(default):
             raise reject('default must be a #RRGGBB or #RRGGBBAA color')
-        if cfg.min is not None or cfg.max is not None:
-            raise reject('min/max only apply to integer/number')
-        if cfg.min_length is not None or cfg.max_length is not None:
-            raise reject('min_length/max_length only apply to string')
-        if cfg.options:
-            raise reject('options only apply to select')
+        _reject_misplaced_constraints(cfg, reject)
         return (str, Field(default=default, **field_kwargs))
 
     # select
@@ -180,10 +188,7 @@ def _map_template_field(
         raise reject('select type requires non-empty options')
     if default not in cfg.options:
         raise reject('default must be one of the options')
-    if cfg.min is not None or cfg.max is not None:
-        raise reject('min/max only apply to integer/number')
-    if cfg.min_length is not None or cfg.max_length is not None:
-        raise reject('min_length/max_length only apply to string')
+    _reject_misplaced_constraints(cfg, reject)
     return (Literal[tuple(cfg.options)], Field(default=default, **field_kwargs))
 
 
@@ -249,13 +254,14 @@ class FileAsset:
         return _resolve_asset_str(self)
 
 
-# 当前渲染中的激活渲染器（供 Jinja2 资源函数把包装转换为渲染器可用字符串）
-_current_renderer: BaseRenderer | None = None
+# 当前渲染中的激活渲染器（供 Jinja2 资源函数把包装转换为渲染器可用字符串）。
+# 用 ContextVar 而非模块级变量：并发渲染时各任务上下文隔离，避免互相覆盖
+_current_renderer: ContextVar[BaseRenderer | None] = ContextVar('current_renderer', default=None)
 
 
 def _resolve_asset_str(asset: OnlineAsset | FileAsset) -> str:
     """把资源包装按当前激活渲染器转换为字符串。"""
-    renderer = _current_renderer
+    renderer = _current_renderer.get()
     if isinstance(asset, OnlineAsset):
         return asset.url if renderer is None else renderer.deal_online_asset(asset)
     if isinstance(asset, FileAsset):
@@ -271,7 +277,7 @@ class BaseRenderer:
     async def setup(self) -> None:
         """初始化（启动浏览器/加载资源等）。"""
 
-    async def render(self, html: str, css: str, size: tuple[int, int] | None = None) -> bytes:
+    async def render(self, html_content: str, css: str, size: tuple[int, int] | None = None) -> bytes:
         """渲染为 PNG 字节。
 
         size: (宽度, 高度)；高度为 0/None 表示按内容自适应。
@@ -499,12 +505,11 @@ class RendererManager:
         return f'url("{FileAsset(choice(images))}")'
 
     def resource_path(self, extension_id: str, relative_path: str) -> FileAsset:
-        """返回资源文件的本地文件包装（由渲染器决定引用格式）。"""
-        return FileAsset(self._resolve_resource(extension_id, relative_path))
-
-    def resource_url(self, extension_id: str, relative_path: str) -> FileAsset:
         """返回资源文件的本地文件包装（由渲染器决定引用格式，如 playwright 需 file://）。"""
         return FileAsset(self._resolve_resource(extension_id, relative_path))
+
+    # 与 resource_path 同实现：为模板语义保留两个名称（url 强调用于引用，path 强调本地路径）
+    resource_url = resource_path
 
     def resource_text(self, extension_id: str, relative_path: str, encoding: str = 'Utf-8') -> str:
         """以文本形式读取资源内容（单次读取上限 2 MiB）。"""
@@ -563,7 +568,6 @@ class RendererManager:
                 由渲染器的 `deal_online_asset`/`deal_file_asset` 转换为可用字符串。
             renderer: 渲染引擎名称，缺省用 `config.image.renderer`。
         """
-        width, height = size
         registration = self._select_template()
         environment = self._get_environment(registration.extension_id)
         # 资源依赖检查
@@ -578,9 +582,7 @@ class RendererManager:
         if active_renderer is None:
             active_renderer = await self.setup(renderer_name)
         # 设置当前渲染器，供 Jinja2 资源函数把包装转换为渲染器可用字符串
-        global _current_renderer
-        previous_renderer = _current_renderer
-        _current_renderer = active_renderer
+        renderer_token = _current_renderer.set(active_renderer)
         try:
             return await self._render_with_renderer(
                 template,
@@ -591,7 +593,7 @@ class RendererManager:
                 context,
             )
         finally:
-            _current_renderer = previous_renderer
+            _current_renderer.reset(renderer_token)
 
     async def _render_with_renderer(
         self,
@@ -665,11 +667,14 @@ class RendererManager:
         await renderer.setup()
         self._active[renderer.name] = renderer
         if renderer.name not in self._semaphores:
-            self._semaphores[renderer.name] = asyncio.Semaphore(max(1, 1))
+            # 默认并发 = 1：渲染引擎（浏览器内核等）通常不支持并发页面安全复用
+            self._semaphores[renderer.name] = asyncio.Semaphore(1)
         logger.info(f'Render engine {renderer.name} is ready.')
         return renderer
 
-    async def render(self, html: str, css: str, name: str | None = None, size: tuple[int, int] | None = None) -> bytes:
+    async def render(
+        self, html_content: str, css: str, name: str | None = None, size: tuple[int, int] | None = None
+    ) -> bytes:
         """使用指定引擎渲染 HTML+CSS 为 PNG 字节，带并发上限与超时。
 
         size: (宽度, 高度)，透传给渲染器的 render，供布局视口使用。
@@ -686,7 +691,7 @@ class RendererManager:
         if semaphore is None:
             raise RuntimeError(f'Semaphore for render engine {renderer.name} is not configured!')
         async with semaphore:
-            return await asyncio.wait_for(renderer.render(html, css, size), timeout=timeout)
+            return await asyncio.wait_for(renderer.render(html_content, css, size), timeout=timeout)
 
     async def shutdown(self) -> None:
         """清理全部已启用引擎。"""

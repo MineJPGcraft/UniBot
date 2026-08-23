@@ -1,6 +1,6 @@
+import asyncio
 import shutil
 from pathlib import Path
-from zipfile import ZipFile
 
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
@@ -36,6 +36,11 @@ class WebUiManager:
 
     async def ensure_downloaded(self) -> bool:
         """确保 WebUI 静态资源已下载且版本匹配，否则重新下载。"""
+        # 函数内导入：Scripts.Utils 顶层依赖 nonebot_plugin_uninfo / alconna，
+        # 这些包必须经 NoneBot 插件机制加载；本模块在 Bot.main() 早期导入，
+        # 顶层导入会把 uninfo 抢先变成普通模块，导致后续 require() 失败
+        from Scripts.Utils import safe_extract_zip
+
         if not self.version:
             logger.warning('No WebUI version configured, skipping download.')
             return False
@@ -48,11 +53,11 @@ class WebUiManager:
             logger.warning(f'Failed to download WebUI (v{self.version}), check your network and retry later.')
             return False
         try:
+            # 清理旧目录与解压属于重 IO，放入线程执行避免阻塞事件循环
             if self.webui_dir.exists():
-                shutil.rmtree(self.webui_dir)
+                await asyncio.to_thread(shutil.rmtree, self.webui_dir)
             self.webui_dir.mkdir(parents=True, exist_ok=True)
-            with ZipFile(response) as zip_file:
-                zip_file.extractall(self.webui_dir)
+            await asyncio.to_thread(safe_extract_zip, response, self.webui_dir)
             self.version_file.write_text(self.version, encoding='Utf-8')
         except Exception as error:
             logger.warning(f'Failed to extract WebUI static assets: {error}')

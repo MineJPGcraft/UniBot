@@ -41,7 +41,7 @@ async def create_user(body: CreateUserRequest, current_user: dict = Depends(requ
         return {'code': 1, 'data': None, 'message': '无效的角色'}
     user_info = await data_manager.create_user(body.username, body.password, body.nickname, body.role)
     if not user_info:
-        return {'code': 409, 'data': None, 'message': '用户名已存在'}
+        return {'code': 1, 'data': None, 'message': '用户名已存在'}
     return {'code': 0, 'data': {'user_id': user_info['user_id']}, 'message': 'ok'}
 
 
@@ -50,7 +50,7 @@ async def get_user(user_id: str, current_user: dict = Depends(require_role('admi
     """获取指定用户详情。"""
     user_data = data_manager.get_user_by_id(user_id)
     if not user_data:
-        return {'code': 404, 'data': None, 'message': '用户不存在'}
+        return {'code': 1, 'data': None, 'message': '用户不存在'}
     return {'code': 0, 'data': data_manager.public_user_info(user_data), 'message': 'ok'}
 
 
@@ -63,7 +63,7 @@ async def update_user(user_id: str, body: UpdateUserRequest, current_user: dict 
         return {'code': 1, 'data': None, 'message': '无效的角色'}
     success = await data_manager.update_user(user_id, nickname=body.nickname, role=body.role)
     if not success:
-        return {'code': 404, 'data': None, 'message': '用户不存在'}
+        return {'code': 1, 'data': None, 'message': '用户不存在'}
     return {'code': 0, 'data': None, 'message': 'ok'}
 
 
@@ -74,7 +74,7 @@ async def reset_user_password(
     """重置指定用户密码。"""
     success = await data_manager.reset_password(user_id, body.password)
     if not success:
-        return {'code': 404, 'data': None, 'message': '用户不存在'}
+        return {'code': 1, 'data': None, 'message': '用户不存在'}
     return {'code': 0, 'data': None, 'message': 'ok'}
 
 
@@ -85,5 +85,5 @@ async def delete_user(user_id: str, current_user: dict = Depends(require_role('a
         return {'code': 1, 'data': None, 'message': '不可删除自己'}
     success = await data_manager.delete_user(user_id)
     if not success:
-        return {'code': 404, 'data': None, 'message': '用户不存在'}
+        return {'code': 1, 'data': None, 'message': '用户不存在'}
     return {'code': 0, 'data': None, 'message': 'ok'}

@@ -1,5 +1,6 @@
 """指令注册测试：命令类发现、嵌套子命令与字段校验（验证点 3、4、11）。"""
 
+import inspect
 from typing import override
 
 import pytest
@@ -10,8 +11,19 @@ from Scripts.Extensions import (
     CommandFieldError,
     CommandManager,
     SubCommand,
-    discover_commands,
 )
+
+
+def discover_commands(module) -> list[Command]:
+    """扫描模块中非抽象、非 SubCommand 的 Command 子类并实例化（测试辅助）。"""
+    commands = []
+    for _, member in inspect.getmembers(module, inspect.isclass):
+        if member is Command or member is SubCommand or not issubclass(member, Command):
+            continue
+        if issubclass(member, SubCommand) or inspect.isabstract(member):
+            continue
+        commands.append(member())
+    return commands
 
 
 class WeatherCommand(Command):

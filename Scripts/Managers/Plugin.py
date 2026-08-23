@@ -2,6 +2,7 @@ import time
 
 import nonebot
 
+from Scripts.Constants import BUILTIN_PLUGIN_PREFIX, MARKET_CACHE_TTL
 from Scripts.Logging import logger
 from Scripts.Managers import config_manager
 from Scripts.Network import request
@@ -10,13 +11,12 @@ from Scripts.Network import request
 class PluginManager:
     """插件管理器，管理 pyproject.toml 中登记的插件、依赖插件与插件市场。"""
 
-    # 市场数据缓存时长（秒）
-    MARKET_CACHE_TTL = 600
     # 插件市场注册表地址（NoneBot 官方插件市场）
     MARKET_URL = 'https://registry.nonebot.dev/plugins.json'
 
-    market_cache: list = []
-    market_cache_time: float = 0
+    def __init__(self) -> None:
+        self.market_cache: list = []
+        self.market_cache_time: float = 0
 
     def _configured_plugins(self) -> list[dict]:
         """获取 pyproject.toml 中登记的插件配置。"""
@@ -30,8 +30,8 @@ class PluginManager:
 
     @staticmethod
     def _can_disable(module_name: str) -> bool:
-        """框架内置插件（`Scripts.` 前缀）不允许禁用。"""
-        return not module_name.startswith('Scripts.')
+        """框架内置插件（`BUILTIN_PLUGIN_PREFIX` 前缀）不允许禁用。"""
+        return not module_name.startswith(BUILTIN_PLUGIN_PREFIX)
 
     @staticmethod
     def _plugin_info(plugin, configured: dict | None = None) -> dict:
@@ -49,7 +49,7 @@ class PluginManager:
             'author': extra.get('author', '') if metadata else '',
             'homepage': metadata.homepage if metadata else '',
             'enabled': configured.get('enabled', True) if configured else True,
-            'type': 'builtin' if module_name.startswith('Scripts.') else 'external',
+            'type': 'builtin' if module_name.startswith(BUILTIN_PLUGIN_PREFIX) else 'external',
             'can_disable': PluginManager._can_disable(module_name),
             'dependencies': [],
             'config_schema': {},
@@ -92,7 +92,7 @@ class PluginManager:
     async def fetch_market(self, force: bool = False) -> list[dict]:
         """获取插件市场数据（带缓存），请求失败时返回空列表。"""
         now = time.time()
-        if not force and self.market_cache and now - self.market_cache_time < self.MARKET_CACHE_TTL:
+        if not force and self.market_cache and now - self.market_cache_time < MARKET_CACHE_TTL:
             return self.market_cache
         data = await request(self.MARKET_URL)
         if not isinstance(data, list):

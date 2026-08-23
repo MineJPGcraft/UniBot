@@ -71,7 +71,7 @@ async def get_user_bindings(user: str, current_user: dict = Depends(get_current_
     player_service = Globals.player_service
     bindings = player_service.players if player_service else {}
     if user not in bindings:
-        return {'code': 404, 'data': None, 'message': '用户不存在'}
+        return {'code': 1, 'data': None, 'message': '用户不存在'}
     return {'code': 0, 'data': {'user': user, 'players': bindings[user]}, 'message': 'ok'}
 
 
@@ -116,9 +116,7 @@ async def unbind_player(user: str, player: str, current_user: dict = Depends(req
     """解除用户与游戏 ID 的绑定。"""
     player_service = Globals.player_service
     bindings = player_service.players if player_service else {}
-    if user not in bindings:
-        return {'code': 404, 'data': None, 'message': '绑定关系不存在'}
-    if player not in bindings.get(user, []):
-        return {'code': 404, 'data': None, 'message': '绑定关系不存在'}
+    if user not in bindings or player not in bindings.get(user, []):
+        return {'code': 1, 'data': None, 'message': '绑定关系不存在'}
     await player_service.remove_player(user, player)
     return {'code': 0, 'data': None, 'message': 'ok'}

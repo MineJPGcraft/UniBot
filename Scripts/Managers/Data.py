@@ -1,25 +1,26 @@
+import asyncio
 import uuid
 from asyncio import Lock
 from datetime import UTC, datetime
 from json import dumps, loads
-from pathlib import Path
 
 import bcrypt
 
+from Scripts.Constants import DATA_DIR
 from Scripts.Logging import logger
 
 
 class DataManager:
     """数据管理器，负责 WebUI 用户的 CRUD 及密码哈希。"""
 
-    users: dict[str, dict] = {}
-
-    data_dir = Path('Data')
-
-    users_file = data_dir / 'Users.json'
-    secret_file = data_dir / 'Secret.key'
-
-    lock = Lock()
+    def __init__(self) -> None:
+        self.users: dict[str, dict] = {}
+        self.data_dir = DATA_DIR
+        self.users_file = self.data_dir / 'Users.json'
+        self.secret_file = self.data_dir / 'Secret.key'
+        self.lock = Lock()
+        # JWT 签名密钥（load() 时生成或读取）
+        self.secret_key: str = ''
 
     def load(self):
         """加载 WebUI 用户数据与 JWT 密钥。"""
@@ -58,13 +59,14 @@ class DataManager:
         """是否已有用户（已初始化）。"""
         return len(self.users) > 0
 
-    def hash_password(self, password: str) -> str:
-        """使用 bcrypt 哈希密码。"""
-        return bcrypt.hashpw(password.encode('Utf-8'), bcrypt.gensalt()).decode('Utf-8')
+    async def hash_password(self, password: str) -> str:
+        """使用 bcrypt 哈希密码（CPU 密集，放入线程避免阻塞事件循环）。"""
+        hashed = await asyncio.to_thread(bcrypt.hashpw, password.encode('Utf-8'), bcrypt.gensalt())
+        return hashed.decode('Utf-8')
 
-    def verify_password(self, password: str, hashed: str) -> bool:
-        """验证密码。"""
-        return bcrypt.checkpw(password.encode('Utf-8'), hashed.encode('Utf-8'))
+    async def verify_password(self, password: str, hashed: str) -> bool:
+        """验证密码（CPU 密集，放入线程避免阻塞事件循环）。"""
+        return await asyncio.to_thread(bcrypt.checkpw, password.encode('Utf-8'), hashed.encode('Utf-8'))
 
     async def create_user(self, username: str, password: str, nickname: str, role: str = 'viewer') -> dict | None:
         """创建用户，返回用户信息（不含密码哈希）。"""
@@ -77,7 +79,7 @@ class DataManager:
             'username': username,
             'nickname': nickname,
             'role': role,
-            'password_hash': self.hash_password(password),
+            'password_hash': await self.hash_password(password),
             'created_at': now,
             'last_login_at': None,
         }
@@ -130,7 +132,7 @@ class DataManager:
         user_data = self.users.get(user_id)
         if not user_data:
             return False
-        user_data['password_hash'] = self.hash_password(password)
+        user_data['password_hash'] = await self.hash_password(password)
         await self.save()
         return True
 

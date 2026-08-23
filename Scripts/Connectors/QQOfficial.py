@@ -35,6 +35,7 @@ import httpx
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from nonebot.log import logger
 
+from Scripts.Constants import QQ_INTENT_FIELDS
 from Scripts.Managers import config_manager
 
 # --------------------------------------------------------------------------- #
@@ -526,21 +527,8 @@ def _save_credentials_to_env(app_id: str, app_secret: str) -> None:
     if not app_id or not app_secret:
         return
     bots = list(config_manager.read_env().get('QQ_BOTS') or [])
-    default_intent = {
-        'guilds': False,
-        'guild_members': False,
-        'guild_messages': False,
-        'guild_message_reactions': False,
-        'direct_message': False,
-        'open_forum_event': False,
-        'audio_live_member': False,
-        'c2c_group_at_messages': True,
-        'interaction': False,
-        'message_audit': False,
-        'forum_event': False,
-        'audio_action': False,
-        'at_messages': False,
-    }
+    # 默认订阅以 Schema 的 intent 字段为单一来源（避免两处清单漂移）
+    default_intent = {field['key']: field['default'] for field in QQ_INTENT_FIELDS}
     for bot in bots:
         if isinstance(bot, dict) and bot.get('id') == app_id:
             bot['secret'] = app_secret

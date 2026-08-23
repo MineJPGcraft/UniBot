@@ -235,13 +235,12 @@ class TestAssetWrapping:
         import Scripts.Extensions.Renderer as renderer_module
 
         renderer = _FileUriRenderer()
-        previous = renderer_module._current_renderer
+        renderer_token = renderer_module._current_renderer.set(renderer)
         try:
-            renderer_module._current_renderer = renderer
             assert str(FileAsset(Path('/tmp/a.png'))) == Path('/tmp/a.png').as_uri()
             assert str(OnlineAsset('https://example.com/i.png')) == 'https://example.com/i.png'
         finally:
-            renderer_module._current_renderer = previous
+            renderer_module._current_renderer.reset(renderer_token)
 
     def test_resource_functions_return_wrappers(self):
         # 自带 Jinja2 资源函数返回 FileAsset 包装，由渲染器决定引用格式

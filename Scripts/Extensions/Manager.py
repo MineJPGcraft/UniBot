@@ -5,6 +5,7 @@ from pathlib import Path
 import tomlkit
 
 from Scripts.Config import config
+from Scripts.Constants import CONFIG_EXTENSIONS_FILE
 from Scripts.Logging import logger
 
 from . import (
@@ -12,7 +13,6 @@ from . import (
     ExtensionState,
 )
 from .Loader import (
-    CONFIG_EXTENSIONS_FILE,
     ExtensionLoader,
 )
 from .Renderer import BaseRenderer, RendererManager, TemplateRegistration
@@ -21,13 +21,13 @@ from .Renderer import BaseRenderer, RendererManager, TemplateRegistration
 class ExtensionManager:
     """扩展管理器，负责扩展生命周期、服务注册与渲染器管理。"""
 
-    registry: dict[str, Extension] = {}
-    services: dict[str, object] = {}
-    renderers: dict[str, BaseRenderer] = {}
-    # 无代码扩展包（template/resources）展示信息：extension_id -> info dict
-    no_code_info: dict[str, dict] = {}
-
     def __init__(self) -> None:
+        # 已加载扩展注册表等容器必须实例私有，避免多实例共享与热重载脏状态
+        self.registry: dict[str, Extension] = {}
+        self.services: dict[str, object] = {}
+        self.renderers: dict[str, BaseRenderer] = {}
+        # 无代码扩展包（template/resources）展示信息：extension_id -> info dict
+        self.no_code_info: dict[str, dict] = {}
         self.loader = ExtensionLoader(self)
         self.renderer_manager = RendererManager(self.get_renderer)
 
@@ -43,9 +43,20 @@ class ExtensionManager:
 
     # ===== 加载与生命周期 =====
 
-    def load(self) -> None:
-        """发现、校验、排序并加载扩展（声明 + on_load）。"""
+    def reset(self) -> None:
+        """清空全部注册与加载状态（重新加载前调用，测试也用它做隔离）。"""
         self.registry.clear()
+        self.services.clear()
+        self.renderers.clear()
+        self.no_code_info.clear()
+        self.renderer_manager.templates.clear()
+        self.renderer_manager.resources.clear()
+        self.renderer_manager._environments.clear()
+        self.loader.reset()
+
+    def load(self) -> None:
+        """发现、校验、排序并加载扩展（声明 + on_load），重复调用前自动重置状态。"""
+        self.reset()
         self.loader.load()
 
     async def start(self) -> None:

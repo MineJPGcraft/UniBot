@@ -227,18 +227,6 @@ def _command_source(command: Command) -> MatcherSource | None:
     return MatcherSource(module_name=module.__name__, lineno=lineno)
 
 
-def discover_commands(module) -> list[Command[Any]]:
-    """扫描模块中非抽象、非 SubCommand 的 Command 子类并实例化。"""
-    commands = []
-    for _, member in inspect.getmembers(module, inspect.isclass):
-        if member is Command or member is SubCommand or not issubclass(member, Command):
-            continue
-        if issubclass(member, SubCommand) or inspect.isabstract(member):
-            continue
-        commands.append(member())
-    return commands
-
-
 # ===== 命令管理器 =====
 
 

@@ -6,6 +6,7 @@ import tomllib
 from enum import StrEnum
 from typing import Any, Generic, Literal, TypeVar, cast
 
+from packaging.specifiers import SpecifierSet
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from Scripts.Logging import logger
@@ -13,6 +14,7 @@ from Scripts.Managers import config_manager
 
 from .Command import Command
 from .Errors import (
+    CompatibilityError,
     ExtensionError,
     ExtensionNotBoundError,
     ManifestError,
@@ -526,3 +528,24 @@ class Extension(Generic[ConfigModelT]):
 def get_unibot_version() -> str:
     """获取当前 UniBot 版本号（去除前缀 v）。"""
     return config_manager.version.lstrip('v')
+
+
+def validate_unibot_constraint(extension_id: str, constraint: str) -> None:
+    """
+    校验扩展声明的 UniBot 版本约束与当前版本兼容，不满足时抛 CompatibilityError。
+
+    Loader 与市场安装共用此实现；`'*'` / 空串表示任意版本。
+    """
+    if not constraint or constraint == '*':
+        return
+    try:
+        specifier = SpecifierSet(constraint)
+    except Exception as error:
+        raise CompatibilityError(
+            f'Extension {extension_id} has invalid version constraint: {constraint} ({error})'
+        ) from error
+    current_version = get_unibot_version()
+    if current_version and current_version not in specifier:
+        raise CompatibilityError(
+            f'Extension {extension_id} requires UniBot {constraint}, current is {current_version}!'
+        )

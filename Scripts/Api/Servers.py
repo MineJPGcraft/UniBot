@@ -43,7 +43,7 @@ async def get_server_detail(name: str, current_user: dict = Depends(get_current_
         return {'code': 1, 'data': None, 'message': 'Minecraft 服务器服务不可用'}
     servers = server_service.servers
     if name not in servers:
-        return {'code': 404, 'data': None, 'message': f'服务器 [{name}] 不存在'}
+        return {'code': 1, 'data': None, 'message': f'服务器 [{name}] 不存在'}
     status, player_data = await asyncio.gather(
         server_service.get_status(servers[name]),
         server_service.get_player_list(servers[name]),
@@ -71,7 +71,7 @@ async def get_server_players(name: str, current_user: dict = Depends(get_current
         return {'code': 1, 'data': None, 'message': 'Minecraft 服务器服务不可用'}
     servers = server_service.servers
     if name not in servers:
-        return {'code': 404, 'data': None, 'message': f'服务器 [{name}] 不存在'}
+        return {'code': 1, 'data': None, 'message': f'服务器 [{name}] 不存在'}
     players, max_players = await server_service.get_player_list(servers[name])
     return {
         'code': 0,
@@ -100,7 +100,7 @@ async def execute_command(
 
     bot = server_service.get_server(name)
     if bot is None:
-        return {'code': 404, 'data': None, 'message': f'服务器 [{name}] 不存在'}
+        return {'code': 1, 'data': None, 'message': f'服务器 [{name}] 不存在'}
 
     try:
         result = await bot.send_rcon_command(command=body.command)

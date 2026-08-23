@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import psutil
 import asyncio
 import contextlib
 import hashlib
@@ -15,9 +14,10 @@ import sys
 import time
 from pathlib import Path
 
+import psutil
+
 from Scripts.Logging import exception_logger, logger
 from Scripts.Network import download, request
-
 
 # Studio 版本清单与下载地址（私有仓库经 bot-api 分发）
 STUDIO_VERSION_URL = 'https://bot-api.mcjpg.dev/files/version.json'
@@ -197,9 +197,10 @@ class StudioManager:
         try:
             self.studio_dir.mkdir(parents=True, exist_ok=True)
             log_file = self.studio_dir / LOG_FILE_NAME
+            # 异步创建子进程，避免阻塞事件循环；日志句柄由子进程持有，父进程随即释放
             with log_file.open('ab') as log_stream:
-                process = subprocess.Popen(
-                    command,
+                process = await asyncio.create_subprocess_exec(
+                    *command,
                     cwd=str(UNIBOT_ROOT),
                     stdout=log_stream,
                     stderr=subprocess.STDOUT,
@@ -215,8 +216,8 @@ class StudioManager:
             exception_logger.error('Failed to launch Extension Studio!')
             return False, f'Studio 启动失败：{error}'
 
-    def stop(self) -> tuple[bool, str]:
-        """停止 Studio 进程并清理 PID 状态文件。"""
+    async def stop(self) -> tuple[bool, str]:
+        """停止 Studio 进程并清理 PID 状态文件（阻塞等待放入线程）。"""
         pid_file = self.studio_dir / PID_FILE_NAME
         if not pid_file.exists():
             return False, 'Studio 未在运行'
@@ -224,6 +225,20 @@ class StudioManager:
             pid = int(pid_file.read_text('Utf-8').strip())
         except ValueError:
             return False, 'Studio 状态文件异常'
+        try:
+            success = await asyncio.to_thread(self._terminate_process, pid)
+            if not success:
+                return False, 'Studio 停止失败'
+        except Exception as error:
+            exception_logger.error('Failed to stop Extension Studio!')
+            return False, f'Studio 停止失败：{error}'
+        self._cleanup_state_files()
+        logger.success(f'Extension Studio stopped (pid={pid}).')
+        return True, 'Studio 已停止'
+
+    @staticmethod
+    def _terminate_process(pid: int) -> bool:
+        """终止 Studio 进程：先优雅终止，超时后强杀。"""
         try:
             if psutil.pid_exists(pid):
                 process = psutil.Process(pid)
@@ -237,12 +252,9 @@ class StudioManager:
                 os.kill(pid, signal.SIGTERM)
         except (psutil.Error, ProcessLookupError):
             pass
-        except Exception as error:
-            exception_logger.error('Failed to stop Extension Studio!')
-            return False, f'Studio 停止失败：{error}'
-        self._cleanup_state_files()
-        logger.success(f'Extension Studio stopped (pid={pid}).')
-        return True, 'Studio 已停止'
+        except Exception:
+            return False
+        return True
 
     def read_log(self, tail: int = 200) -> str:
         """读取 Studio 进程日志（默认返回末尾 tail 行）。"""

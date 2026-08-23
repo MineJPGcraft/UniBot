@@ -17,7 +17,6 @@ from nonebot_plugin_uninfo import Uninfo
 
 from Scripts import Globals
 from Scripts.Config import config
-from Scripts.Globals import player_list_cache
 from Scripts.Logging import logger
 from Scripts.Messages import messages as message_config
 from Scripts.Rules import message_group_rule
@@ -29,10 +28,15 @@ __plugin_meta__ = PluginMetadata(
     usage='由相关消息与服务器事件自动触发。',
 )
 
+# 玩家聊天中触发「转发到群聊」的指令前缀
+CHAT_COMMAND_PREFIXES = ('send', 'gp', 'qq', 'q')
+
 notice_watcher = on_notice()
 player_chat_watcher = on_message()
 message_watcher = on_message(rule=message_group_rule)
 
+# 持有后台广播任务引用，防止任务被垃圾回收
+_background_tasks: set[asyncio.Task] = set()
 
 segment_mapping = {
     'text': lambda segment: segment.text,
@@ -64,6 +68,16 @@ def build_server_message(source: str, player: str, content: str):
     return message
 
 
+async def broadcast_to_servers(server_name: str, player: str, content: str) -> None:
+    """向除来源服务器外的所有已连接服务器同步消息（未开启同步或无服务时跳过）。"""
+    if not config.sync_message_between_servers:
+        return
+    server_service = Globals.server_service
+    if server_service is None:
+        return
+    await server_service.broadcast(build_server_message(server_name, player, content), server_name)
+
+
 @notice_watcher.handle()
 async def handle_player_join(event: PlayerJoinEvent):
     """处理玩家加入服务器事件。"""
@@ -72,12 +86,12 @@ async def handle_player_join(event: PlayerJoinEvent):
     logger.info(f'Player {player} joined server [{name}].')
 
     if config.list_compatible_mode:
-        if name not in player_list_cache:
-            player_list_cache[name] = []
+        if name not in Globals.player_list_cache:
+            Globals.player_list_cache[name] = []
         if (
             not config.bot_prefix or not player.upper().startswith(config.bot_prefix)
-        ) and player not in player_list_cache[name]:
-            player_list_cache[name].append(player)
+        ) and player not in Globals.player_list_cache[name]:
+            Globals.player_list_cache[name].append(player)
 
     server_message = message_config.events.player_join.format(player=player)
     group_message = message_config.events.player_join_group.format(player=player, server=name)
@@ -86,10 +100,7 @@ async def handle_player_join(event: PlayerJoinEvent):
         group_message = message_config.events.fake_join_group.format(player=player, server=name)
         server_message = message_config.events.fake_join_game.format(server=name, player=player)
 
-    if config.sync_message_between_servers:
-        server_service = Globals.server_service
-        if server_service is not None:
-            await server_service.broadcast(build_server_message(name, player, server_message), name)
+    await broadcast_to_servers(name, player, server_message)
 
     if config.broadcast_player:
         await send_message_to_groups(group_message)
@@ -102,8 +113,8 @@ async def handle_player_quit(event: PlayerQuitEvent):
     player = event.player.nickname
     logger.info(f'Player {player} left server [{name}].')
 
-    if config.list_compatible_mode and name in player_list_cache and player in player_list_cache[name]:
-        player_list_cache[name].remove(player)
+    if config.list_compatible_mode and name in Globals.player_list_cache and player in Globals.player_list_cache[name]:
+        Globals.player_list_cache[name].remove(player)
 
     server_message = message_config.events.player_quit.format(player=player)
     group_message = message_config.events.player_quit_group.format(player=player, server=name)
@@ -112,10 +123,7 @@ async def handle_player_quit(event: PlayerQuitEvent):
         server_message = message_config.events.fake_quit_game.format(player=player)
         group_message = message_config.events.fake_quit_group.format(player=player, server=name)
 
-    if config.sync_message_between_servers:
-        server_service = Globals.server_service
-        if server_service is not None:
-            await server_service.broadcast(build_server_message(name, player, server_message), name)
+    await broadcast_to_servers(name, player, server_message)
 
     if config.broadcast_player:
         await send_message_to_groups(group_message)
@@ -131,10 +139,7 @@ async def handle_player_death(event: PlayerDeathEvent):
 
     if (not config.bot_prefix) or (not player.upper().startswith(config.bot_prefix)):
         broadcast_message = message_config.events.player_death.format(player=player, death=death_message)
-        if config.sync_message_between_servers:
-            server_service = Globals.server_service
-            if server_service is not None:
-                await server_service.broadcast(build_server_message(name, player, broadcast_message), name)
+        await broadcast_to_servers(name, player, broadcast_message)
         if config.broadcast_player:
             await send_message_to_groups(broadcast_message)
 
@@ -158,10 +163,7 @@ async def handle_player_achievement(event: PlayerAchievementEvent):
         broadcast_message = message_config.events.player_achievement.format(
             player=player, achievement=achievement_message
         )
-        if config.sync_message_between_servers:
-            server_service = Globals.server_service
-            if server_service is not None:
-                await server_service.broadcast(build_server_message(name, player, broadcast_message), name)
+        await broadcast_to_servers(name, player, broadcast_message)
         if config.broadcast_player:
             await send_message_to_groups(broadcast_message)
 
@@ -177,7 +179,12 @@ async def handle_player_chat(event: PlayerChatEvent):
     if config.sync_message_between_servers:
         server_service = Globals.server_service
         if server_service is not None:
-            asyncio.create_task(server_service.broadcast(build_server_message(name, player, chat_message), name))
+            # 后台广播不阻塞聊天转发；持引用防止任务被 GC
+            broadcast_task = asyncio.create_task(
+                server_service.broadcast(build_server_message(name, player, chat_message), name)
+            )
+            _background_tasks.add(broadcast_task)
+            broadcast_task.add_done_callback(_background_tasks.discard)
 
     if config.sync_all_game_message:
         if check_message(chat_message):
@@ -193,7 +200,7 @@ async def handle_player_chat(event: PlayerChatEvent):
     if ' ' not in chat_message:
         return
     start, content = chat_message.split(' ', maxsplit=1)
-    if start.lower() not in ('send', 'gp', 'qq', 'q'):
+    if start.lower() not in CHAT_COMMAND_PREFIXES:
         return
     server_service = Globals.server_service
     server = server_service.get_server(name) if server_service else None

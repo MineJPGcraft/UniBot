@@ -1,5 +1,7 @@
 """扩展系统 WebUI REST 路由：已安装扩展、配置、启停、渲染引擎与主题。"""
 
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from Scripts.Config import config, reload_config
@@ -8,6 +10,8 @@ from Scripts.Managers import config_manager
 from Scripts.Managers.Studio import studio_manager
 
 from .Auth import get_current_user, require_role
+from .Body import parse_json_object
+from .Schemas import MarketInstallRequest, NameSwitchRequest
 
 router = APIRouter(prefix='/api/extensions', tags=['Extensions'])
 
@@ -60,17 +64,11 @@ async def get_market(force: bool = False, current_user: dict = Depends(get_curre
 
 
 @router.post('/market/install', summary='从市场安装扩展')
-async def install_market_extension(request: Request, user: dict = Depends(require_role('admin'))):
+async def install_market_extension(body: MarketInstallRequest, user: dict = Depends(require_role('admin'))):
     """从市场下载并安装/升级扩展，重启后生效。"""
-    try:
-        body = await request.json()
-    except Exception:
-        return {'code': 1, 'data': None, 'message': '请求体格式错误'}
-    extension_id = (body or {}).get('id', '')
-    version = (body or {}).get('version', '')
-    if not extension_id:
+    if not body.id:
         return {'code': 1, 'data': None, 'message': '缺少扩展 id'}
-    success, message = await market_manager.install(extension_id, version)
+    success, message = await market_manager.install(body.id, body.version)
     return {'code': 0 if success else 1, 'data': None, 'message': message}
 
 
@@ -124,14 +122,15 @@ async def launch_studio(user: dict = Depends(require_role('admin'))):
 @router.post('/studio/stop', summary='停止 Extension Studio')
 async def stop_studio(user: dict = Depends(require_role('admin'))):
     """停止 Studio 进程并清理状态文件。"""
-    success, message = studio_manager.stop()
+    success, message = await studio_manager.stop()
     return {'code': 0 if success else 1, 'data': None, 'message': message}
 
 
 @router.get('/studio/log', summary='Extension Studio 日志')
 async def get_studio_log(tail: int = 200, current_user: dict = Depends(get_current_user)):
     """返回 Studio 进程日志（默认末尾 200 行）。"""
-    return {'code': 0, 'data': {'content': studio_manager.read_log(tail=tail)}, 'message': 'ok'}
+    content = await asyncio.to_thread(studio_manager.read_log, tail=tail)
+    return {'code': 0, 'data': {'content': content}, 'message': 'ok'}
 
 
 @router.get('/items/{extension_id}', summary='扩展详情与配置 schema')
@@ -147,7 +146,7 @@ async def get_extension_detail(extension_id: str, current_user: dict = Depends(g
 async def enable_extension(extension_id: str, user: dict = Depends(require_role('admin'))):
     """启用扩展（写 Config/Extensions.toml，重启生效）。"""
     _ensure_extension_exists(extension_id)
-    extension_manager.set_enabled(extension_id, True)
+    await asyncio.to_thread(extension_manager.set_enabled, extension_id, True)
     return {'code': 0, 'data': None, 'message': 'ok'}
 
 
@@ -155,7 +154,7 @@ async def enable_extension(extension_id: str, user: dict = Depends(require_role(
 async def disable_extension(extension_id: str, user: dict = Depends(require_role('admin'))):
     """禁用扩展（写 Config/Extensions.toml，重启生效）。"""
     _ensure_extension_exists(extension_id)
-    extension_manager.set_enabled(extension_id, False)
+    await asyncio.to_thread(extension_manager.set_enabled, extension_id, False)
     return {'code': 0, 'data': None, 'message': 'ok'}
 
 
@@ -174,10 +173,7 @@ async def get_extension_config(extension_id: str, current_user: dict = Depends(g
 @router.patch('/{extension_id}/config', summary='更新扩展配置')
 async def patch_extension_config(extension_id: str, request: Request, user: dict = Depends(require_role('admin'))):
     """更新扩展配置，校验失败返回字段级错误且不修改原配置。"""
-    try:
-        patch_data = await request.json()
-    except Exception:
-        return {'code': 1, 'data': None, 'message': '请求体格式错误'}
+    patch_data = await parse_json_object(request)
     extension = extension_manager.registry.get(extension_id)
     if extension is not None:
         if not extension.is_bound:
@@ -277,13 +273,9 @@ async def get_render_configs(current_user: dict = Depends(get_current_user)):
 
 
 @router.post('/renderers/switch', summary='切换渲染引擎')
-async def switch_renderer(request: Request, user: dict = Depends(require_role('admin'))):
+async def switch_renderer(body: NameSwitchRequest, user: dict = Depends(require_role('admin'))):
     """切换渲染引擎并写回 Config.toml。"""
-    try:
-        body = await request.json()
-    except Exception:
-        return {'code': 1, 'data': None, 'message': '请求体格式错误'}
-    name = (body or {}).get('name', '')
+    name = body.name
     # 校验目标是「已安装的渲染器扩展」，而非「已启用/已 setup 的引擎实例」
     # （否则图片模式未开启或目标引擎尚未 setup 时会被误判为不存在）
     installed = {
@@ -308,13 +300,9 @@ async def get_templates(current_user: dict = Depends(get_current_user)):
 
 
 @router.post('/templates/switch', summary='切换模板')
-async def switch_template(request: Request, user: dict = Depends(require_role('admin'))):
+async def switch_template(body: NameSwitchRequest, user: dict = Depends(require_role('admin'))):
     """切换模板包并立即使模板缓存失效。"""
-    try:
-        body = await request.json()
-    except Exception:
-        return {'code': 1, 'data': None, 'message': '请求体格式错误'}
-    template_name = (body or {}).get('name', '')
+    template_name = body.name
     if template_name not in extension_manager.templates:
         return {'code': 1, 'data': None, 'message': f'模板 {template_name} 不存在'}
     _patch_image_config('template', template_name)

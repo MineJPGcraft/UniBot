@@ -1,10 +1,8 @@
-from pathlib import Path
-
 import tomlkit
 from nonebot import get_plugin_config
 from pydantic import BaseModel, model_validator
 
-TOML_PATH = Path('Config.toml')
+from Scripts.Constants import CONFIG_TOML_PATH
 
 
 class ImageConfig(BaseModel):
@@ -67,7 +65,7 @@ def _merge_toml(content: str) -> dict:
     return merged
 
 
-config = Config.model_validate(_merge_toml(TOML_PATH.read_text('Utf-8')))
+config = Config.model_validate(_merge_toml(CONFIG_TOML_PATH.read_text('Utf-8')))
 
 
 def validate_config_content(content: str) -> str | None:
@@ -81,6 +79,6 @@ def validate_config_content(content: str) -> str | None:
 
 def reload_config():
     """从磁盘重新读取 Config.toml，热更新全局 config 对象（保持对象引用不变）。"""
-    updated_config = Config.model_validate(_merge_toml(TOML_PATH.read_text('Utf-8')))
+    updated_config = Config.model_validate(_merge_toml(CONFIG_TOML_PATH.read_text('Utf-8')))
     for field_name in Config.model_fields:
         setattr(config, field_name, getattr(updated_config, field_name))

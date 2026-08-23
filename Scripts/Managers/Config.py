@@ -1,27 +1,27 @@
 import sys
 from contextlib import suppress
 from json import JSONDecodeError, dumps, loads
-from pathlib import Path
 
 import tomlkit
 
+from Scripts.Constants import CONFIG_TOML_PATH, ENV_PATH, MESSAGES_PATH, PYPROJECT_PATH
 from Scripts.Logging import logger
 
 
 class ConfigManager:
-    mapping: list = []
-    environment: dict = {}
-
-    env_path: Path = Path('.env')
-    pyproject_path: Path = Path('pyproject.toml')
-    messages_path: Path = Path('Config') / 'Messages.toml'
-    config_path: Path = Path('Config.toml')
-
     # pyproject.toml 数据
     version: str = ''
     webui_version: str = ''
     nonebot_config: dict = {}
     pyproject_data: dict = {}
+
+    def __init__(self) -> None:
+        self.env_path = ENV_PATH
+        self.pyproject_path = PYPROJECT_PATH
+        self.messages_path = MESSAGES_PATH
+        self.config_path = CONFIG_TOML_PATH
+        self.mapping: list = []
+        self.environment: dict = {}
 
     @staticmethod
     def _parse_value(raw: str) -> object:

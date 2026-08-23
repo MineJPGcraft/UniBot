@@ -2,6 +2,8 @@
 
 from nonebot_plugin_alconna import Match
 
+from Scripts.Constants import CONFIG_EXTENSIONS_FILE, EXTENSIONS_DIR, MANIFEST_FILE
+
 from .Base import (
     Extension,
     ExtensionManifest,
@@ -20,7 +22,6 @@ from .Command import (
     ImageHandler,
     SubCommand,
     command_manager,
-    discover_commands,
 )
 from .Errors import (
     CommandError,
@@ -35,10 +36,8 @@ from .Errors import (
 )
 from .Loader import (
     BUILTIN_DIR,
-    CONFIG_EXTENSIONS_FILE,
     CONFIG_ROOT,
     DATA_ROOT,
-    EXTENSIONS_DIR,
     STATES_FILE,
     STATES_ROOT,
     ExtensionLoader,
@@ -99,13 +98,14 @@ __all__ = [
     'SubCommand',
     'UNSET',
     'command_manager',
-    'discover_commands',
+    # Constants
+    'CONFIG_EXTENSIONS_FILE',
+    'EXTENSIONS_DIR',
+    'MANIFEST_FILE',
     # Loader
     'BUILTIN_DIR',
-    'CONFIG_EXTENSIONS_FILE',
     'CONFIG_ROOT',
     'DATA_ROOT',
-    'EXTENSIONS_DIR',
     'ExtensionLoader',
     'STATES_FILE',
     'STATES_ROOT',

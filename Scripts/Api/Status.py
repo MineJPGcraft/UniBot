@@ -30,7 +30,8 @@ def get_status_data() -> dict:
         'has_update': version_manager.check_update(),
         'uptime': int(time.time() - start_time),
         'memory_mb': round(process.memory_info().rss / 1024 / 1024, 1),
-        'cpu_percent': process.cpu_percent(interval=0.1),
+        # 非阻塞采样：返回自上次调用以来的平均占用（首次为 0），REST 与 WebSocket 推送共用时不会互相阻塞
+        'cpu_percent': process.cpu_percent(interval=None),
         'servers_online': len(servers),
         'players_bound': players_bound,
         'adapters': adapter_names,

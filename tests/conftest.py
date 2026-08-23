@@ -27,24 +27,12 @@ def _isolate_extension_manager():
     """每个测试前清空扩展管理器状态，避免测试间相互污染。"""
     from Scripts.Extensions import command_manager, extension_manager
 
-    extension_manager.registry.clear()
-    extension_manager.services.clear()
-    extension_manager.renderers.clear()
-    extension_manager.no_code_info.clear()
-    extension_manager.renderer_manager.templates.clear()
-    extension_manager.renderer_manager.resources.clear()
-    extension_manager.renderer_manager._environments.clear()
+    extension_manager.reset()
     command_manager._commands.clear()
     command_manager._built = False
     command_manager._matchers = []
     yield
-    extension_manager.registry.clear()
-    extension_manager.services.clear()
-    extension_manager.renderers.clear()
-    extension_manager.no_code_info.clear()
-    extension_manager.renderer_manager.templates.clear()
-    extension_manager.renderer_manager.resources.clear()
-    extension_manager.renderer_manager._environments.clear()
+    extension_manager.reset()
     command_manager._commands.clear()
     command_manager._built = False
     command_manager._matchers = []

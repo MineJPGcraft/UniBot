@@ -235,7 +235,7 @@ class TestValidationIsolation:
 
     def test_incompatible_extension_blocked_not_crash(self, monkeypatch):
         # 固定当前 UniBot 版本，使 ">=999.0.0" 约束必然不满足
-        monkeypatch.setattr('Scripts.Extensions.Loader.get_unibot_version', lambda: '1.0.0')
+        monkeypatch.setattr('Scripts.Extensions.Base.get_unibot_version', lambda: '1.0.0')
         loader = self._make_loader_with(
             {
                 'Playwright': """
@@ -260,7 +260,7 @@ unibot = ">=999.0.0"
         assert 'UniBot' in info.failure_reason
 
     def test_compatible_extension_still_loads_alongside_blocked(self, monkeypatch):
-        monkeypatch.setattr('Scripts.Extensions.Loader.get_unibot_version', lambda: '1.0.0')
+        monkeypatch.setattr('Scripts.Extensions.Base.get_unibot_version', lambda: '1.0.0')
         loader = self._make_loader_with(
             {
                 'GoodExt': """
@@ -295,7 +295,7 @@ unibot = ">=999.0.0"
         )
 
     def test_dependent_extension_also_blocked(self, monkeypatch):
-        monkeypatch.setattr('Scripts.Extensions.Loader.get_unibot_version', lambda: '1.0.0')
+        monkeypatch.setattr('Scripts.Extensions.Base.get_unibot_version', lambda: '1.0.0')
         loader = self._make_loader_with(
             {
                 'Incompat': """

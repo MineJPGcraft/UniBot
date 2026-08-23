@@ -9,30 +9,35 @@
 """
 
 import tomllib
+from collections.abc import Mapping
 from pathlib import Path
 
 import tomlkit
 
+from Scripts.Constants import CONFIG_EXTENSIONS_FILE, EXTENSIONS_DIR, MANIFEST_FILE, PYPROJECT_PATH
 from Scripts.Logging import logger
 
-# 扩展目录根与清单文件名（与 Loader 保持一致）
-EXTENSIONS_DIR = Path('Extensions')
-MANIFEST_FILE = 'Extension.toml'
-PYPROJECT_PATH = Path('pyproject.toml')
-# 扩展启停配置文件（与 Loader 保持一致）
-CONFIG_EXTENSIONS_FILE = Path('Config') / 'Extensions.toml'
 # 收集所有扩展依赖的 optional-dependencies 组名
 EXTENSIONS_EXTRA = 'extensions'
 
 
-def _is_enabled(extension_id: str) -> bool:
-    """读取 Config/Extensions.toml 中扩展的启停标志，缺失时默认启用。"""
+def load_enabled_config() -> dict:
+    """读取扩展启停配置文件，缺失或损坏时返回空 dict（视为全部启用）。"""
     try:
-        data = tomlkit.parse(CONFIG_EXTENSIONS_FILE.read_text('Utf-8'))
+        return tomlkit.parse(CONFIG_EXTENSIONS_FILE.read_text('Utf-8'))
     except Exception as error:
         logger.warning(f'Failed to read extension enable/disable config: {error}, defaulting to all enabled.')
-        return True
-    return bool(data.get(extension_id, {}).get('enabled', True))
+        return {}
+
+
+def is_extension_enabled(enabled_config: Mapping, extension_id: str) -> bool:
+    """从启停配置中读取单个扩展的启用标志，缺失时默认启用。"""
+    return bool(enabled_config.get(extension_id, {}).get('enabled', True))
+
+
+def _is_enabled(extension_id: str) -> bool:
+    """读取 Config/Extensions.toml 中扩展的启停标志，缺失时默认启用。"""
+    return is_extension_enabled(load_enabled_config(), extension_id)
 
 
 def _read_extension_dependencies(manifest_path: Path) -> list[str]:

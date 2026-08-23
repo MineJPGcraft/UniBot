@@ -8,11 +8,19 @@ from copy import deepcopy
 
 from fastapi import APIRouter, Depends, Request
 
-from Scripts.Config import TOML_PATH, Config, config, reload_config, validate_config_content
+from Scripts.Config import CONFIG_TOML_PATH, Config, config, reload_config, validate_config_content
+from Scripts.Constants import BUILTIN_PLUGIN_PREFIX
 from Scripts.Managers import config_manager
 
 from ..Auth import get_current_user, require_role
-from ..Schemas import InstallAdapterRequest, NoneBotItemRequest, UninstallAdapterRequest
+from ..Body import parse_json_object
+from ..Schemas import (
+    InstallAdapterRequest,
+    MessagesPatchRequest,
+    NoneBotItemRequest,
+    RawConfigPatchRequest,
+    UninstallAdapterRequest,
+)
 from .Adapters import ADAPTER_CATALOG, PROTECTED_ADAPTER_MODULES
 from .Driver import compute_redundant_drivers, format_driver, merge_driver, shrink_driver
 from .Helpers import deep_merge, sanitize_none
@@ -51,10 +59,7 @@ async def get_config_schema(current_user: dict = Depends(get_current_user)):
 @router.patch('', summary='更新配置')
 async def patch_config(request: Request, current_user: dict = Depends(require_role('admin'))):
     """部分更新配置，深合并后写回 Config.toml 并热更新。"""
-    try:
-        patch_data = await request.json()
-    except Exception:
-        return {'code': 1, 'data': None, 'message': '请求体格式错误'}
+    patch_data = await parse_json_object(request)
 
     merged_data = deep_merge(config.model_dump(), patch_data)
     toml_output = deepcopy(merged_data)
@@ -64,7 +69,7 @@ async def patch_config(request: Request, current_user: dict = Depends(require_ro
     try:
         config_manager.update_config(sanitize_none(toml_output))
     except Exception as error:
-        return {'code': 500, 'data': None, 'message': f'写入配置文件失败：{error}'}
+        return {'code': 1, 'data': None, 'message': f'写入配置文件失败：{error}'}
 
     # 热更新内存中的配置对象（先经模型校验，保证嵌套配置仍为 Pydantic 子模型而非 dict）
     updated_config = Config.model_validate(merged_data)
@@ -90,20 +95,12 @@ async def get_messages(current_user: dict = Depends(get_current_user)):
 
 
 @router.patch('/messages', summary='保存消息文本配置')
-async def patch_messages(request: Request, current_user: dict = Depends(require_role('admin'))):
+async def patch_messages(body: MessagesPatchRequest, current_user: dict = Depends(require_role('admin'))):
     """以原始文本方式保存 Messages.toml 并热更新。"""
     try:
-        patch_data = await request.json()
-    except Exception:
-        return {'code': 1, 'data': None, 'message': '请求体格式错误'}
-
-    content = patch_data.get('messages_toml')
-    if content is None:
-        return {'code': 1, 'data': None, 'message': '未提供需要保存的消息文本'}
-    try:
-        config_manager.write_messages_raw(content)
+        config_manager.write_messages_raw(body.messages_toml)
     except Exception as error:
-        return {'code': 400, 'data': None, 'message': f'消息文本保存失败：{error}'}
+        return {'code': 1, 'data': None, 'message': f'消息文本保存失败：{error}'}
     return {'code': 0, 'data': None, 'message': '消息文本已保存并生效'}
 
 
@@ -127,10 +124,7 @@ async def get_env_config(current_user: dict = Depends(get_current_user)):
 @router.patch('/env', summary='更新环境变量配置')
 async def patch_env_config(request: Request, current_user: dict = Depends(require_role('admin'))):
     """部分更新 .env 配置，写回文件（需重启生效）。"""
-    try:
-        patch_data = await request.json()
-    except Exception:
-        return {'code': 1, 'data': None, 'message': '请求体格式错误'}
+    patch_data = await parse_json_object(request)
     config_manager.update_env(patch_data)
     return {'code': 0, 'data': None, 'message': 'ok（重启后生效）'}
 
@@ -144,7 +138,7 @@ async def get_raw_config(current_user: dict = Depends(get_current_user)):
     return {
         'code': 0,
         'data': {
-            'config_toml': TOML_PATH.read_text('Utf-8'),
+            'config_toml': CONFIG_TOML_PATH.read_text('Utf-8'),
             'env': config_manager.env_path.read_text('Utf-8'),
         },
         'message': 'ok',
@@ -152,25 +146,18 @@ async def get_raw_config(current_user: dict = Depends(get_current_user)):
 
 
 @router.patch('/raw', summary='保存原始配置文件内容')
-async def patch_raw_config(request: Request, current_user: dict = Depends(require_role('admin'))):
+async def patch_raw_config(body: RawConfigPatchRequest, current_user: dict = Depends(require_role('admin'))):
     """以原始文本方式保存 Config.toml / .env（.env 改动需重启生效）。"""
-    try:
-        patch_data = await request.json()
-    except Exception:
-        return {'code': 1, 'data': None, 'message': '请求体格式错误'}
-
     hints = []
-    config_content = patch_data.get('config_toml')
-    if config_content is not None:
-        if error_message := validate_config_content(config_content):
-            return {'code': 400, 'data': None, 'message': error_message}
-        TOML_PATH.write_text(config_content, encoding='Utf-8')
+    if body.config_toml is not None:
+        if error_message := validate_config_content(body.config_toml):
+            return {'code': 1, 'data': None, 'message': error_message}
+        CONFIG_TOML_PATH.write_text(body.config_toml, encoding='Utf-8')
         reload_config()
         hints.append('Config.toml 已热更新')
 
-    env_content = patch_data.get('env')
-    if env_content is not None:
-        config_manager.write_env_raw(env_content)
+    if body.env is not None:
+        config_manager.write_env_raw(body.env)
         hints.append('.env 已保存，重启后生效')
 
     if not hints:
@@ -218,7 +205,7 @@ async def install_adapter(body: InstallAdapterRequest, current_user: dict = Depe
     """向 pyproject.toml 写入依赖记录和 NoneBot 适配器配置，并自动补全所需驱动。"""
     adapter = next((item for item in ADAPTER_CATALOG if item['id'] == body.adapter_id), None)
     if adapter is None:
-        return {'code': 404, 'data': None, 'message': '适配器不在内置目录中'}
+        return {'code': 1, 'data': None, 'message': '适配器不在内置目录中'}
     config_manager.add_dependency(adapter['package'])
     config_manager.add_adapter(adapter['name'], adapter['module_name'])
     new_driver, added_drivers = merge_driver(adapter.get('drivers', []))
@@ -277,7 +264,7 @@ async def add_plugin(body: NoneBotItemRequest, current_user: dict = Depends(requ
 @router.delete('/nonebot/plugins', summary='移除插件')
 async def remove_plugin(body: NoneBotItemRequest, current_user: dict = Depends(require_role('admin'))):
     """从 pyproject.toml 移除插件。"""
-    if body.module_name.startswith('Plugins.'):
+    if body.module_name.startswith(BUILTIN_PLUGIN_PREFIX):
         return {'code': 1, 'data': None, 'message': '内置插件不允许删除'}
     config_manager.remove_plugin(body.module_name)
     return {'code': 0, 'data': None, 'message': 'ok（重启后生效）'}

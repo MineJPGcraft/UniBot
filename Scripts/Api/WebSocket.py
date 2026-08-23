@@ -1,11 +1,11 @@
 import asyncio
 from datetime import datetime
 
-import jwt
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from Scripts.Logging import logger
-from Scripts.Managers import data_manager
+
+from .Auth import COOKIE_ACCESS_KEY, decode_access_token_payload
 
 router = APIRouter(tags=['WebSocket'])
 
@@ -54,27 +54,20 @@ def log_sink(message):
     log_cache.append(log_data)
     if len(log_cache) > LOG_CACHE_SIZE:
         del log_cache[0]
+    # 仅在事件循环线程内时推送；跨线程调用（无运行中的循环）直接跳过
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            loop.create_task(broadcast_event('log', log_data))
+        loop = asyncio.get_running_loop()
     except RuntimeError:
-        pass
+        return
+    loop.create_task(broadcast_event('log', log_data))
 
 
 @router.websocket('/ws')
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket 端点，支持订阅日志、服务器、玩家、系统事件。"""
     # 通过 cookie 中的 access_token 验证身份（fallback 到 query 参数兼容旧版）
-    token = websocket.cookies.get('unibot_access_token', '') or websocket.query_params.get('token', '')
-    if not token:
-        await websocket.close(code=4001, reason='Unauthorized')
-        return
-    try:
-        payload = jwt.decode(token, data_manager.secret_key, algorithms=['HS256'])
-        if payload.get('type') != 'access':
-            raise jwt.InvalidTokenError()
-    except jwt.InvalidTokenError:
+    token = websocket.cookies.get(COOKIE_ACCESS_KEY, '') or websocket.query_params.get('token', '')
+    if not decode_access_token_payload(token):
         await websocket.close(code=4001, reason='Unauthorized')
         return
 

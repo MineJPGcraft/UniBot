@@ -83,6 +83,27 @@ class UpgradePluginRequest(BaseModel):
     name: str
 
 
+# ===== Extensions =====
+
+
+class MarketInstallRequest(BaseModel):
+    id: str
+    version: str = ''
+
+
+class NameSwitchRequest(BaseModel):
+    name: str
+
+
+class MessagesPatchRequest(BaseModel):
+    messages_toml: str
+
+
+class RawConfigPatchRequest(BaseModel):
+    config_toml: str | None = None
+    env: str | None = None
+
+
 # ===== Config / Environment =====
 
 

@@ -6,6 +6,8 @@
 - `ENV_SCHEMA` / `ENV_GROUPS`：`.env` 字段，供 `/api/config/env` 渲染。
 """
 
+from Scripts.Constants import QQ_INTENT_FIELDS
+
 from .Adapters import PLATFORM_OPTIONS
 
 # ===== Config.toml 字段定义 =====
@@ -184,26 +186,7 @@ CONFIG_GROUPS = [
 
 # ===== .env 环境变量字段定义 =====
 
-QQ_INTENT_FIELDS = [
-    {'key': 'guilds', 'label': '频道事件', 'type': 'boolean', 'default': False},
-    {'key': 'guild_members', 'label': '频道成员事件', 'type': 'boolean', 'default': False},
-    {'key': 'guild_messages', 'label': '频道消息事件', 'type': 'boolean', 'default': False},
-    {'key': 'guild_message_reactions', 'label': '频道消息表态事件', 'type': 'boolean', 'default': False},
-    {'key': 'direct_message', 'label': '频道私信事件', 'type': 'boolean', 'default': False},
-    {'key': 'open_forum_event', 'label': '频道公域论坛事件', 'type': 'boolean', 'default': False},
-    {'key': 'audio_live_member', 'label': '频道音频或直播成员事件', 'type': 'boolean', 'default': False},
-    {
-        'key': 'c2c_group_at_messages',
-        'label': '私聊与群聊 @ 消息事件',
-        'type': 'boolean',
-        'default': True,
-    },
-    {'key': 'interaction', 'label': '互动事件', 'type': 'boolean', 'default': False},
-    {'key': 'message_audit', 'label': '频道消息审核事件', 'type': 'boolean', 'default': False},
-    {'key': 'forum_event', 'label': '频道私域论坛事件', 'type': 'boolean', 'default': False},
-    {'key': 'audio_action', 'label': '频道音频操作事件', 'type': 'boolean', 'default': False},
-    {'key': 'at_messages', 'label': '频道 @ 机器人消息事件', 'type': 'boolean', 'default': False},
-]
+# QQ 官方机器人 Intent 订阅清单：单一来源在 Scripts/Constants.py（扫码登录默认值共用）
 
 ENV_SCHEMA = [
     {'key': 'PORT', 'label': '监听端口', 'type': 'number', 'default': 8000, 'description': 'NoneBot 监听的端口'},

@@ -7,6 +7,7 @@ import time
 import tomllib
 from pathlib import Path
 
+from Scripts.Constants import CONFIG_TOML_PATH, DATA_DIR, PYPROJECT_PATH
 from Scripts.Logging import configure_handlers, logger
 from Scripts.Process import RESTART_EXIT_CODE, WATCHDOG_ENVIRONMENT
 
@@ -14,10 +15,8 @@ MAX_RESTART_ATTEMPTS = 3
 RESTART_WINDOW_SECONDS = 60
 
 BOT_PATH = Path('Bot.py')
-CONFIG_PATH = Path('Config.toml')
-PYPROJECT_PATH = Path('pyproject.toml')
 # 记录最近一次同步时的依赖指纹，用于判断依赖声明是否有变化
-HASH_FILE = Path('Data') / 'Project.hash'
+HASH_FILE = DATA_DIR / 'Project.hash'
 
 EXTRA_CONFIG_FIELDS = {
     'webui': ('webui', 'enabled'),
@@ -31,7 +30,7 @@ def read_toml(path: Path) -> dict:
 
 def get_enabled_extras() -> list[str]:
     """获取当前配置中已启用的可选功能。"""
-    config = read_toml(CONFIG_PATH)
+    config = read_toml(CONFIG_TOML_PATH)
     return [
         extra for extra, (section, field) in EXTRA_CONFIG_FIELDS.items() if config.get(section, {}).get(field, False)
     ]

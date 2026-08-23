@@ -7,9 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import tomlkit
-from packaging.specifiers import SpecifierSet
-
+from Scripts.Constants import EXTENSIONS_DIR, MANIFEST_FILE
 from Scripts.Logging import exception_logger, logger
 
 if TYPE_CHECKING:
@@ -23,15 +21,15 @@ from .Base import (
     ExtensionMetadata,
     ExtensionState,
     ExtensionType,
-    get_unibot_version,
     manifest_from_attributes,
     parse_manifest,
+    validate_unibot_constraint,
 )
 from .Command import (
     BUILTIN_PREFIX,
     command_manager,
 )
-from .Dependencies import sync_extension_dependencies
+from .Dependencies import is_extension_enabled, load_enabled_config, sync_extension_dependencies
 from .Errors import (
     CompatibilityError,
     DependencyError,
@@ -49,18 +47,12 @@ from .Storage import (
     ExtensionDataStore,
 )
 
-# 扩展目录根
-EXTENSIONS_DIR = Path('Extensions')
 # 内置命令扩展目录（框架包内随代码分发）
 BUILTIN_DIR = Path(__file__).parent / 'Builtin'
 CONFIG_ROOT = Path('Config') / 'Extensions'
-CONFIG_EXTENSIONS_FILE = Path('Config') / 'Extensions.toml'
 DATA_ROOT = Path('Data') / 'Exs'
 STATES_ROOT = Path('Data') / 'Extension'
 STATES_FILE = 'States.toml'
-
-# 框架约定文件名
-MANIFEST_FILE = 'Extension.toml'
 
 
 @dataclass
@@ -92,10 +84,16 @@ class ExtensionLoader:
         # 启停配置缓存（load 开头重置，避免重复读文件）
         self._enabled_config: dict | None = None
 
-    def load(self) -> list[Extension]:
-        """执行完整加载流程：发现 -> 校验 -> 拓扑排序 -> 导入 -> 声明 -> on_load。"""
+    def reset(self) -> None:
+        """清空发现与加载状态（配合 ExtensionManager.reset 使用）。"""
+        self._discovered.clear()
+        self.extensions.clear()
         self._builtin_command_classes.clear()
         self._enabled_config = None
+
+    def load(self) -> list[Extension]:
+        """执行完整加载流程：发现 -> 校验 -> 拓扑排序 -> 导入 -> 声明 -> on_load。"""
+        self.reset()
         self._discover()
         self._validate_all()
         order = self._topological_sort()
@@ -190,15 +188,8 @@ class ExtensionLoader:
         """读取 Config/Extensions.toml 中扩展的启停标志，缺失时默认启用。"""
         # 缓存解析结果，发现阶段多次调用时只读一次文件
         if self._enabled_config is None:
-            self._enabled_config = {}
-            if CONFIG_EXTENSIONS_FILE.exists():
-                try:
-                    self._enabled_config = tomlkit.parse(CONFIG_EXTENSIONS_FILE.read_text('Utf-8'))
-                except Exception as error:
-                    logger.warning(
-                        f'Failed to read extension enable/disable config: {error}, defaulting to all enabled.'
-                    )
-        return bool(self._enabled_config.get(extension_id, {}).get('enabled', True))
+            self._enabled_config = load_enabled_config()
+        return is_extension_enabled(self._enabled_config, extension_id)
 
     # ===== 校验 =====
 
@@ -227,21 +218,7 @@ class ExtensionLoader:
 
     def _validate_compatibility(self, extension_id: str, manifest) -> None:
         """校验扩展与当前 UniBot 版本的兼容性。"""
-        constraint = manifest.compatibility.unibot
-        # '*' / 空串表示任意版本（单文件扩展无 Extension.toml 时的缺省值）
-        if not constraint or constraint == '*':
-            return
-        try:
-            specifier = SpecifierSet(constraint)
-        except Exception as error:
-            raise CompatibilityError(
-                f'Extension {extension_id} has invalid version constraint: {constraint} ({error})'
-            ) from error
-        current_version = get_unibot_version()
-        if current_version and current_version not in specifier:
-            raise CompatibilityError(
-                f'Extension {extension_id} requires UniBot {constraint}, current is {current_version}!'
-            )
+        validate_unibot_constraint(extension_id, manifest.compatibility.unibot)
 
     @staticmethod
     def _validate_entry_module(extension_id: str, directory: Path) -> None:

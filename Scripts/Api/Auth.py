@@ -1,10 +1,14 @@
 import asyncio
+import uuid
 from datetime import UTC, datetime, timedelta
+from json import dumps, loads
 
+import bcrypt
 import jwt
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from Scripts.Constants import DATA_DIR
 from Scripts.Logging import logger
 from Scripts.Managers import data_manager
 
@@ -71,11 +75,60 @@ router = APIRouter(
     dependencies=[Depends(rate_limiter.check)],
 )
 
-# 已注销的 refresh_token 集合
-revoked_tokens: set[str] = set()
+# 已注销的 refresh_token：token -> 过期时间戳（惰性清理，避免集合无限增长）
+REVOKED_TOKENS_FILE = DATA_DIR / 'RevokedTokens.json'
+revoked_tokens: dict[str, float] = {}
+_revoked_tokens_loaded = False
 
 # 初始化接口并发锁：防止「检测无用户 → 创建用户」之间被并发请求插入
 setup_lock = asyncio.Lock()
+
+# 哑密码哈希：用户不存在时仍执行一次 bcrypt 校验，抹平响应时延差防用户名枚举
+DUMMY_PASSWORD_HASH = bcrypt.hashpw(uuid.uuid4().hex.encode('Utf-8'), bcrypt.gensalt()).decode('Utf-8')
+
+
+def _load_revoked_tokens() -> None:
+    """从磁盘加载已注销 token 记录（首次使用时执行一次）。"""
+    global _revoked_tokens_loaded
+    if _revoked_tokens_loaded:
+        return
+    _revoked_tokens_loaded = True
+    try:
+        if REVOKED_TOKENS_FILE.exists():
+            revoked_tokens.update(loads(REVOKED_TOKENS_FILE.read_text('Utf-8')))
+    except Exception as error:
+        logger.warning(f'Failed to load revoked tokens: {error}')
+
+
+def _purge_expired_revocations() -> None:
+    """清理已过期的注销记录，控制内存占用。"""
+    now = datetime.now(UTC).timestamp()
+    for token, expire_at in list(revoked_tokens.items()):
+        if expire_at <= now:
+            del revoked_tokens[token]
+
+
+def revoke_refresh_token(token: str) -> None:
+    """注销 refresh_token 并持久化记录，保证跨重启仍失效。"""
+    _load_revoked_tokens()
+    try:
+        payload = jwt.decode(token, data_manager.secret_key, algorithms=['HS256'], options={'verify_exp': False})
+    except jwt.InvalidTokenError:
+        return
+    revoked_tokens[token] = float(payload.get('exp') or 0)
+    _purge_expired_revocations()
+    try:
+        REVOKED_TOKENS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        REVOKED_TOKENS_FILE.write_text(dumps(revoked_tokens), encoding='Utf-8')
+    except OSError as error:
+        logger.warning(f'Failed to persist revoked tokens: {error}')
+
+
+def is_refresh_token_revoked(token: str) -> bool:
+    """检查 refresh_token 是否已被注销。"""
+    _load_revoked_tokens()
+    _purge_expired_revocations()
+    return token in revoked_tokens
 
 
 def create_access_token(user_id: str, role: str) -> str:
@@ -133,6 +186,17 @@ def require_role(*roles: str):
     return checker
 
 
+def decode_access_token_payload(token: str) -> dict | None:
+    """校验 access_token 并返回 payload，无效或类型不符时返回 None。"""
+    try:
+        payload = jwt.decode(token, data_manager.secret_key, algorithms=['HS256'])
+    except jwt.InvalidTokenError:
+        return None
+    if payload.get('type') != 'access':
+        return None
+    return payload
+
+
 @router.get('/status', summary='获取认证状态')
 async def auth_status():
     """返回系统是否已初始化（无需认证），供登录页决定是否展示初始化入口。"""
@@ -156,7 +220,9 @@ async def setup(body: SetupRequest):
 async def login(body: LoginRequest):
     """用户名密码登录，通过 HttpOnly cookie 下发 JWT。"""
     user_data = data_manager.get_user_by_username(body.username)
-    if not user_data or not data_manager.verify_password(body.password, user_data['password_hash']):
+    # 未知用户也走一次哑校验，避免响应时延差异暴露用户名是否存在
+    password_hash = user_data['password_hash'] if user_data else DUMMY_PASSWORD_HASH
+    if not await data_manager.verify_password(body.password, password_hash):
         return {'code': 1, 'data': None, 'message': '用户名或密码错误'}
     await data_manager.update_last_login(user_data['user_id'])
     access_token = create_access_token(user_data['user_id'], user_data['role'])
@@ -180,18 +246,18 @@ async def refresh(request: Request, body: RefreshRequest):
     """使用 refresh_token 换取新的 access_token（优先从 cookie 读取）。"""
     refresh_token = request.cookies.get(COOKIE_REFRESH_KEY) or body.refresh_token
     if not refresh_token:
-        return {'code': 401, 'data': None, 'message': '缺少 refresh_token'}
-    if refresh_token in revoked_tokens:
-        return {'code': 401, 'data': None, 'message': 'Token 已失效'}
+        raise HTTPException(status_code=401, detail='缺少 refresh_token')
+    if is_refresh_token_revoked(refresh_token):
+        raise HTTPException(status_code=401, detail='Token 已失效')
     try:
         payload = jwt.decode(refresh_token, data_manager.secret_key, algorithms=['HS256'])
-    except jwt.InvalidTokenError:
-        return {'code': 401, 'data': None, 'message': '无效的 refresh_token'}
+    except jwt.InvalidTokenError as error:
+        raise HTTPException(status_code=401, detail='无效的 refresh_token') from error
     if payload.get('type') != 'refresh':
-        return {'code': 401, 'data': None, 'message': '无效的 Token 类型'}
+        raise HTTPException(status_code=401, detail='无效的 Token 类型')
     user_data = data_manager.get_user_by_id(payload['sub'])
     if not user_data:
-        return {'code': 401, 'data': None, 'message': '用户不存在'}
+        raise HTTPException(status_code=401, detail='用户不存在')
     access_token = create_access_token(user_data['user_id'], user_data['role'])
     response = JSONResponse(
         {
@@ -209,7 +275,7 @@ async def logout(request: Request, body: LogoutRequest | None = None):
     """使当前 refresh_token 失效并清除 cookie（无论请求体或 cookie 是否存在）。"""
     refresh_token = request.cookies.get(COOKIE_REFRESH_KEY) or (body.refresh_token if body else '')
     if refresh_token:
-        revoked_tokens.add(refresh_token)
+        revoke_refresh_token(refresh_token)
     response = JSONResponse({'code': 0, 'data': None, 'message': 'ok'})
     clear_auth_cookies(response)
     return response
@@ -224,7 +290,7 @@ async def get_me(user: dict = Depends(get_current_user)):
 @router.put('/password', summary='修改密码')
 async def change_password(body: ChangePasswordRequest, user: dict = Depends(get_current_user)):
     """修改当前用户密码。"""
-    if not data_manager.verify_password(body.old_password, user['password_hash']):
+    if not await data_manager.verify_password(body.old_password, user['password_hash']):
         return {'code': 1, 'data': None, 'message': '原密码错误'}
     await data_manager.reset_password(user['user_id'], body.new_password)
     return {'code': 0, 'data': None, 'message': 'ok'}
