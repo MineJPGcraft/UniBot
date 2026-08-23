@@ -8,7 +8,7 @@ import tomllib
 from pathlib import Path
 
 from Scripts.Constants import CONFIG_TOML_PATH, DATA_DIR, PYPROJECT_PATH
-from Scripts.Logging import configure_handlers, logger
+from Scripts.Logging import configure_handlers, logger, print_banner
 from Scripts.Process import RESTART_EXIT_CODE, WATCHDOG_ENVIRONMENT
 
 MAX_RESTART_ATTEMPTS = 3
@@ -38,7 +38,7 @@ def get_enabled_extras() -> list[str]:
 
 def sync_dependencies() -> None:
     """使用 uv 同步项目依赖和已启用的可选功能。"""
-    command = ['uv', 'sync']
+    command = ['uv', 'sync', '--no-dev']
     for extra in get_enabled_extras():
         command.extend(('--extra', extra))
     # 扩展依赖统一收口到 extensions 可选组
@@ -87,6 +87,8 @@ def sync_if_changed() -> bool:
 def run() -> None:
     """守护机器人进程，处理异常退出与 WebUI 重启请求。"""
     configure_handlers()
+    # 横幅仅在守护进程启动时打印一次，Bot 子进程重启时不再重复输出
+    print_banner()
     restart_attempts = 0
     restart_window_started_at = time.monotonic()
     shutdown_requested = False

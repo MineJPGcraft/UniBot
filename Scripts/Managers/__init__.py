@@ -1,3 +1,5 @@
+"""管理器集合。"""
+
 from .Cache import cache_manager as cache_manager
 from .Config import config_manager as config_manager
 from .Data import data_manager as data_manager

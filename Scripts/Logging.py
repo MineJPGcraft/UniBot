@@ -37,6 +37,25 @@ MODULE_ALIASES: tuple[tuple[str, str], ...] = (
 # 模块名为空时的兜底展示名
 FALLBACK_NAME = 'Unknown'
 
+# 启动横幅：Slant 风格的 ASCII Art，自带倾斜笔画，逐行配色形成渐变
+BANNER_LINES: tuple[tuple[str, str], ...] = (
+    ('    __  _________     __  __      _ ____        __', 'white'),
+    ('   /  |/  / ____/    / / / /___  (_) __ )____  / /_', 'white'),
+    ('  / /|_/ / /  ______/ / / / __ \\/ / __  / __ \\/ __/', 'white'),
+    (' / /  / / /__/_____/ / /_/ / / / / /_/ / /_/ / /_', 'white'),
+    ('/_/  /_/\\____/     \\____/_/ /_/_/_____/\\____/\\__/', 'white'),
+    ('', 'white'),
+    ('--------------------------------------------------', 'white'),
+    ('', 'white')
+)
+
+
+def print_banner() -> None:
+    """启动时向控制台打印 MC-UniBot 的斜体渐变 ASCII 横幅。"""
+    for line, color in BANNER_LINES:
+        # raw=True 跳过时间戳等格式前缀，保证横幅整体不被拆行破坏
+        logger.opt(colors=True, raw=True).info(f'<b><{color}>{line}</{color}></b>\n')
+
 
 def resolve_module_alias(module_name: str | None) -> str:
     """将完整模块名映射为简短的展示名，提升日志辨识度。
