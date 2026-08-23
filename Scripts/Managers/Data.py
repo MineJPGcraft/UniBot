@@ -11,10 +11,12 @@ from Scripts.Logging import logger
 
 
 class DataManager:
-    """数据管理器，负责 WebUI 用户的 CRUD 及密码哈希。"""
+    """数据管理器，负责 WebUI 用户 CRUD、密码哈希与已注销令牌存储。"""
 
     def __init__(self) -> None:
         self.users: dict[str, dict] = {}
+        # 已注销 refresh_token：token -> 过期时间戳
+        self.revoked_tokens: dict[str, float] = {}
         self.data_dir = DATA_DIR
         self.users_file = self.data_dir / 'Users.json'
         self.secret_file = self.data_dir / 'Secret.key'
@@ -27,13 +29,17 @@ class DataManager:
         if not self.data_dir.exists():
             logger.warning('Data directory does not exist, creating it...')
             self.data_dir.mkdir(parents=True, exist_ok=True)
-        # 加载 WebUI 用户数据
+        stored_data: dict = {}
         if self.users_file.exists():
             try:
-                self.users = loads(self.users_file.read_text('Utf-8'))
+                stored_data = loads(self.users_file.read_text('Utf-8'))
+                # 新版结构为 {'users': ..., 'revoked_tokens': ...}；旧版顶层即用户表，直接嘎调
+                assert 'users' in stored_data
             except Exception:
                 logger.warning('User data file is corrupted, falling back to empty data.')
-                self.users = {}
+                stored_data = {}
+        self.users = stored_data['users']
+        self.revoked_tokens = stored_data.get('revoked_tokens') or {}
         # 生成或加载 JWT 签名密钥
         self.secret_key = self.load_secret_key()
         logger.success('Data files loaded successfully.')
@@ -49,8 +55,29 @@ class DataManager:
     async def save(self):
         """持久化 WebUI 用户数据。"""
         async with self.lock:
-            self.users_file.write_text(dumps(self.users, ensure_ascii=False, indent=2), encoding='Utf-8')
+            content = {'users': self.users, 'revoked_tokens': self.revoked_tokens}
+            self.users_file.write_text(dumps(content, ensure_ascii=False, indent=2), encoding='Utf-8')
             logger.success('Data files saved successfully.')
+
+    # ── 已注销 refresh_token ──────────────────────────────────
+
+    async def revoke_refresh_token(self, token: str, expire_at: float) -> None:
+        """记录已注销的 refresh_token 并持久化，进程重启后仍保持失效。"""
+        self._purge_expired_revocations()
+        self.revoked_tokens[token] = expire_at
+        await self.save()
+
+    def is_refresh_token_revoked(self, token: str) -> bool:
+        """检查 refresh_token 是否已被注销。"""
+        self._purge_expired_revocations()
+        return token in self.revoked_tokens
+
+    def _purge_expired_revocations(self) -> None:
+        """清理已过期的注销记录，控制存储体积。"""
+        now = datetime.now(UTC).timestamp()
+        for token, expire_at in list(self.revoked_tokens.items()):
+            if expire_at <= now:
+                del self.revoked_tokens[token]
 
     # ── WebUI 用户管理 ────────────────────────────────────────
 

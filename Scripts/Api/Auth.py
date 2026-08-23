@@ -1,14 +1,12 @@
 import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
-from json import dumps, loads
 
 import bcrypt
 import jwt
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from Scripts.Constants import DATA_DIR
 from Scripts.Logging import logger
 from Scripts.Managers.Data import data_manager
 
@@ -75,11 +73,6 @@ router = APIRouter(
     dependencies=[Depends(rate_limiter.check)],
 )
 
-# 已注销的 refresh_token：token -> 过期时间戳（惰性清理，避免集合无限增长）
-REVOKED_TOKENS_FILE = DATA_DIR / 'RevokedTokens.json'
-revoked_tokens: dict[str, float] = {}
-_revoked_tokens_loaded = False
-
 # 初始化接口并发锁：防止「检测无用户 → 创建用户」之间被并发请求插入
 setup_lock = asyncio.Lock()
 
@@ -87,48 +80,13 @@ setup_lock = asyncio.Lock()
 DUMMY_PASSWORD_HASH = bcrypt.hashpw(uuid.uuid4().hex.encode('Utf-8'), bcrypt.gensalt()).decode('Utf-8')
 
 
-def _load_revoked_tokens() -> None:
-    """从磁盘加载已注销 token 记录（首次使用时执行一次）。"""
-    global _revoked_tokens_loaded
-    if _revoked_tokens_loaded:
-        return
-    _revoked_tokens_loaded = True
-    try:
-        if REVOKED_TOKENS_FILE.exists():
-            revoked_tokens.update(loads(REVOKED_TOKENS_FILE.read_text('Utf-8')))
-    except Exception as error:
-        logger.warning(f'Failed to load revoked tokens: {error}')
-
-
-def _purge_expired_revocations() -> None:
-    """清理已过期的注销记录，控制内存占用。"""
-    now = datetime.now(UTC).timestamp()
-    for token, expire_at in list(revoked_tokens.items()):
-        if expire_at <= now:
-            del revoked_tokens[token]
-
-
-def revoke_refresh_token(token: str) -> None:
-    """注销 refresh_token 并持久化记录，保证跨重启仍失效。"""
-    _load_revoked_tokens()
+def refresh_token_expire_at(token: str) -> float:
+    """解析 refresh_token 的过期时间戳，无效令牌返回 0。"""
     try:
         payload = jwt.decode(token, data_manager.secret_key, algorithms=['HS256'], options={'verify_exp': False})
     except jwt.InvalidTokenError:
-        return
-    revoked_tokens[token] = float(payload.get('exp') or 0)
-    _purge_expired_revocations()
-    try:
-        REVOKED_TOKENS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        REVOKED_TOKENS_FILE.write_text(dumps(revoked_tokens), encoding='Utf-8')
-    except OSError as error:
-        logger.warning(f'Failed to persist revoked tokens: {error}')
-
-
-def is_refresh_token_revoked(token: str) -> bool:
-    """检查 refresh_token 是否已被注销。"""
-    _load_revoked_tokens()
-    _purge_expired_revocations()
-    return token in revoked_tokens
+        return 0.0
+    return float(payload.get('exp') or 0)
 
 
 def create_access_token(user_id: str, role: str) -> str:
@@ -224,6 +182,7 @@ async def login(body: LoginRequest):
     password_hash = user_data['password_hash'] if user_data else DUMMY_PASSWORD_HASH
     if not await data_manager.verify_password(body.password, password_hash):
         return {'code': 1, 'data': None, 'message': '用户名或密码错误'}
+    assert user_data is not None  # 上面已校验过
     await data_manager.update_last_login(user_data['user_id'])
     access_token = create_access_token(user_data['user_id'], user_data['role'])
     refresh_token = create_refresh_token(user_data['user_id'])
@@ -247,7 +206,7 @@ async def refresh(request: Request, body: RefreshRequest):
     refresh_token = request.cookies.get(COOKIE_REFRESH_KEY) or body.refresh_token
     if not refresh_token:
         raise HTTPException(status_code=401, detail='缺少 refresh_token')
-    if is_refresh_token_revoked(refresh_token):
+    if data_manager.is_refresh_token_revoked(refresh_token):
         raise HTTPException(status_code=401, detail='Token 已失效')
     try:
         payload = jwt.decode(refresh_token, data_manager.secret_key, algorithms=['HS256'])
@@ -275,7 +234,7 @@ async def logout(request: Request, body: LogoutRequest | None = None):
     """使当前 refresh_token 失效并清除 cookie（无论请求体或 cookie 是否存在）。"""
     refresh_token = request.cookies.get(COOKIE_REFRESH_KEY) or (body.refresh_token if body else '')
     if refresh_token:
-        revoke_refresh_token(refresh_token)
+        await data_manager.revoke_refresh_token(refresh_token, refresh_token_expire_at(refresh_token))
     response = JSONResponse({'code': 0, 'data': None, 'message': 'ok'})
     clear_auth_cookies(response)
     return response
