@@ -72,6 +72,13 @@ CONFIG_SCHEMA = [
         'description': '是否播报玩家进入或离开服务器',
     },
     {
+        'key': 'broadcast_update',
+        'label': '播报版本更新',
+        'type': 'boolean',
+        'default': True,
+        'description': '检测到新版本后，机器人连接时向消息群发送一次更新提醒',
+    },
+    {
         'key': 'sync_all_qq_message',
         'label': '同步全部群消息',
         'type': 'boolean',
@@ -161,7 +168,7 @@ CONFIG_GROUPS = [
     {'name': '基础与权限', 'keys': ['admin_superusers', 'qq_bound_max_number']},
     {'name': '群组', 'keys': ['command_groups', 'message_groups']},
     {'name': 'Minecraft 指令', 'keys': ['command_minecraft_whitelist', 'command_minecraft_blacklist']},
-    {'name': '消息播报', 'keys': ['broadcast_server', 'broadcast_player']},
+    {'name': '消息播报', 'keys': ['broadcast_server', 'broadcast_player', 'broadcast_update']},
     {
         'name': '消息同步',
         'keys': [

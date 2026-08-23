@@ -5,6 +5,7 @@ from pathlib import Path
 
 import tomlkit
 
+from Scripts.Config import config
 from Scripts.Logging import exception_logger, logger
 from Scripts.Network import github_download, request
 
@@ -22,15 +23,45 @@ class VersionManager:
     latest_version: str | None = None
     latest_asset_url: str | None = None
 
+    def __init__(self):
+        self.notified_version: str | None = None
+        self._notify_lock = asyncio.Lock()
+
     def check_update(self) -> bool:
         """当前版本是否落后于最新版本。"""
         return self.latest_version is not None and self.latest_version != self.version
+
+    async def try_notify_update(self) -> None:
+        """机器人连接或版本检测完成后，向消息群推送一次更新提醒（每个版本仅推送一次）。"""
+        if not config.broadcast_update or not self.check_update():
+            return
+        async with self._notify_lock:
+            if self.notified_version == self.latest_version:
+                return
+            
+            # 函数内导入：本模块位于插件加载前的早期导入链，禁止顶层引入插件托管包（alconna / uninfo）
+            from Scripts.Utils import send_message_to_groups
+
+            if await send_message_to_groups(f'检测到新版本 {self.latest_version}，请及时更新！'):
+                self.notified_version = self.latest_version
+                logger.info('Update notice sent to message groups.')
 
     async def init(self):
         """记录当前版本，并在后台异步拉取最新版本。"""
         self.version = str(config_manager.version)
         logger.info(f'Current version: {self.version}.')
         await self.fetch_latest()
+        if self.check_update():
+            self.print_update_notice()
+        # 版本检测可能晚于机器人连接完成，此处兜底补发一次（内部有去重保护）
+        await self.try_notify_update()
+
+    def print_update_notice(self) -> None:
+        """检测到新版本时在控制台输出黄色加粗下划线的更新提醒。"""
+        logger.info(
+            f'<yellow><bold><underline>检测到新版本请及时更新</underline></bold></yellow>'
+            f'（当前 {self.version}，最新 {self.latest_version}）'
+        )
 
     async def fetch_latest(self) -> bool:
         """从 GitHub 拉取最新发布版本，成功返回 True。"""

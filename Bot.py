@@ -44,9 +44,9 @@ async def startup() -> None:
 
 @driver.on_shutdown
 async def shutdown() -> None:
+    from Scripts.Config import config
     from Scripts.Extensions import extension_manager
     from Scripts.Managers import machine_manager
-    from Scripts.Config import config
 
     await machine_manager.mark_offline()
     await extension_manager.shutdown()
@@ -57,6 +57,14 @@ async def shutdown() -> None:
         
         rate_limiter.stop()
         await data_manager.save()
+
+
+@driver.on_bot_connect
+async def notify_update_on_connect() -> None:
+    """机器人连接时若开启播报且检测到新版本，向消息群推送一次更新提醒。"""
+    from Scripts.Managers import version_manager
+
+    await version_manager.try_notify_update()
 
 
 def register_adapters(driver, adapters: list[dict]) -> None:

@@ -1,4 +1,3 @@
-import sys
 from contextlib import suppress
 from json import JSONDecodeError, dumps, loads
 
@@ -49,7 +48,7 @@ class ConfigManager:
         """加载 .env 配置文件（可重复调用，会重置内存缓存）。"""
         if not self.env_path.exists():
             logger.error('Config file not found! Please re-download and try again.')
-            sys.exit(1)
+            raise SystemExit(1)
         self.mapping = []
         self.environment = {}
         last_key: str | None = None
@@ -77,7 +76,7 @@ class ConfigManager:
         """加载 pyproject.toml 配置（版本号、NoneBot 适配器/插件等）。"""
         if not self.pyproject_path.exists():
             logger.error('pyproject.toml not found! Please re-download and try again.')
-            sys.exit(1)
+            raise SystemExit(1)
         self.pyproject_data = tomlkit.parse(self.pyproject_path.read_text('Utf-8'))
         self.update_pyproject_cache()
         logger.success('pyproject.toml loaded.')

@@ -34,6 +34,7 @@ class Config(BaseModel):
 
     broadcast_server: bool = True
     broadcast_player: bool = True
+    broadcast_update: bool = True
 
     sync_all_qq_message: bool = True
     sync_all_game_message: bool = False
