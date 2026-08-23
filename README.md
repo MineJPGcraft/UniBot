@@ -92,9 +92,13 @@
 
 指令输出渲染为精美图片，支持玩家头像与自定义背景：
 
-| `/bot about` 指令 | `/list` 指令 | `/help` 指令 |
+| `/list` 指令 | `/server` 指令 | `/luck` 指令 |
 |---|---|---|
-| <p align="center"><img src=".github/images/shows/commands/about.png"></p> | <p align="center"><img src=".github/images/shows/commands/list.png"></p> | <p align="center"><img src=".github/images/shows/commands/help.png"></p> |
+| <p align="center"><img src=".github/images/shows/commands/list.png"></p> | <p align="center"><img src=".github/images/shows/commands/server.png"></p> | <p align="center"><img src=".github/images/shows/commands/luck.png"></p> |
+
+| `/luck rank` 指令 | `/bot about` 指令 | `/help` 指令 | `/help <命令名>` 指令（命令详情） |
+|---|---|---|---|
+| <p align="center"><img src=".github/images/shows/commands/luck-rank.png"></p> | <p align="center"><img src=".github/images/shows/commands/about.png"></p> | <p align="center"><img src=".github/images/shows/commands/help.png"></p> | <p align="center"><img src=".github/images/shows/commands/help-detailed.png"></p> |
 
 ## 快速开始
 
