@@ -1,6 +1,5 @@
 """数据统计插件：监听收发消息，统计机器人发言总量、场景分布与活跃群聊。"""
 
-import asyncio
 from typing import Any
 
 from nonebot import get_driver, on_message
@@ -9,7 +8,7 @@ from nonebot.plugin import PluginMetadata
 from nonebot_plugin_uninfo import SceneType, SupportScope, Uninfo
 
 from Scripts.Logging import logger
-from Scripts.Managers import statistics_manager
+from Scripts.Managers import statistics_manager, task_manager
 from Scripts.Utils import get_platform_name
 
 __plugin_meta__ = PluginMetadata(
@@ -44,8 +43,6 @@ PRIVATE_TARGET_KEYS = ('user_id', 'openid', 'chat_id')
 # 定时落盘间隔（秒），仅在存在未写入的增量时写盘
 SAVE_INTERVAL_SECONDS = 120
 
-_save_task: asyncio.Task | None = None
-
 
 def is_message_send_api(api_name: str) -> bool:
     """判断 API 名称是否代表一次向外发送消息。"""
@@ -74,28 +71,23 @@ async def count_sent_message(bot: Bot, exception: Exception | None, api: str, da
 
 @driver.on_startup
 async def load_statistics_on_startup() -> None:
-    """启动时加载历史统计数据并开始定时落盘。"""
-    global _save_task
+    """启动时加载历史统计数据并登记定时落盘任务。"""
     statistics_manager.load()
-    _save_task = asyncio.create_task(save_statistics_periodically())
+    task_manager.add('statistics-autosave', save_dirty_statistics, SAVE_INTERVAL_SECONDS)
 
 
-async def save_statistics_periodically() -> None:
-    """定期把未写入磁盘的统计增量持久化。"""
-    while True:
-        await asyncio.sleep(SAVE_INTERVAL_SECONDS)
-        if statistics_manager.dirty:
-            try:
-                await statistics_manager.save()
-            except Exception as error:
-                logger.warning(f'Failed to save statistics data: {error}')
+async def save_dirty_statistics() -> None:
+    """把未写入磁盘的统计增量持久化一次。"""
+    if statistics_manager.dirty:
+        try:
+            await statistics_manager.save()
+        except Exception as error:
+            logger.warning(f'Failed to save statistics data: {error}')
 
 
 @driver.on_shutdown
 async def save_statistics_on_shutdown() -> None:
     """关闭时持久化统计数据。"""
-    if _save_task is not None:
-        _save_task.cancel()
     if statistics_manager.dirty:
         await statistics_manager.save()
 

@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import subprocess
 import uuid
 from pathlib import Path
 
 from Scripts.Logging import logger
+from Scripts.Managers import task_manager
 from Scripts.Network import post_request
 
 REPORTER_SERVER_URL = 'https://bot-api.mcjpg.dev'
 REPORT_INTERVAL_SECONDS = 300
+# 启动后首次上报的延迟（秒），等待统计等管理器完成初始化
+INITIAL_REPORT_DELAY_SECONDS = 5
 
 
 class Reporter:
@@ -20,12 +22,11 @@ class Reporter:
 
     machine_id: str = ''
 
-    def __init__(self) -> None:
-        self._report_task: asyncio.Task | None = None
-
     def init(self) -> None:
-        """初始化机器 ID。"""
+        """初始化机器 ID 并登记首报与心跳定时事务。"""
         self.machine_id = self.generate_machine_id()
+        task_manager.add_once('reporter-first-report', self.report, INITIAL_REPORT_DELAY_SECONDS)
+        task_manager.add('reporter-heartbeat', self.report, REPORT_INTERVAL_SECONDS)
         logger.info('Reporter identifier initialized.')
 
     def generate_machine_id(self) -> str:
@@ -114,26 +115,8 @@ class Reporter:
             logger.warning(f'Reporter submission rejected: {data.get("message", "unknown reason")}')
         return False
 
-    async def start(self) -> None:
-        """立即上报并启动定时心跳。"""
-        await asyncio.sleep(5)  # 等待t管理器初始化完成
-        await self.report()
-        self._report_task = asyncio.create_task(self.report_periodically())
-
-    async def report_periodically(self) -> None:
-        """定时续期在线状态并同步统计。"""
-        while True:
-            await asyncio.sleep(REPORT_INTERVAL_SECONDS)
-            try:
-                await self.report()
-            except Exception as error:
-                logger.warning(f'Reporter submission failed: {error}')
-
     async def stop(self) -> bool:
-        """停止心跳并通知服务器离线。"""
-        if self._report_task is not None:
-            self._report_task.cancel()
-            self._report_task = None
+        """停止上报并通知服务器离线。"""
         data = await post_request(f'{REPORTER_SERVER_URL}/offline.php', {'id': self.machine_id})
         if data is not None and data.get('code') == 0:
             logger.success('Reporter marked offline.')

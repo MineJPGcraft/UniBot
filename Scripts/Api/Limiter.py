@@ -1,10 +1,13 @@
-import asyncio
 import time
 from collections import defaultdict
 
 from fastapi import HTTPException, Request
 
 from Scripts.Logging import logger
+from Scripts.Managers import task_manager
+
+# 任务管理器中的清理任务名称
+CLEANUP_TASK_NAME = 'rate-limiter-cleanup'
 
 
 class RateLimiter:
@@ -28,7 +31,6 @@ class RateLimiter:
 
         # {ip: {"timestamps": [float, ...], "banned_until": float | None, "ban_count": int}}
         self.records: dict[str, dict] = defaultdict(lambda: {'timestamps': [], 'banned_until': None, 'ban_count': 0})
-        self.cleanup_task: asyncio.Task | None = None
 
     def get_client_ip(self, request: Request) -> str:
         """从请求中获取客户端真实 IP。"""
@@ -100,48 +102,44 @@ class RateLimiter:
                 detail=f'请求过于频繁，已封禁 {remain} 秒',
             )
 
-    async def cleanup_loop(self):
-        """定时清理过期数据，防止内存泄漏。"""
-        while True:
-            await asyncio.sleep(self.cleanup_interval)
-            now = time.time()
-            cutoff = now - self.window_seconds
-            expired_ips: list[str] = []
+    async def cleanup_expired(self):
+        """清理一次过期数据，防止内存泄漏。"""
+        now = time.time()
+        cutoff = now - self.window_seconds
+        expired_ips: list[str] = []
 
-            for ip, record in list(self.records.items()):
-                # 清理过期时间戳
-                timestamps = record['timestamps']
-                while timestamps and timestamps[0] < cutoff:
-                    timestamps.pop(0)
+        for ip, record in list(self.records.items()):
+            # 清理过期时间戳
+            timestamps = record['timestamps']
+            while timestamps and timestamps[0] < cutoff:
+                timestamps.pop(0)
 
-                # 如果 IP 已无记录且未封禁，彻底清理
-                if not timestamps and not record['banned_until']:
+            # 如果 IP 已无记录且未封禁，彻底清理
+            if not timestamps and not record['banned_until']:
+                expired_ips.append(ip)
+
+            # 清理已过期的封禁状态
+            if record['banned_until'] and now >= record['banned_until']:
+                record['banned_until'] = None
+                if not timestamps:
                     expired_ips.append(ip)
 
-                # 清理已过期的封禁状态
-                if record['banned_until'] and now >= record['banned_until']:
-                    record['banned_until'] = None
-                    if not timestamps:
-                        expired_ips.append(ip)
+        for ip in expired_ips:
+            del self.records[ip]
 
-            for ip in expired_ips:
-                del self.records[ip]
-
-            if expired_ips:
-                logger.debug(f'Rate limiter cleaned up {len(expired_ips)} expired IP records.')
+        if expired_ips:
+            logger.debug(f'Rate limiter cleaned up {len(expired_ips)} expired IP records.')
 
     def start(self):
-        """启动后台清理任务。"""
-        if self.cleanup_task is None:
-            self.cleanup_task = asyncio.create_task(self.cleanup_loop())
-            logger.debug('Rate limiter background cleanup task started.')
+        """向任务管理器登记后台清理任务。"""
+        if task_manager.get(CLEANUP_TASK_NAME) is None:
+            task_manager.add(CLEANUP_TASK_NAME, self.cleanup_expired, self.cleanup_interval)
+            logger.debug('Rate limiter background cleanup task registered.')
 
     def stop(self):
-        """停止后台清理任务。"""
-        if self.cleanup_task is not None:
-            self.cleanup_task.cancel()
-            self.cleanup_task = None
-            logger.debug('Rate limiter background cleanup task stopped.')
+        """从任务管理器注销后台清理任务。"""
+        if task_manager.remove(CLEANUP_TASK_NAME):
+            logger.debug('Rate limiter background cleanup task removed.')
 
 
 rate_limiter = RateLimiter()

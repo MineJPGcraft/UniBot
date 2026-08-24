@@ -20,13 +20,14 @@ driver = nonebot.get_driver()
 async def startup() -> None:
     from Scripts.Config import config
     from Scripts.Extensions import extension_manager
-    from Scripts.Managers import reporter, version_manager
+    from Scripts.Managers import task_manager, version_manager
+    from Scripts.Reporter import reporter
 
     reporter.init()
 
     asyncio.create_task(version_manager.init())
-    asyncio.create_task(reporter.start())
 
+    await task_manager.start()
     await extension_manager.start()
 
     if config.webui.enabled:
@@ -43,10 +44,12 @@ async def startup() -> None:
 async def shutdown() -> None:
     from Scripts.Config import config
     from Scripts.Extensions import extension_manager
-    from Scripts.Managers import reporter
+    from Scripts.Managers import task_manager
+    from Scripts.Reporter import reporter
 
     await reporter.stop()
     await extension_manager.shutdown()
+    await task_manager.stop()
 
     if config.webui.enabled:
         from Scripts.Api.Limiter import rate_limiter

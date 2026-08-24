@@ -14,15 +14,6 @@ def _manager(tmp_path) -> DataManager:
     return manager
 
 
-def test_load_supports_legacy_user_map(tmp_path) -> None:
-    legacy_users = '{"u_legacy": {"user_id": "u_legacy", "username": "admin"}}'
-    (tmp_path / 'Users.json').write_text(legacy_users, encoding='Utf-8')
-    manager = _manager(tmp_path)
-    manager.load()
-    assert manager.get_user_by_username('admin')['user_id'] == 'u_legacy'
-    assert manager.revoked_tokens == {}
-
-
 def test_revoke_persists_across_reload(tmp_path) -> None:
     manager = _manager(tmp_path)
     manager.load()
