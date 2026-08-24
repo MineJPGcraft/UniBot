@@ -62,7 +62,9 @@ def extract_target_kind(data: dict[str, Any]) -> str:
 
 
 @Bot.on_called_api
-async def count_sent_message(bot: Bot, exception: Exception | None, api: str, data: dict[str, Any], result: Any) -> None:
+async def count_sent_message(
+    bot: Bot, exception: Exception | None, api: str, data: dict[str, Any], result: Any
+) -> None:
     """API 调用后钩子：统计一次成功的向外发消息。"""
     if exception is not None or not is_message_send_api(api):
         return

@@ -96,7 +96,7 @@ async def _sync_one_bot(app_id: str, client_secret: str, panel_items: list[dict]
                 raise
             panel_limit = (error.details or {}).get('limit') or MAX_PANELS_PER_BOT
             logger.warning(
-                f'Bot {app_id} has reached the panel limit ({panel_limit}), cleaning up stale panels and retrying: {error}!' 
+                f'Bot {app_id} has reached the panel limit ({panel_limit}), cleaning up stale panels and retrying: {error}!'
             )
             if await _cleanup_stale_panels(client) == 0:
                 raise

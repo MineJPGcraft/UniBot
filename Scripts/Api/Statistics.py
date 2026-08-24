@@ -14,10 +14,7 @@ MAX_TREND_DAYS = 90
 
 def get_connected_bots() -> list[dict]:
     """收集当前已连接的机器人账号信息。"""
-    return [
-        {'self_id': str(self_id), 'adapter': bot.adapter.get_name()}
-        for self_id, bot in nonebot.get_bots().items()
-    ]
+    return [{'self_id': str(self_id), 'adapter': bot.adapter.get_name()} for self_id, bot in nonebot.get_bots().items()]
 
 
 @router.get('', summary='获取消息统计数据')

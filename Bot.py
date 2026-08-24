@@ -63,8 +63,11 @@ async def shutdown() -> None:
 async def notify_update_on_connect() -> None:
     """机器人连接时若开启播报且检测到新版本，向消息群推送一次更新提醒。"""
     from Scripts.Managers import version_manager
+    from Scripts.Platforms.Panels import sync_panels_for_all_bots
 
     await version_manager.try_notify_update()
+    # 连接时把 UniBot 指令同步为 QQ 群指令面板（对所有群生效，失败仅告警不阻断）
+    await sync_panels_for_all_bots()
 
 
 def register_adapters(driver, adapters: list[dict]) -> None:
