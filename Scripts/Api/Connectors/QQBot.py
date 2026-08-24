@@ -1,7 +1,7 @@
 """
 QQ 官方机器人扫码绑定 API。
 
-将 `Scripts/Connectors/QQOfficial` 的扫码流程封装为 WebUI 可调用的接口：
+将 `Scripts/Platforms/Connectors/QQOfficial` 的扫码流程封装为 WebUI 可调用的接口：
   - POST   /api/connectors/qq/qr/login          启动扫码登录（返回二维码图片）
   - GET    /api/connectors/qq/qr/login/stream   扫码登录 SSE 流（启动 + 推送状态）
   - GET    /api/connectors/qq/qr/login          查询当前登录状态
@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from pydantic import BaseModel
 
-from Scripts.Connectors.QQOfficial import (
+from Scripts.Platforms.Connectors.QQOfficial import (
     cancel_qr_login,
     get_qr_login,
     qr_login,

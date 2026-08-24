@@ -49,3 +49,11 @@ QQ_INTENT_FIELDS = [
     {'key': 'audio_action', 'label': '频道音频操作事件', 'type': 'boolean', 'default': False},
     {'key': 'at_messages', 'label': '频道 @ 机器人消息事件', 'type': 'boolean', 'default': False},
 ]
+
+# ===== QQ 官方机器人开放接口（OpenAPI） =====
+# 凭证与业务接口统一走 https://api.bot.qq.com（官方文档：获取访问凭证 / 自定义菜单与指令面板）
+QQ_OPEN_API_BASE = 'https://api.bot.qq.com'
+QQ_OPEN_API_TOKEN_PATH = '/app/getAppAccessToken'
+QQ_OPEN_API_PANELS_PATH = '/v2/panels'
+# access_token 有效期约 7200 秒，提前 5 分钟刷新
+QQ_PANEL_TOKEN_REFRESH_MARGIN_SECONDS = 300

@@ -22,7 +22,8 @@ if TYPE_CHECKING:
 
 # 模块名前缀 → 展示名，按前缀长度从长到短排列
 MODULE_ALIASES: tuple[tuple[str, str], ...] = (
-    ('Scripts.Connectors', 'Conn'),
+    ('Scripts.Platforms.Connectors', 'Conn'),
+    ('Scripts.Platforms.Panels', 'Panel'),
     ('Scripts.Extensions.Builtin', 'Builtin'),
     ('Scripts.Extensions', 'Ext'),
     ('Scripts.Managers', 'Mgr'),

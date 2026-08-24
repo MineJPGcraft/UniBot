@@ -9,7 +9,7 @@
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-from Scripts.Connectors.QQOfficial import (
+from Scripts.Platforms.Connectors.QQOfficial import (
     BindStatus,
     BindTask,
     PollResult,
@@ -113,11 +113,11 @@ def test_qr_login_generator_yields_pending_then_completed():
 
         with (
             patch(
-                'Scripts.Connectors.QQOfficial.QQBotConnector',
+                'Scripts.Platforms.Connectors.QQOfficial.QQBotConnector',
                 return_value=connector,
             ),
             patch(
-                'Scripts.Connectors.QQOfficial.QQBotConnector.decrypt_secret',
+                'Scripts.Platforms.Connectors.QQOfficial.QQBotConnector.decrypt_secret',
                 return_value='secret-1',
             ),
         ):
@@ -148,7 +148,7 @@ def test_qr_login_generator_cancel_yields_cancelled():
         connector.__aenter__.return_value = connector
 
         with patch(
-            'Scripts.Connectors.QQOfficial.QQBotConnector',
+            'Scripts.Platforms.Connectors.QQOfficial.QQBotConnector',
             return_value=connector,
         ):
             states = []
@@ -196,7 +196,7 @@ def test_save_credentials_to_env_appends_new_bot():
             self.updated.append(new)
 
     fake = FakeConfigManager()
-    with patch('Scripts.Connectors.QQOfficial.config_manager', fake):
+    with patch('Scripts.Platforms.Connectors.QQOfficial.config_manager', fake):
         _save_credentials_to_env('app-1', 'secret-1')
 
     bots = fake.environment['QQ_BOTS']
@@ -224,7 +224,7 @@ def test_save_credentials_to_env_updates_existing_bot():
             self.updated.append(new)
 
     fake = FakeConfigManager()
-    with patch('Scripts.Connectors.QQOfficial.config_manager', fake):
+    with patch('Scripts.Platforms.Connectors.QQOfficial.config_manager', fake):
         _save_credentials_to_env('app-1', 'secret-new')
 
     bots = fake.environment['QQ_BOTS']
@@ -249,7 +249,7 @@ def test_save_credentials_to_env_skips_empty():
             self.updated.append(new)
 
     fake = FakeConfigManager()
-    with patch('Scripts.Connectors.QQOfficial.config_manager', fake):
+    with patch('Scripts.Platforms.Connectors.QQOfficial.config_manager', fake):
         _save_credentials_to_env('', '')
         _save_credentials_to_env('app-1', '')
 
