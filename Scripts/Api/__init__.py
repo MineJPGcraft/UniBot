@@ -9,6 +9,7 @@ from .Logs import router as logs_router
 from .Players import router as players_router
 from .Plugins import router as plugins_router
 from .Servers import router as servers_router
+from .Statistics import router as statistics_router
 from .Status import router as status_router
 from .Users import router as users_router
 from .WebSocket import router as ws_router
@@ -19,6 +20,7 @@ api_router.include_router(users_router)
 api_router.include_router(status_router)
 api_router.include_router(config_router)
 api_router.include_router(servers_router)
+api_router.include_router(statistics_router)
 api_router.include_router(players_router)
 api_router.include_router(logs_router)
 api_router.include_router(plugins_router)

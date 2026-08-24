@@ -25,6 +25,7 @@ UniBot 的 WebUI 后端提供一组 REST API，供前端管理面板调用。所
 | 插件 | `/api/plugins` | 插件列表与状态 |
 | 日志 | `/api/logs` | 日志查看 |
 | 状态 | `/api/status` | 运行状态监控 |
+| 统计 | `/api/statistics` | 消息统计与活跃群聊 |
 | 用户 | `/api/users` | 用户管理 |
 | WebSocket | `/api/ws` | 实时推送 |
 :::
@@ -97,6 +98,26 @@ GET /api/servers                    # 所有服务器状态
 GET /api/servers/{name}             # 指定服务器详情
 POST /api/servers/{name}/command    # 远程执行指令
 ```
+
+## 统计接口
+
+由「数据统计」插件在后台自动收集，数据持久化于 `Data/Statistics.json`。
+
+### 获取统计数据
+
+```
+GET /api/statistics?days=30         # days 为趋势天数（1-90，默认 30）
+```
+
+返回总览摘要、按天趋势、活跃群聊排行、平台分布以及当前已连接的机器人列表。
+
+### 清空统计数据
+
+```
+POST /api/statistics/reset
+```
+
+清空全部统计数据并立即落盘，需要 <Badge type="danger" text="管理员权限" />。
 
 ## 玩家接口
 

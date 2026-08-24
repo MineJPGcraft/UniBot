@@ -102,7 +102,7 @@ class MachineManager:
 
     async def register(self) -> bool:
         """向服务器登记本机并标记在线，成功返回 True。"""
-        url = f'{MACHINE_SERVER_URL}/register.php'
+        url = f'{MACHINE_SERVER_URL}/register'
         payload = {'id': self.machine_id, 'ip': self.machine_ip}
         data = await post_request(url, payload)
         if data is None:
@@ -115,7 +115,7 @@ class MachineManager:
 
     async def mark_offline(self) -> bool:
         """通知服务器本机离线，成功返回 True。"""
-        url = f'{MACHINE_SERVER_URL}/offline.php'
+        url = f'{MACHINE_SERVER_URL}/offline'
         payload = {'id': self.machine_id}
         data = await post_request(url, payload)
         if data is None:

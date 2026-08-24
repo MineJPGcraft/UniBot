@@ -13,6 +13,7 @@ MESSAGES_PATH = Path('Config') / 'Messages.toml'
 
 # ===== 运行时数据 =====
 DATA_DIR = Path('Data')
+STATISTICS_FILE = DATA_DIR / 'Statistics.json'
 
 # ===== 扩展系统约定 =====
 EXTENSIONS_DIR = Path('Extensions')

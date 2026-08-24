@@ -30,6 +30,7 @@ scope_mapping = {
     str(UninfoSupportScope.kook): 'Kook',
     str(UninfoSupportScope.wechat): 'WX',
     str(UninfoSupportScope.wecom): 'WX',
+    str(UninfoSupportScope.minecraft): 'MC',
 }
 
 

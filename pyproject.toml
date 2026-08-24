@@ -57,6 +57,7 @@ webui_version = 'v1.0.2'
 
 [tool.nonebot]
 plugins = [
+    { module_name = "Scripts.Plugins.Collector", enabled = true },
     { module_name = "Scripts.Plugins.Events", enabled = true },
     { module_name = "Scripts.Plugins.Token", enabled = true },
 ]
