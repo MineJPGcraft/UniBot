@@ -4,7 +4,7 @@ import asyncio
 import re
 from collections.abc import Awaitable, Callable
 from functools import wraps
-from typing import Any, Concatenate, ParamSpec, TypeVar, override
+from typing import Any, Coroutine, Concatenate, ParamSpec, TypeVar, override
 
 from nonebot import get_adapter
 from nonebot.adapters.minecraft import Adapter as MCAdapter

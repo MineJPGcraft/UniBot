@@ -100,7 +100,7 @@ async def save_statistics_on_shutdown() -> None:
         await statistics_manager.save()
 
 
-message_watcher = on_message(priority=98)
+message_watcher = on_message(priority=0, block=False)
 
 
 @message_watcher.handle()
