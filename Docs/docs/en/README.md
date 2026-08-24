@@ -63,7 +63,14 @@ This is the official documentation for the **Minecraft UniBot** project. The pro
 ## ::fluent-color:chart-multiple-24:: Bot Status
 
 <ClientOnly>
-  <MachineStats online-label="Online Bots" total-label="Total Machines Used" error-label="Failed to load statistics" />
+  <MachineStats
+    online-machine-label="Online Machines"
+    total-machine-label="Total Machines"
+    connected-bot-label="Connected Bots"
+    sent-total-label="Messages Sent"
+    received-total-label="Messages Received"
+    error-label="Failed to load statistics"
+  />
 </ClientOnly>
 
 <script setup>
