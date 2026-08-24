@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 
 import tomlkit
+from packaging.version import InvalidVersion, Version
 
 from Scripts.Config import config
 from Scripts.Logging import exception_logger, logger
@@ -28,8 +29,13 @@ class VersionManager:
         self._notify_lock = asyncio.Lock()
 
     def check_update(self) -> bool:
-        """当前版本是否落后于最新版本。"""
-        return self.latest_version is not None and self.latest_version != self.version
+        """当前版本是否落后于最新版本（PEP 440 语义比较，无法解析时回退字符串比较）。"""
+        if not self.latest_version or not self.version:
+            return False
+        try:
+            return Version(self.latest_version) > Version(self.version)
+        except InvalidVersion:
+            return self.latest_version != self.version
 
     async def try_notify_update(self) -> None:
         """机器人连接或版本检测完成后，向消息群推送一次更新提醒（每个版本仅推送一次）。"""
