@@ -24,7 +24,7 @@ P = ParamSpec('P')
 
 def collect_results(
     func: Callable[Concatenate[Any, Bot, P], Awaitable[R]],
-) -> Callable[Concatenate[Any, P], Awaitable[dict[str, R]]]:
+) -> Callable[Concatenate[Any, P], Coroutine[Any, Any, dict[str, R]]]:
     """并发向所有服务器分发任务并收集为 {名称: 结果} 字典，注入 server 参数。"""
 
     @wraps(func)

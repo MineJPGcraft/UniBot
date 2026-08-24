@@ -20,11 +20,7 @@ driver = nonebot.get_driver()
 async def startup() -> None:
     from Scripts.Config import config
     from Scripts.Extensions import extension_manager
-    from Scripts.Managers import (
-        machine_manager,
-        version_manager,
-        webui_manager,
-    )
+    from Scripts.Managers import machine_manager, version_manager
 
     machine_manager.init()
 
@@ -34,8 +30,9 @@ async def startup() -> None:
     await extension_manager.start()
 
     if config.webui.enabled:
+        # 启动钩子在 main() 插件加载完成后执行，此时导入 Scripts.Api 是安全的
         from Scripts.Api.Limiter import rate_limiter
-        from Scripts.Managers.Data import data_manager
+        from Scripts.Api.Managers import data_manager, webui_manager
 
         data_manager.load()
         rate_limiter.start()
@@ -53,7 +50,7 @@ async def shutdown() -> None:
 
     if config.webui.enabled:
         from Scripts.Api.Limiter import rate_limiter
-        from Scripts.Managers.Data import data_manager
+        from Scripts.Api.Managers import data_manager
 
         rate_limiter.stop()
         await data_manager.save()
@@ -102,7 +99,7 @@ def main():
     """初始化并运行机器人进程。"""
     # NoneBot 初始化必须在本地模块导入之前完成。
     from Scripts.Config import config as bot_config
-    from Scripts.Managers import config_manager, webui_manager
+    from Scripts.Managers import config_manager
 
     configure_logging()
     config_manager.init()
@@ -113,6 +110,10 @@ def main():
     load_plugins(config_manager.nonebot_config.get('plugins', []))
 
     if bot_config.webui.enabled:
+        # 函数内延迟导入：Scripts.Api 聚合全部路由，部分模块顶层依赖插件托管包，
+        # 必须等插件加载完成后再导入，避免 uninfo 等被抢先注册为普通模块
+        from Scripts.Api.Managers import webui_manager
+
         webui_manager.mount(nonebot.get_app())
 
     signal.signal(signal.SIGTERM, exit_on_sigterm)

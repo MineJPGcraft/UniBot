@@ -7,8 +7,8 @@ import jwt
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from Scripts.Api.Managers import data_manager
 from Scripts.Logging import logger
-from Scripts.Managers.Data import data_manager
 
 from .Limiter import rate_limiter
 from .Schemas import (

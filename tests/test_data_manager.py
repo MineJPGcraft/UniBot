@@ -2,7 +2,7 @@
 
 import asyncio
 
-from Scripts.Managers.Data import DataManager
+from Scripts.Api.Managers.Data import DataManager
 
 
 def _manager(tmp_path) -> DataManager:

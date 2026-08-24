@@ -4,10 +4,10 @@ import asyncio
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from Scripts.Api.Managers import studio_manager
 from Scripts.Config import config, reload_config
 from Scripts.Extensions import EXTENSIONS_DIR, ExtensionType, extension_manager, market_manager
 from Scripts.Managers import config_manager
-from Scripts.Managers.Studio import studio_manager
 
 from .Auth import get_current_user, require_role
 from .Body import parse_json_object
