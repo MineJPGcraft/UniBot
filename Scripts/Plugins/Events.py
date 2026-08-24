@@ -180,9 +180,8 @@ async def handle_player_chat(event: PlayerChatEvent):
         server_service = Globals.server_service
         if server_service is not None:
             # 后台广播不阻塞聊天转发；持引用防止任务被 GC
-            broadcast_task = asyncio.create_task(
-                server_service.broadcast(build_server_message(name, player, chat_message), name)
-            )
+            message = build_server_message(name, player, chat_message)
+            broadcast_task = asyncio.create_task(server_service.broadcast(message, name))
             _background_tasks.add(broadcast_task)
             broadcast_task.add_done_callback(_background_tasks.discard)
 

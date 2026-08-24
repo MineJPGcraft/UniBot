@@ -26,6 +26,7 @@ MODULE_ALIASES: tuple[tuple[str, str], ...] = (
     ('Scripts.Extensions.Builtin', 'Builtin'),
     ('Scripts.Extensions', 'Ext'),
     ('Scripts.Managers', 'Mgr'),
+    ('Scripts.Api.Managers', 'WebMgr'),
     ('Scripts.Api', 'WebApi'),
     ('Scripts.Plugins', 'Plg'),
     ('Scripts', 'Core'),
