@@ -1,3 +1,12 @@
+---
+title: "Adapters"
+description: "UniBot adapter overview: connect QQ, QQ Official, Telegram, Discord, DoDo, KOOK and Satori chat platforms via NoneBot2 adapters, plus the MC adapter using the QueQiao protocol."
+tags:
+  - adapters
+  - chat platforms
+  - NoneBot2
+---
+
 # Adapters
 
 An Adapter is the bridge between UniBot and each chat platform, responsible for connecting the bot account to the corresponding platform. It is the channel through which the bot connects to external platforms.

@@ -1,3 +1,13 @@
+---
+title: "Command Reference"
+date: 2026-08-21
+description: "Complete command reference for Minecraft UniBot: command overview, detailed usage, platform prefix differences, custom prefixes, and toggling commands per platform via command groups."
+tags:
+  - commands
+  - reference
+  - Alconna
+---
+
 # Command Reference
 
 UniBot's commands are parsed with [Alconna](https://github.com/ArcletProject/Alconna) and behave consistently across platforms. The default command prefix is `/` (configurable in `COMMAND_START` in `.env`).

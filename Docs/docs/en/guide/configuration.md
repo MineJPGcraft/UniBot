@@ -1,3 +1,13 @@
+---
+title: "Configuration Guide"
+date: 2026-08-21
+description: "Minecraft UniBot configuration reference: the dual-file system of .env framework config and Config.toml business config, covering ports, commands, image rendering, WebUI and more."
+tags:
+  - configuration
+  - .env
+  - Config.toml
+---
+
 # Configuration Guide
 
 UniBot uses a **dual-config-file** system, separately managing the framework layer and the business layer configuration, each serving its own purpose.

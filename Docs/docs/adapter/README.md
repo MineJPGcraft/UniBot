@@ -1,3 +1,12 @@
+---
+title: 适配器
+description: UniBot 适配器总览：基于 NoneBot2 适配器接入 QQ、QQ 官方、Telegram、Discord、DoDo、KOOK、Satori 等聊天平台，以及通过鹊桥协议互通的 MC 适配器。
+tags:
+  - 适配器
+  - 聊天平台
+  - NoneBot2
+---
+
 # 适配器
 
 适配器（Adapter）是 UniBot 与各聊天平台之间的桥梁，负责将机器人账号连接到对应平台，是机器人与外部平台对接的通道。

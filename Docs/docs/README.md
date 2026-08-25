@@ -1,6 +1,18 @@
 ---
 home: true
 pageLayout: home
+heroText: Minecraft UniBot
+tagline: 开源免费的 Minecraft 群服互通机器人：支持 QQ、Telegram、Discord、KOOK 等聊天平台与多台 MC 服务器实时互通，跨平台指令、图片渲染、WebUI 管理，基于 NoneBot2。
+details: |
+  Minecraft UniBot 是一个开源的 Minecraft 群服互通机器人，基于 NoneBot2 框架构建。
+
+  核心能力：
+  - 跨平台：QQ、QQ 官方、QQ 频道、Telegram、Discord、KOOK、DoDo、Satori 等平台一套指令通用
+  - 多服互联：同时连接多台 Minecraft 服务器（Fabric / Forge / Spigot / Paper 等），消息互通
+  - 扩展系统：指令、服务、渲染引擎、模板、资源五类扩展，即插即用，兼容 NB 插件商店
+  - WebUI 管理面板：可视化配置、实时监控、白名单管理、日志查看
+
+  本文档包含用户指南（快速开始、指令手册、配置指南）、UniBot 核心（架构设计、扩展系统、REST API）与适配器接入说明。
 config:
   -
     type: doc-hero

@@ -1,3 +1,12 @@
+---
+title: 指南
+description: Minecraft UniBot 用户手册总览：快速开始、指令手册、功能特性、WebUI 管理面板、图片渲染与配置指南，帮助你从零部署并玩转 Minecraft 群服互通机器人。
+tags:
+  - Minecraft UniBot
+  - 群服互通
+  - 使用指南
+---
+
 # 指南
 
 欢迎使用 **Minecraft UniBot**。本指南作为**用户手册**，帮助你安装机器人并快速上手使用。如需深入调整配置，请跳转到 [配置指南](/guide/configuration.html)。

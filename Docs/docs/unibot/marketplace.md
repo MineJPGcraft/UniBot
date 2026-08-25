@@ -1,3 +1,12 @@
+---
+title: 扩展市场
+date: 2026-08-11
+description: UniBot 扩展市场发布指南：通过 Pull Request 向 UniBot.Market 注册表提交扩展，用户即可在 WebUI 中搜索并一键安装你的扩展。
+tags:
+  - 扩展市场
+  - 发布
+---
+
 # 上传市场
 
 扩展市场由 [UniBot.Market](https://github.com/MineJPGcraft/UniBot.Market) 仓库维护。

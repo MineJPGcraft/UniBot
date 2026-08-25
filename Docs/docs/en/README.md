@@ -1,6 +1,18 @@
 ---
 home: true
 pageLayout: home
+heroText: "Minecraft UniBot"
+tagline: "A free, open-source Minecraft cross-server bridge bot: connect QQ, Telegram, Discord, KOOK and more chat platforms with multiple MC servers in real time — cross-platform commands, image rendering and a WebUI, built on NoneBot2."
+details: |
+  Minecraft UniBot is an open-source bridge bot for Minecraft, built on the NoneBot2 framework.
+
+  Key capabilities:
+  - Cross-platform: one command set across QQ, QQ Official, QQ Guilds, Telegram, Discord, KOOK, DoDo and Satori
+  - Multi-server interconnection: connect multiple Minecraft servers (Fabric / Forge / Spigot / Paper) with shared messaging
+  - Extension system: five extension types — commands, services, renderer engines, templates and resources — compatible with the NB Plugin Store
+  - WebUI admin panel: visual configuration, real-time monitoring, whitelist management and log viewing
+
+  This documentation covers the user guide (quick start, command reference, configuration), the UniBot core (architecture, extension system, REST API) and adapter setup.
 config:
   -
     type: doc-hero

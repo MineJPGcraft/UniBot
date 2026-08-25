@@ -1,3 +1,12 @@
+---
+title: "UniBot Core"
+description: "UniBot core documentation: a Minecraft cross-server bridge bot built on NoneBot2, compatible with the NB Plugin Store — architecture, extension system, REST API and development guides."
+tags:
+  - UniBot
+  - NoneBot2
+  - core
+---
+
 # UniBot
 
 **UniBot** is the core bot of Minecraft UniBot, built on the [NoneBot2](https://nonebot.dev/) framework, responsible for communicating with chat platforms and multiple Minecraft servers. UniBot is fully compatible with the NoneBot2 ecosystem, can seamlessly integrate with the [NB Plugin Store](https://registry.nonebot.dev/), and can directly use community-ready plugins.

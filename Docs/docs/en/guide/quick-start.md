@@ -1,3 +1,13 @@
+---
+title: "Quick Start"
+date: 2026-08-21
+description: "Minecraft UniBot quick start tutorial: deploy in about 10 minutes — install the UniBot core, add the QueQiao plugin to your MC server, connect QQ / Telegram / Discord and finish authorization."
+tags:
+  - quick start
+  - deployment
+  - QueQiao
+---
+
 # Quick Start
 
 Welcome to **Minecraft UniBot**. This page walks you through the complete deployment flow from scratch to a working bot; the whole process takes about *==10 minutes==*.

@@ -1,3 +1,13 @@
+---
+title: "WebUI Admin Panel"
+date: 2026-08-21
+description: "Guide to UniBot's built-in WebUI admin panel: visual configuration, real-time monitoring, server and player management, whitelist and log viewing — powered by Vue 3, REST API and WebSocket."
+tags:
+  - WebUI
+  - admin panel
+  - configuration
+---
+
 # Admin Panel
 
 **WebUI** is UniBot's built-in modern web admin panel, built on **Vue 3 + Vite + Pinia + reka-ui**, interacting with the backend through a REST API and WebSocket.

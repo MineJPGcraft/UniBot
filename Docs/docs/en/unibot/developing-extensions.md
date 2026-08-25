@@ -1,3 +1,13 @@
+---
+title: "Developing Extensions"
+date: 2026-08-21
+description: "UniBot extension development guide: write, configure and distribute extensions from scratch — project structure, manifest, command and service registration, rendering templates and marketplace publishing."
+tags:
+  - extension development
+  - guide
+  - plugins
+---
+
 # Developing Extensions
 
 This document is for extension developers. It explains from scratch how to write, configure, and distribute a UniBot extension. Before you begin, it is recommended to read [Extension System](/en/unibot/extension-system.html) to understand the overall design.

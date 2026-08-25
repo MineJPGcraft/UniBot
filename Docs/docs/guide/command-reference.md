@@ -1,3 +1,13 @@
+---
+title: 指令手册
+date: 2026-08-04
+description: Minecraft UniBot 全部内置指令参考：指令总览与详细说明、平台前缀差异、自定义命令前缀，以及通过指令分组（command_groups）与启用列表控制各平台指令开关。
+tags:
+  - 指令
+  - 命令参考
+  - Alconna
+---
+
 # 指令手册
 
 UniBot 的指令基于 [Alconna](https://github.com/ArcletProject/Alconna) 解析，跨平台表现一致。默认命令前缀为 `/`（可在 `.env` 的 `COMMAND_START` 中修改）。

@@ -1,3 +1,13 @@
+---
+title: 快速开始
+date: 2026-08-04
+description: Minecraft UniBot 快速开始教程：约 10 分钟完成部署——安装 UniBot 核心、在 MC 服务器安装鹊桥插件、接入 QQ / Telegram / Discord 等聊天平台并完成授权验证。
+tags:
+  - 快速开始
+  - 部署
+  - 鹊桥
+---
+
 # 快速开始
 
 欢迎使用 **Minecraft UniBot**。本页将带你走完从零到可正常使用的完整部署流程，整个过程大约 *==10 分钟==*。

@@ -1,3 +1,13 @@
+---
+title: "Extension System"
+date: 2026-08-21
+description: "UniBot extension system: five extension types (command, service, renderer engine, template, resource), manifest structure, lifecycle and isolation, fully compatible with NoneBot2 and the NB Plugin Store."
+tags:
+  - extensions
+  - NoneBot2
+  - plugins
+---
+
 # Extension System
 
 UniBot is built on the [NoneBot2](https://nonebot.dev/) ecosystem and can **seamlessly integrate with the NB Plugin Store** — community-ready NoneBot plugins work out of the box. At the same time, on top of the NoneBot plugin system, UniBot also provides a **native extension system** to carry features deeply bound to the bot's internal capabilities.

@@ -1,3 +1,13 @@
+---
+title: 扩展系统
+date: 2026-08-11
+description: UniBot 扩展系统详解：指令、服务、渲染引擎、模板与资源五类扩展的设计理念、清单结构、生命周期与隔离机制，兼容 NoneBot2 / NB 插件商店生态。
+tags:
+  - 扩展系统
+  - NoneBot2
+  - 插件
+---
+
 # 扩展系统
 
 UniBot 基于 [NoneBot2](https://nonebot.dev/) 生态构建，可**无缝接入 NB 插件商店**，社区现成的 NoneBot 插件开箱即用。与此同时，UniBot 在 NoneBot 插件体系之外，还提供了一套**原生扩展系统**，用于承载与机器人内部能力深度绑定的功能。

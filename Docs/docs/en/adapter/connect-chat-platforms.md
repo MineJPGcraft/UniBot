@@ -1,3 +1,13 @@
+---
+title: "Connecting Chat Platforms"
+date: 2026-08-21
+description: "How to connect QQ, QQ Official, Telegram, Discord, DoDo and KOOK to UniBot: per-platform adapter fields in .env and filling bot cards in the WebUI."
+tags:
+  - chat platforms
+  - configuration
+  - .env
+---
+
 # Connecting Chat Platforms
 
 UniBot is built on NoneBot2 and connects to various chat platforms by installing different adapters. This page introduces the configuration fields and connection methods for each platform adapter. All configuration is done in the `.env` file in UniBot's root directory.

@@ -1,3 +1,13 @@
+---
+title: "MC Adapter"
+date: 2026-08-21
+description: "Usage of nonebot-adapter-minecraft: UniBot's built-in Minecraft protocol adapter, interconnecting with server-side plugins / Mods via the QueQiao protocol for group-server messaging."
+tags:
+  - MC adapter
+  - QueQiao protocol
+  - nonebot-adapter-minecraft
+---
+
 # MC Adapter
 
 `nonebot-adapter-minecraft` is NoneBot's Minecraft protocol adapter, used together with UniBot to interconnect with server-side plugins / Mods via the **QueQiao** protocol. The full documentation is available in its [Wiki](https://github.com/17TheWord/nonebot-adapter-minecraft/wiki).

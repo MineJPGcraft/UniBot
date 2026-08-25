@@ -5,24 +5,27 @@ import { plumeTheme } from 'vuepress-theme-plume'
 export default defineUserConfig({
   // 默认语言
   lang: 'zh-CN',
-  title: 'MC-UniBot Docs',
-  description: '跨平台 · 多服互联 · 即插即用 —— 让 Minecraft 与你的聊天世界无缝相连',
-
+  title: 'Minecraft UniBot 文档',
+  description: 'Minecraft UniBot 是开源免费的 Minecraft 群服互通机器人：支持 QQ、QQ 频道、Telegram、Discord、KOOK、DoDo 等聊天平台与多台 MC 服务器实时互通，跨平台指令、图片渲染、WebUI 管理，基于 NoneBot2，即插即用。',
   head: [
     ['link', { rel: 'icon', href: '/icon.svg' }],
+    // 社交平台抓取器对 SVG 支持差，补充 PNG 格式的 apple-touch-icon
+    ['link', { rel: 'apple-touch-icon', href: '/images/studio/dashboard.png' }],
+    // 告知搜索引擎站点主题色
+    ['meta', { name: 'theme-color', content: '#1a1a1f' }],
   ],
 
   // 多语言支持（路径键需与主题 locales 保持一致）
   locales: {
     '/': {
       lang: 'zh-CN',
-      title: 'MC-UniBot Docs',
-      description: '跨平台 · 多服互联 · 即插即用 —— 让 Minecraft 与你的聊天世界无缝相连',
+      title: 'Minecraft UniBot 文档',
+      description: 'Minecraft UniBot 是开源免费的 Minecraft 群服互通机器人：支持 QQ、QQ 频道、Telegram、Discord、KOOK、DoDo 等聊天平台与多台 MC 服务器实时互通，跨平台指令、图片渲染、WebUI 管理，基于 NoneBot2，即插即用。',
     },
     '/en/': {
       lang: 'en-US',
-      title: 'MC-UniBot Docs',
-      description: 'Cross-platform · Multi-server · Plug-and-Play — seamlessly connect Minecraft with your chat world',
+      title: 'Minecraft UniBot Docs',
+      description: 'Minecraft UniBot is a free, open-source cross-server bridge bot for Minecraft: connect QQ, Telegram, Discord, KOOK, DoDo and more chat platforms with multiple MC servers in real time. Cross-platform commands, image rendering and a WebUI, built on NoneBot2.',
     },
   },
 
@@ -186,16 +189,52 @@ export default defineUserConfig({
           name: 'McJPG 团队',
           url: 'https://mcjpg.org/',
         },
-        // 无配图页面回退到站点图标（需绝对 URL）
-        fallBackImage: 'https://bot.mcjpg.dev/icon.svg',
-        // 补充默认 OGP：强制站点名（若站点新增语言后 siteData 取到其他 title 时兜底）
-        ogp: (ogpInfo) => ({
-          ...ogpInfo,
-          'og:site_name': 'Minecraft UniBot',
-        }),
+        // 无配图页面回退图：社交平台不支持 SVG，改用 PNG 截图
+        fallBackImage: 'https://bot.mcjpg.dev/images/studio/dashboard.png',
+        // canonical 链接基准地址（不配置则不会生成 canonical 标签）
+        canonical: 'https://bot.mcjpg.dev/',
+        // 补充默认 OGP：强制站点名；页面自身无图片时兜底 twitter 卡片
+        ogp: (ogpInfo, page, app) => {
+          const result = {
+            ...ogpInfo,
+            'og:site_name': 'Minecraft UniBot',
+          }
+          if (!ogpInfo['twitter:card']) {
+            result['twitter:card'] = 'summary_large_image'
+            result['twitter:image'] = ogpInfo['og:image']
+            result['twitter:image:alt'] = ogpInfo['og:title']
+          }
+          return result
+        },
       },
       // sitemap：生成 sitemap.xml（仅生产构建生效，hostname 自动继承顶层配置）
       sitemap: {},
+      // GEO：生成 llms.txt / llms-full.txt 及每页 .md 纯文本版本，
+      // 供 ChatGPT / Perplexity / Claude 等 AI 搜索引擎抓取（仅生产构建生效）
+      llmstxt: {
+        locale: 'all',
+        // 生成绝对 URL，AI 智能体解析更可靠
+        domain: 'https://bot.mcjpg.dev',
+        // 自定义模板：备用语言链接移至末尾。
+        // 插件会删除空占位符及其前面的空行（默认模板中 {alternateLinks} 紧跟 {details}，
+        // 导致英文版无备用链接时 details 直接拼在 description 后）
+        llmsTxtTemplate: '# {title}\n\n{description}\n\n{details}\n\n## Table of Contents\n\n{toc}\n\n{alternateLinks}',
+        llmsTxtTemplateGetter: {
+          // 主题内置 toc 仅支持「集合」结构，本站未使用集合，这里回退为插件的扁平目录：
+          // - [标题](绝对 .md 链接): frontmatter 中的 description
+          toc: (pages, { domain }) =>
+            pages
+              .map((page) => {
+                const url = `${domain ?? ''}${page.path.replace(/\.html$/, '.md')}`
+                const desc =
+                  page.frontmatter.description && !page.data.autoDesc
+                    ? `: ${page.frontmatter.description.trim()}`
+                    : ''
+                return `- [${page.title}](${url})${desc}\n`
+              })
+              .join(''),
+        },
+      },
     },
   }),
 

@@ -1,3 +1,13 @@
+---
+title: 配置指南
+date: 2026-08-04
+description: Minecraft UniBot 配置详解：.env 框架配置与 Config.toml 业务配置的双文件体系，覆盖端口、指令、图片渲染、WebUI 等全部配置项说明。
+tags:
+  - 配置
+  - .env
+  - Config.toml
+---
+
 # 配置指南
 
 UniBot 采用 **双配置文件** 体系，分别管理框架层与业务层配置，各司其职。
