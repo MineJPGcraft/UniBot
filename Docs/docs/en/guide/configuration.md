@@ -11,7 +11,7 @@ UniBot uses a **dual-config-file** system, separately managing the framework lay
 | `Config.toml` | Project root | Bot custom config (commands, messages, images, etc.) | TOML |
 | `Config/Extensions.toml` | `Config/` directory | Extension toggle switch (one key per extension) | TOML |
 | `Config/Extensions/<id>.toml` | `Config/Extensions/` directory | Independent config for each extension (one file per extension) | TOML |
-| `Config/Messages.toml` | `Config/` directory | Outbound message text (customizable) | TOML |
+| `Config/Messages.zh.toml` / `Config/Messages.en.toml` | `Config/` directory | Bilingual bot message packs (loaded by `language`) | TOML |
 :::
 
 ==In daily use, the vast majority of configuration can be done visually in the WebUI without manually editing these files.== This page is for scenarios that require deep tuning or manual deployment.
@@ -79,6 +79,10 @@ For other platforms (Telegram, Discord, Kook, etc.), refer to the corresponding 
 - Example configuration
 
   ```toml
+  # Bot message language: zh / en, selects which Messages pack to load
+  # Only affects messages sent by the bot; the WebUI panel language is switched separately inside the panel
+  language = "zh"
+
   # Whether to treat all admins as superusers
   admin_superusers = true
 
@@ -186,14 +190,17 @@ After modification, the extension validates and applies the config immediately; 
 
 ---
 
-## `Config/Messages.toml` — Message Text
+## `Config/Messages.zh.toml` / `Config/Messages.en.toml` — Message Text
 
-All of the bot's outbound prompts/broadcast text is centralized in this file. It supports `{placeholder}` formatting and takes effect after restart.
+All of the bot's outbound prompts/broadcast text is centralized in message pack files. They support `{placeholder}` formatting and apply instantly after saving in the WebUI.
+
+- With `language = "zh"`, `Messages.zh.toml` is loaded (the legacy single file `Messages.toml` is still accepted as a Chinese-pack fallback)
+- With `language = "en"`, `Messages.en.toml` is loaded
+- Both packs share identical keys and can be customized independently; switch packs via the `language` field in `Config.toml`
 
 ```toml
 [events]
-player_join = "玩家 {player} 加入了游戏。"
-player_join_group = "玩家 {player} 加入了 [{server}] 服务器，喵～"
+player_join = "玩家 {player} 加入了游戏。"        # en pack: "Player {player} joined the game."
 
 [commands.send]
 sent = "已向服务器发送消息：{content}。"
@@ -203,6 +210,18 @@ result = "你今天的人品为 {point}，{tips}"
 ```
 
 *Note: do not delete existing keys.* Missing required items will cause the bot to fail to start.
+
+::: tip Hidden blocks (# Hidden Start / # Hidden End)
+The `# Hidden Start` / `# Hidden End` comment lines and everything between them are **completely hidden** from the WebUI message editor:
+on save they are re-inserted at their original position (located by the visible content preceding each block) and are still loaded by the bot.
+If the locating content is deleted, the block is appended to the end of the file with full markers on save — data is never lost.
+Do not type these markers manually in the WebUI editor (they are ignored).
+:::
+
+::: tip Panel language and message language are independent
+The WebUI panel language (Chinese / English) is switched from the top-right corner of the panel and stored only in your browser;
+dynamic API messages follow the browser language automatically. Neither is related to the `language` field.
+:::
 
 ---
 

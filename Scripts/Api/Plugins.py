@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 
+from Scripts.Api.Locale import text
 from Scripts.Constants import BUILTIN_PLUGIN_PREFIX
 from Scripts.Managers import config_manager, plugin_manager
 
@@ -98,7 +99,7 @@ async def install_plugin(body: InstallPluginRequest, current_user: dict = Depend
     """从市场安装插件（登记依赖，重启后由 Watchdog 自动安装）。"""
     plugin = await find_market_plugin(body.name)
     if not plugin:
-        return {'code': 1, 'data': None, 'message': '市场中未找到该插件'}
+        return {'code': 1, 'data': None, 'message': text('plugins.market_not_found')}
     success, message = await plugin_manager.install(
         plugin['project_link'],
         plugin['module_name'],
@@ -114,7 +115,7 @@ async def upgrade_plugin(body: UpgradePluginRequest, current_user: dict = Depend
     """升级已安装插件（更新登记，重启后由 Watchdog 自动更新）。"""
     plugin = await find_market_plugin(body.name)
     if not plugin:
-        return {'code': 1, 'data': None, 'message': '市场中未找到该插件'}
+        return {'code': 1, 'data': None, 'message': text('plugins.market_not_found')}
     success, message = await plugin_manager.upgrade(
         plugin['project_link'],
         plugin['module_name'],
@@ -129,7 +130,7 @@ async def get_plugin_detail(name: str, current_user: dict = Depends(get_current_
     """获取指定插件详情。"""
     detail = plugin_manager.get_plugin_detail(name)
     if not detail:
-        return {'code': 1, 'data': None, 'message': '插件不存在'}
+        return {'code': 1, 'data': None, 'message': text('plugins.not_found')}
     return {'code': 0, 'data': detail, 'message': 'ok'}
 
 
@@ -138,7 +139,7 @@ async def enable_plugin(name: str, current_user: dict = Depends(require_role('ad
     """启用插件。"""
     success = await plugin_manager.set_enabled(name, True)
     if not success:
-        return {'code': 1, 'data': None, 'message': '插件不存在'}
+        return {'code': 1, 'data': None, 'message': text('plugins.not_found')}
     return {'code': 0, 'data': None, 'message': 'ok'}
 
 
@@ -147,7 +148,7 @@ async def disable_plugin(name: str, current_user: dict = Depends(require_role('a
     """禁用插件。"""
     success = await plugin_manager.set_enabled(name, False)
     if not success:
-        return {'code': 1, 'data': None, 'message': '插件不存在'}
+        return {'code': 1, 'data': None, 'message': text('plugins.not_found')}
     return {'code': 0, 'data': None, 'message': 'ok'}
 
 
@@ -156,10 +157,10 @@ async def uninstall_plugin(name: str, current_user: dict = Depends(require_role(
     """卸载外部插件：移除 pyproject 登记，重启后由 Watchdog 自动卸载。"""
     plugin = plugin_manager.get_plugin_detail(name)
     if not plugin:
-        return {'code': 1, 'data': None, 'message': '插件不存在'}
+        return {'code': 1, 'data': None, 'message': text('plugins.not_found')}
     module_name = plugin['module_name']
     if module_name.startswith(BUILTIN_PLUGIN_PREFIX):
-        return {'code': 1, 'data': None, 'message': '内置插件不可卸载'}
+        return {'code': 1, 'data': None, 'message': text('plugins.builtin_cannot_uninstall')}
     # 在市场中查找对应的 PyPI 包名
     market_plugin = await find_market_plugin(module_name)
     project_link = market_plugin.get('project_link', '') if market_plugin else ''
@@ -167,7 +168,7 @@ async def uninstall_plugin(name: str, current_user: dict = Depends(require_role(
         # 未收录于市场时仅移除 pyproject 登记
         config_manager.remove_plugin(module_name)
         config_manager.remove_dependency(module_name)
-        return {'code': 0, 'data': None, 'message': '已移除登记，重启后生效'}
+        return {'code': 0, 'data': None, 'message': text('plugins.unregistered_restart_required')}
     success, message = await plugin_manager.uninstall(project_link, module_name)
     if not success:
         return {'code': 1, 'data': None, 'message': message}

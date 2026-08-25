@@ -1,6 +1,7 @@
 import nonebot
 from fastapi import APIRouter, Depends, Query
 
+from Scripts.Api.Locale import text
 from Scripts.Managers import statistics_manager
 
 from .Auth import get_current_user, require_role
@@ -41,4 +42,4 @@ async def reset_statistics():
     """清空全部统计数据并立即落盘。"""
     statistics_manager.reset()
     await statistics_manager.save()
-    return {'code': 0, 'data': None, 'message': '统计数据已清空'}
+    return {'code': 0, 'data': None, 'message': text('statistics.reset_success')}

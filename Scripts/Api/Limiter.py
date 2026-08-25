@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from fastapi import HTTPException, Request
 
+from Scripts.Api.Locale import text
 from Scripts.Logging import logger
 from Scripts.Managers import task_manager
 
@@ -91,7 +92,7 @@ class RateLimiter:
             remain = int(record['banned_until'] - time.time())
             raise HTTPException(
                 status_code=429,
-                detail=f'请求过于频繁，请 {remain} 秒后再试',
+                detail=text('limiter.banned_retry', remain=remain),
             )
 
         allowed = self.record_request(client_ip)
@@ -99,7 +100,7 @@ class RateLimiter:
             remain = int(self.records[client_ip]['banned_until'] - time.time())
             raise HTTPException(
                 status_code=429,
-                detail=f'请求过于频繁，已封禁 {remain} 秒',
+                detail=text('limiter.rate_limited', remain=remain),
             )
 
     async def cleanup_expired(self):

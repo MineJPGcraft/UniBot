@@ -3,6 +3,8 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends
 
+from Scripts.Api.Locale import text
+
 from .Auth import get_current_user
 
 router = APIRouter(prefix='/api/logs', tags=['Logs'])
@@ -36,19 +38,19 @@ async def get_log_content(
 ):
     """获取指定日志文件原始内容，解析与过滤由前端完成。"""
     if not name.endswith('.log'):
-        return {'code': 1, 'data': None, 'message': '日志文件不存在'}
+        return {'code': 1, 'data': None, 'message': text('logs.file_not_found')}
     log_file = (LOGS_DIR / name).resolve()
     try:
         log_file.relative_to(LOGS_DIR)
     except ValueError:
-        return {'code': 1, 'data': None, 'message': '日志文件不存在'}
+        return {'code': 1, 'data': None, 'message': text('logs.file_not_found')}
     if not log_file.is_file():
-        return {'code': 1, 'data': None, 'message': '日志文件不存在'}
+        return {'code': 1, 'data': None, 'message': text('logs.file_not_found')}
 
     try:
         content = log_file.read_text('Utf-8')
     except Exception as error:
-        return {'code': 1, 'data': None, 'message': f'读取日志失败：{error}'}
+        return {'code': 1, 'data': None, 'message': text('logs.read_failed', error=error)}
 
     lines = [{'line': index, 'text': line} for index, line in enumerate(content.splitlines(), start=1)]
 

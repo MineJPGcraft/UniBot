@@ -1,621 +1,704 @@
 """
 配置表单 Schema。
 
-定义两组数据：
-- `CONFIG_SCHEMA` / `CONFIG_GROUPS`：`Config.toml` 字段，供 `/api/config/schema` 渲染。
-- `ENV_SCHEMA` / `ENV_GROUPS`：`.env` 字段，供 `/api/config/env` 渲染。
+定义两组构建函数（每次调用返回全新结构，供路由按当前请求语言动态生成）：
+- `build_config_schema()` / `build_config_groups()`：`Config.toml` 字段，供 `/api/config/schema` 渲染。
+- `build_env_schema()` / `build_env_groups()`：`.env` 字段，供 `/api/config/env` 渲染。
 """
 
+from Scripts.Api.Locale import text
 from Scripts.Constants import QQ_INTENT_FIELDS
 
 from .Adapters import PLATFORM_OPTIONS
 
+
+def _platform_options() -> list[dict]:
+    """构建注入请求语言译名的平台选项列表。"""
+    return [
+        {'value': option['value'], 'label': text(f'adapters.platform.{option["value"]}_label')}
+        for option in PLATFORM_OPTIONS
+    ]
+
+
 # ===== Config.toml 字段定义 =====
 
-CONFIG_SCHEMA = [
-    {
-        'key': 'admin_superusers',
-        'label': '管理员视为超级用户',
-        'type': 'boolean',
-        'default': True,
-        'description': '是否将所有管理员视为超级用户',
-    },
-    {
-        'key': 'qq_bound_max_number',
-        'label': 'QQ 绑定数量上限',
-        'type': 'number',
-        'default': 1,
-        'description': '每名玩家最多可绑定的 QQ 号数量，设置为 0 表示不限制',
-    },
-    {
-        'key': 'command_groups',
-        'label': '指令群',
-        'type': 'platform_list',
-        'default': [],
-        'options': PLATFORM_OPTIONS,
-        'description': '机器人只响应这些平台群组内发送的指令',
-    },
-    {
-        'key': 'message_groups',
-        'label': '消息群',
-        'type': 'platform_list',
-        'default': [],
-        'options': PLATFORM_OPTIONS,
-        'description': '接收游戏消息，并可向游戏内同步群消息的群',
-    },
-    {
-        'key': 'command_minecraft_whitelist',
-        'label': '指令白名单',
-        'type': 'list',
-        'default': [],
-        'description': 'Command 指令只允许执行以列表内容开头的 Minecraft 指令；使用时请留空黑名单',
-    },
-    {
-        'key': 'command_minecraft_blacklist',
-        'label': '指令黑名单',
-        'type': 'list',
-        'default': [],
-        'description': 'Command 指令禁止执行以列表内容开头的 Minecraft 指令',
-    },
-    {
-        'key': 'broadcast_server',
-        'label': '播报服务器状态',
-        'type': 'boolean',
-        'default': True,
-        'description': '是否向其他服务器和消息群播报服务器开启或关闭',
-    },
-    {
-        'key': 'broadcast_player',
-        'label': '播报玩家进出',
-        'type': 'boolean',
-        'default': True,
-        'description': '是否播报玩家进入或离开服务器',
-    },
-    {
-        'key': 'broadcast_update',
-        'label': '播报版本更新',
-        'type': 'boolean',
-        'default': True,
-        'description': '检测到新版本后，机器人连接时向消息群发送一次更新提醒',
-    },
-    {
-        'key': 'sync_all_qq_message',
-        'label': '同步全部群消息',
-        'type': 'boolean',
-        'default': True,
-        'description': '是否将消息群内的所有消息转发到服务器；关闭后可使用 send 指令发送消息',
-    },
-    {
-        'key': 'sync_all_game_message',
-        'label': '同步全部游戏消息',
-        'type': 'boolean',
-        'default': False,
-        'description': '是否将服务器内发送的所有消息转发到消息群',
-    },
-    {
-        'key': 'sync_message_between_servers',
-        'label': '服务器间同步消息',
-        'type': 'boolean',
-        'default': False,
-        'description': '是否将服务器内的消息转发到其他服务器',
-    },
-    {
-        'key': 'sync_sensitive_words',
-        'label': '同步敏感词',
-        'type': 'list',
-        'default': [],
-        'description': '包含列表中任意敏感词的消息不会同步到消息群，而会提示消息违禁',
-    },
-    {
-        'key': 'sync_color_source',
-        'label': '消息来源颜色',
-        'type': 'string',
-        'default': 'gray',
-        'description': '群消息和跨服消息转发时，消息来源部分使用的 Minecraft 颜色',
-    },
-    {
-        'key': 'sync_color_player',
-        'label': '玩家名称颜色',
-        'type': 'string',
-        'default': 'gray',
-        'description': '群消息和跨服消息转发时，玩家名称部分使用的 Minecraft 颜色',
-    },
-    {
-        'key': 'sync_color_message',
-        'label': '消息内容颜色',
-        'type': 'string',
-        'default': 'gray',
-        'description': '群消息和跨服消息转发时，消息内容部分使用的 Minecraft 颜色',
-    },
-    {
-        'key': 'bot_prefix',
-        'label': '假人前缀',
-        'type': 'string',
-        'default': '',
-        'description': 'list 指令分类和进服广播判定使用的假人名称前缀；无需分类时留空',
-    },
-    {
-        'key': 'list_compatible_mode',
-        'label': '玩家列表兼容模式',
-        'type': 'boolean',
-        'default': False,
-        'description': '通过监听玩家进入和离开更新玩家列表，适用于无法直接获取列表的服务器，但数据可能不准确',
-    },
-    {
-        'key': 'whitelist_command',
-        'label': '白名单指令名称',
-        'type': 'string',
-        'default': 'whitelist',
-        'description': '服务器用于管理白名单的 Minecraft 指令名称',
-    },
-    {
-        'key': 'image.mode',
-        'label': '启用图片模式',
-        'type': 'boolean',
-        'default': False,
-        'description': '将机器人发送的消息渲染为图片；需要额外安装图片依赖，且响应速度会变慢',
-    },
-    {
-        'key': 'webui.enabled',
-        'label': '启用 WebUI',
-        'type': 'boolean',
-        'default': False,
-        'description': '是否启用 WebUI 管理面板，并在机器人端口挂载 Web API 与 WebSocket',
-    },
-]
 
-CONFIG_GROUPS = [
-    {'name': '基础与权限', 'keys': ['admin_superusers', 'qq_bound_max_number']},
-    {'name': '群组', 'keys': ['command_groups', 'message_groups']},
-    {'name': 'Minecraft 指令', 'keys': ['command_minecraft_whitelist', 'command_minecraft_blacklist']},
-    {'name': '消息播报', 'keys': ['broadcast_server', 'broadcast_player', 'broadcast_update']},
-    {
-        'name': '消息同步',
-        'keys': [
-            'sync_all_qq_message',
-            'sync_all_game_message',
-            'sync_message_between_servers',
-            'sync_sensitive_words',
-            'sync_color_source',
-            'sync_color_player',
-            'sync_color_message',
-        ],
-    },
-    {'name': '玩家列表', 'keys': ['bot_prefix', 'list_compatible_mode', 'whitelist_command']},
-    {
-        'name': '图片渲染',
-        'keys': ['image.mode'],
-        # 门控开关：仅当该 key 为 true 时组内字段可编辑；前端据此渲染锁定遮罩
-        # 'gated_by': 'image.mode',
-    },
-    {'name': 'WebUI', 'keys': ['webui.enabled']},
-]
+def build_config_schema() -> list[dict]:
+    """构建 Config.toml 字段 Schema（每次调用返回全新结构）。"""
+    return [
+        {
+            'key': 'admin_superusers',
+            'label': text('schema.config.admin_superusers_label'),
+            'type': 'boolean',
+            'default': True,
+            'description': text('schema.config.admin_superusers_description'),
+        },
+        {
+            'key': 'qq_bound_max_number',
+            'label': text('schema.config.qq_bound_max_number_label'),
+            'type': 'number',
+            'default': 1,
+            'description': text('schema.config.qq_bound_max_number_description'),
+        },
+        {
+            'key': 'command_groups',
+            'label': text('schema.config.command_groups_label'),
+            'type': 'platform_list',
+            'default': [],
+            'options': _platform_options(),
+            'description': text('schema.config.command_groups_description'),
+        },
+        {
+            'key': 'message_groups',
+            'label': text('schema.config.message_groups_label'),
+            'type': 'platform_list',
+            'default': [],
+            'options': _platform_options(),
+            'description': text('schema.config.message_groups_description'),
+        },
+        {
+            'key': 'command_minecraft_whitelist',
+            'label': text('schema.config.command_minecraft_whitelist_label'),
+            'type': 'list',
+            'default': [],
+            'description': text('schema.config.command_minecraft_whitelist_description'),
+        },
+        {
+            'key': 'command_minecraft_blacklist',
+            'label': text('schema.config.command_minecraft_blacklist_label'),
+            'type': 'list',
+            'default': [],
+            'description': text('schema.config.command_minecraft_blacklist_description'),
+        },
+        {
+            'key': 'broadcast_server',
+            'label': text('schema.config.broadcast_server_label'),
+            'type': 'boolean',
+            'default': True,
+            'description': text('schema.config.broadcast_server_description'),
+        },
+        {
+            'key': 'broadcast_player',
+            'label': text('schema.config.broadcast_player_label'),
+            'type': 'boolean',
+            'default': True,
+            'description': text('schema.config.broadcast_player_description'),
+        },
+        {
+            'key': 'broadcast_update',
+            'label': text('schema.config.broadcast_update_label'),
+            'type': 'boolean',
+            'default': True,
+            'description': text('schema.config.broadcast_update_description'),
+        },
+        {
+            'key': 'sync_all_qq_message',
+            'label': text('schema.config.sync_all_qq_message_label'),
+            'type': 'boolean',
+            'default': True,
+            'description': text('schema.config.sync_all_qq_message_description'),
+        },
+        {
+            'key': 'sync_all_game_message',
+            'label': text('schema.config.sync_all_game_message_label'),
+            'type': 'boolean',
+            'default': False,
+            'description': text('schema.config.sync_all_game_message_description'),
+        },
+        {
+            'key': 'sync_message_between_servers',
+            'label': text('schema.config.sync_message_between_servers_label'),
+            'type': 'boolean',
+            'default': False,
+            'description': text('schema.config.sync_message_between_servers_description'),
+        },
+        {
+            'key': 'sync_sensitive_words',
+            'label': text('schema.config.sync_sensitive_words_label'),
+            'type': 'list',
+            'default': [],
+            'description': text('schema.config.sync_sensitive_words_description'),
+        },
+        {
+            'key': 'sync_color_source',
+            'label': text('schema.config.sync_color_source_label'),
+            'type': 'string',
+            'default': 'gray',
+            'description': text('schema.config.sync_color_source_description'),
+        },
+        {
+            'key': 'sync_color_player',
+            'label': text('schema.config.sync_color_player_label'),
+            'type': 'string',
+            'default': 'gray',
+            'description': text('schema.config.sync_color_player_description'),
+        },
+        {
+            'key': 'sync_color_message',
+            'label': text('schema.config.sync_color_message_label'),
+            'type': 'string',
+            'default': 'gray',
+            'description': text('schema.config.sync_color_message_description'),
+        },
+        {
+            'key': 'bot_prefix',
+            'label': text('schema.config.bot_prefix_label'),
+            'type': 'string',
+            'default': '',
+            'description': text('schema.config.bot_prefix_description'),
+        },
+        {
+            'key': 'list_compatible_mode',
+            'label': text('schema.config.list_compatible_mode_label'),
+            'type': 'boolean',
+            'default': False,
+            'description': text('schema.config.list_compatible_mode_description'),
+        },
+        {
+            'key': 'whitelist_command',
+            'label': text('schema.config.whitelist_command_label'),
+            'type': 'string',
+            'default': 'whitelist',
+            'description': text('schema.config.whitelist_command_description'),
+        },
+        {
+            'key': 'image.mode',
+            'label': text('schema.config.image__mode_label'),
+            'type': 'boolean',
+            'default': False,
+            'description': text('schema.config.image__mode_description'),
+        },
+        {
+            'key': 'webui.enabled',
+            'label': text('schema.config.webui__enabled_label'),
+            'type': 'boolean',
+            'default': False,
+            'description': text('schema.config.webui__enabled_description'),
+        },
+    ]
+
+
+def build_config_groups() -> list[dict]:
+    """构建 Config.toml 分组（每次调用返回全新结构）。"""
+    return [
+        {
+            'id': 'basic',
+            'name': text('schema.config.group_basic'),
+            'keys': ['admin_superusers', 'qq_bound_max_number'],
+        },
+        {
+            'id': 'groups',
+            'name': text('schema.config.group_groups'),
+            'keys': ['command_groups', 'message_groups'],
+        },
+        {
+            'id': 'mc_command',
+            'name': text('schema.config.group_mc_command'),
+            'keys': ['command_minecraft_whitelist', 'command_minecraft_blacklist'],
+        },
+        {
+            'id': 'broadcast',
+            'name': text('schema.config.group_broadcast'),
+            'keys': ['broadcast_server', 'broadcast_player', 'broadcast_update'],
+        },
+        {
+            'id': 'sync',
+            'name': text('schema.config.group_sync'),
+            'keys': [
+                'sync_all_qq_message',
+                'sync_all_game_message',
+                'sync_message_between_servers',
+                'sync_sensitive_words',
+                'sync_color_source',
+                'sync_color_player',
+                'sync_color_message',
+            ],
+        },
+        {
+            'id': 'player_list',
+            'name': text('schema.config.group_player_list'),
+            'keys': ['bot_prefix', 'list_compatible_mode', 'whitelist_command'],
+        },
+        {
+            'id': 'image',
+            'name': text('schema.config.group_image'),
+            'keys': ['image.mode'],
+            # 门控开关：仅当该 key 为 true 时组内字段可编辑；前端据此渲染锁定遮罩
+            # 'gated_by': 'image.mode',
+        },
+        {
+            'id': 'webui',
+            'name': text('schema.config.group_webui'),
+            'keys': ['webui.enabled'],
+        },
+    ]
+
 
 # ===== .env 环境变量字段定义 =====
 
 # QQ 官方机器人 Intent 订阅清单：单一来源在 Scripts/Constants.py（扫码登录默认值共用）
 
-ENV_SCHEMA = [
-    {'key': 'PORT', 'label': '监听端口', 'type': 'number', 'default': 8000, 'description': 'NoneBot 监听的端口'},
-    {
-        'key': 'HOST',
-        'label': '监听地址',
-        'type': 'string',
-        'default': '127.0.0.1',
-        'description': 'NoneBot 监听的 IP / 主机名，公网连接请改为 0.0.0.0',
-    },
-    {
-        'key': 'SUPERUSERS',
-        'label': '超级用户',
-        'type': 'list',
-        'default': [],
-        'description': '拥有管理权限的用户标识（如 QQ 号）',
-    },
-    {
-        'key': 'COMMAND_SEP',
-        'label': '命令分隔符',
-        'type': 'list',
-        'default': [' '],
-        'description': 'NoneBot 命令分隔字符',
-    },
-    {
-        'key': 'COMMAND_START',
-        'label': '命令起始符',
-        'type': 'list',
-        'default': ['.'],
-        'description': 'NoneBot 命令起始字符',
-    },
-    {'key': 'LOG_LEVEL', 'label': '日志等级', 'type': 'string', 'default': 'INFO', 'description': '日志输出等级'},
-    {
-        'key': 'DRIVER',
-        'label': 'NoneBot 驱动',
-        'type': 'string',
-        'default': '~fastapi',
-        'description': 'NoneBot 运行所需的驱动组合，安装/卸载适配器时会自动维护',
-    },
-    # ===== OneBot V11 =====
-    {
-        'key': 'ONEBOT_ACCESS_TOKEN',
-        'label': 'OneBot AccessToken',
-        'type': 'secret',
-        'default': '',
-        'description': 'OneBot V11 平台的 AccessToken，由 OneBot 服务端设置；未启用请留空',
-    },
-    # ===== QQ =====
-    {
-        'key': 'QQ_BOTS',
-        'label': 'QQ 机器人',
-        'type': 'json',
-        'default': [],
-        'description': 'QQ 开放平台官方机器人列表；每个机器人需配置 AppID、Secret，并按需订阅事件（Intent）。使用 WebHook 连接时在开放平台配置回调地址。',
-        'form': {
-            'kind': 'array',
-            'item_title': '机器人',
-            # 扫码快速绑定：前端据此在机器人卡片上渲染「扫码」按钮，扫码成功回填 id / secret
-            'qr_connect': {
-                'id_key': 'id',
-                'secret_key': 'secret',
-                'source': 'qq_official',
-                'hint': '使用手机 QQ 扫码，自动填充 AppID 与 Secret',
-            },
-            'fields': [
-                {
-                    'key': 'id',
-                    'label': 'AppID',
-                    'type': 'string',
-                    'required': True,
-                    'description': 'QQ 开放平台应用的 AppID',
-                },
-                {
-                    'key': 'secret',
-                    'label': 'Secret',
-                    'type': 'secret',
-                    'required': True,
-                    'description': 'QQ 开放平台应用的 Secret，用于消息签名与事件验签',
-                },
-                {
-                    'key': 'token',
-                    'label': 'Token',
-                    'type': 'secret',
-                    'description': 'QQ 开放平台应用的机器人 Token，仅 WebSocket 连接需要',
-                },
-                {
-                    'key': 'intent',
-                    'label': '事件订阅（Intent）',
-                    'type': 'object',
-                    'kind': 'booleans',
-                    'fields': QQ_INTENT_FIELDS,
-                    'description': '仅 WebSocket 连接生效，需按机器人类型订阅所需事件',
-                },
-                {
-                    'key': 'use_websocket',
-                    'label': '使用 WebSocket 连接',
-                    'type': 'boolean',
-                    'default': True,
-                    'description': '关闭后改用 WebHook 连接，需在开放平台配置回调地址',
-                },
-            ],
-        },
-    },
-    {
-        'key': 'QQ_IS_SANDBOX',
-        'label': 'QQ 沙盒模式',
-        'type': 'boolean',
-        'default': False,
-        'description': '是否启用 QQ 沙盒模式，默认关闭',
-    },
-    # ===== Telegram =====
-    {
-        'key': 'TELEGRAM_BOTS',
-        'label': 'Telegram 机器人',
-        'type': 'json',
-        'default': [],
-        'description': 'Telegram 机器人列表；Token 向 @BotFather 申请（必填）。默认使用 Long Polling 长轮询，开启 Webhook 需配合公网 HTTPS 地址。',
-        'form': {
-            'kind': 'array',
-            'item_title': '机器人',
-            'item_placeholder': '名称',
-            'fields': [
-                {
-                    'key': 'token',
-                    'label': '机器人 Token',
-                    'type': 'secret',
-                    'required': True,
-                    'description': '向 @BotFather 申请，格式如 1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-                },
-                {
-                    'key': 'is_webhook',
-                    'label': '使用 Webhook 模式',
-                    'type': 'boolean',
-                    'default': False,
-                    'description': '关闭则使用 Long Polling 长轮询（推荐）',
-                },
-            ],
-        },
-    },
-    {
-        'key': 'TELEGRAM_WEBHOOK_URL',
-        'label': 'Telegram Webhook 地址',
-        'type': 'string',
-        'default': '',
-        'description': 'Webhook 模式下的公网 HTTPS 地址，例如 https://yourdomain.com；Long polling 模式留空',
-    },
-    {
-        'key': 'TELEGRAM_PROXY',
-        'label': 'Telegram 代理',
-        'type': 'string',
-        'default': '',
-        'description': '访问 Telegram API 的代理地址，例如 http://127.0.0.1:10809；Socks 协议需安装 httpx[socks]',
-    },
-    # ===== Discord =====
-    {
-        'key': 'DISCORD_BOTS',
-        'label': 'Discord 机器人',
-        'type': 'json',
-        'default': [],
-        'description': 'Discord 机器人列表；每个机器人需 Bot Token，并按需订阅事件（Intent）。message_content 为特权 Intent，需在开发者平台开启。',
-        'form': {
-            'kind': 'array',
-            'item_title': '机器人',
-            'fields': [
-                {
-                    'key': 'token',
-                    'label': 'Bot Token',
-                    'type': 'secret',
-                    'required': True,
-                    'description': 'Discord Developer Portal 中应用的 Bot Token',
-                },
-                {
-                    'key': 'intent',
-                    'label': '事件订阅（Intent）',
-                    'type': 'object',
-                    'kind': 'booleans',
-                    'fields': [
-                        {'key': 'guilds', 'label': '服务器事件', 'type': 'boolean', 'default': True},
-                        {
-                            'key': 'guild_messages',
-                            'label': '服务器消息事件',
-                            'type': 'boolean',
-                            'default': True,
-                        },
-                        {
-                            'key': 'direct_messages',
-                            'label': '私信事件',
-                            'type': 'boolean',
-                            'default': True,
-                        },
-                        {
-                            'key': 'message_content',
-                            'label': '消息内容（特权）',
-                            'type': 'boolean',
-                            'default': False,
-                            'description': '特权 Intent，需在开发者平台开启 Message Content Intent',
-                        },
-                        {
-                            'key': 'guild_members',
-                            'label': '服务器成员事件',
-                            'type': 'boolean',
-                            'default': True,
-                        },
-                    ],
-                },
-                {
-                    'key': 'application_commands',
-                    'label': '斜杠命令注册范围',
-                    'type': 'object',
-                    'kind': 'map',
-                    'value_type': 'list',
-                    'description': '命令名 → 服务器 ID 列表；{"*": ["*"]} 表示全部注册为全局命令',
-                },
-            ],
-        },
-    },
-    {
-        'key': 'DISCORD_API_VERSION',
-        'label': 'Discord API 版本',
-        'type': 'number',
-        'default': 10,
-        'description': 'Discord API 版本号，默认 10',
-    },
-    {
-        'key': 'DISCORD_API_TIMEOUT',
-        'label': 'Discord API 超时',
-        'type': 'number',
-        'default': 30,
-        'description': 'Discord API 请求超时时间（秒），默认 30',
-    },
-    {
-        'key': 'DISCORD_COMPRESS',
-        'label': 'Discord 数据压缩',
-        'type': 'boolean',
-        'default': False,
-        'description': '是否启用网关数据压缩，默认关闭',
-    },
-    {
-        'key': 'DISCORD_HANDLE_SELF_MESSAGE',
-        'label': 'Discord 处理自身消息',
-        'type': 'boolean',
-        'default': False,
-        'description': '是否处理自己发送的消息，默认关闭',
-    },
-    {
-        'key': 'DISCORD_PROXY',
-        'label': 'Discord 代理',
-        'type': 'string',
-        'default': '',
-        'description': '访问 Discord API 的代理地址，例如 http://127.0.0.1:6666；不使用请留空',
-    },
-    # ===== DoDo =====
-    {
-        'key': 'DODO_BOTS',
-        'label': 'DoDo 机器人',
-        'type': 'json',
-        'default': [],
-        'description': 'DoDo 开放平台机器人列表（仅支持 WebSocket 连接）；在开放平台创建机器人获取 client_id 与 token。',
-        'form': {
-            'kind': 'array',
-            'item_title': '机器人',
-            'fields': [
-                {
-                    'key': 'client_id',
-                    'label': 'Client ID',
-                    'type': 'string',
-                    'required': True,
-                    'description': 'DoDo 开放平台机器的 Client ID',
-                },
-                {
-                    'key': 'token',
-                    'label': 'Token',
-                    'type': 'secret',
-                    'required': True,
-                    'description': 'DoDo 开放平台机器的 Token',
-                },
-            ],
-        },
-    },
-    # ===== KOOK =====
-    {
-        'key': 'KAIHEILA_BOTS',
-        'label': 'KOOK 机器人',
-        'type': 'json',
-        'default': [],
-        'description': 'KOOK（开黑啦）机器人列表；Token 在开发者平台获取（必填）。',
-        'form': {
-            'kind': 'array',
-            'item_title': '机器人',
-            'fields': [
-                {
-                    'key': 'token',
-                    'label': '机器人 Token',
-                    'type': 'secret',
-                    'required': True,
-                    'description': 'KOOK 开发者平台 → 应用 → 机器人连接模式 获取的 Token',
-                },
-            ],
-        },
-    },
-    # ===== Satori =====
-    {
-        'key': 'SATORI_CLIENTS',
-        'label': 'Satori 服务',
-        'type': 'json',
-        'default': [],
-        'description': 'Satori 协议客户端列表，用于连接 Chronocat、LLBot、Koishi 等 Satori 服务端。',
-        'form': {
-            'kind': 'array',
-            'item_title': '连接',
-            'item_placeholder': '名称',
-            'fields': [
-                {
-                    'key': 'host',
-                    'label': '连接地址',
-                    'type': 'string',
-                    'default': 'localhost',
-                    'description': 'Satori 服务端监听地址，如 localhost',
-                },
-                {
-                    'key': 'port',
-                    'label': '端口',
-                    'type': 'number',
-                    'default': 5500,
-                    'description': 'Satori 服务端监听端口，Chronocat 默认为 5500',
-                },
-                {
-                    'key': 'path',
-                    'label': '路径',
-                    'type': 'string',
-                    'default': '',
-                    'description': '服务端自定义监听路径，如 /satori，默认为空',
-                },
-                {
-                    'key': 'token',
-                    'label': 'Token',
-                    'type': 'secret',
-                    'default': '',
-                    'description': '服务端要求的验证 Token（如对接 Chronocat 需要）',
-                },
-                {
-                    'key': 'timeout',
-                    'label': '超时时间',
-                    'type': 'number',
-                    'default': 30,
-                    'description': '连接超时时间（秒）',
-                },
-                {
-                    'key': 'secure',
-                    'label': '使用 TLS',
-                    'type': 'boolean',
-                    'default': False,
-                    'description': '是否使用 TLS / wss 加密连接',
-                },
-            ],
-        },
-    },
-    # ===== Minecraft =====
-    {
-        'key': 'MINECRAFT_WS_URLS',
-        'label': 'Minecraft WS 地址',
-        'type': 'json',
-        'default': {},
-        'description': 'Minecraft WebSocket 连接地址：服务器名称 → 地址列表（支持一服多地址）',
-        'form': {
-            'kind': 'map',
-            'key_label': '服务器名称',
-            'value_type': 'list',
-            'value_placeholder': 'ws://地址:端口/路径',
-        },
-    },
-    {
-        'key': 'MINECRAFT_ACCESS_TOKEN',
-        'label': 'Minecraft 令牌',
-        'type': 'secret',
-        'default': '',
-        'description': 'Minecraft WebSocket 连接令牌，未设置请留空',
-    },
-]
 
-ENV_GROUPS = [
-    {
-        'name': '框架',
-        'keys': ['PORT', 'HOST', 'SUPERUSERS', 'COMMAND_SEP', 'COMMAND_START', 'LOG_LEVEL', 'DRIVER'],
-    },
-    {
-        'name': 'OneBot V11',
-        'keys': ['ONEBOT_ACCESS_TOKEN'],
-    },
-    {
-        'name': 'QQ',
-        'keys': ['QQ_BOTS', 'QQ_IS_SANDBOX'],
-    },
-    {
-        'name': 'Telegram',
-        'keys': ['TELEGRAM_BOTS', 'TELEGRAM_WEBHOOK_URL', 'TELEGRAM_PROXY'],
-    },
-    {
-        'name': 'Discord',
-        'keys': [
-            'DISCORD_BOTS',
-            'DISCORD_API_VERSION',
-            'DISCORD_API_TIMEOUT',
-            'DISCORD_COMPRESS',
-            'DISCORD_HANDLE_SELF_MESSAGE',
-            'DISCORD_PROXY',
-        ],
-    },
-    {
-        'name': 'DoDo',
-        'keys': ['DODO_BOTS'],
-    },
-    {
-        'name': 'KOOK',
-        'keys': ['KAIHEILA_BOTS'],
-    },
-    {
-        'name': 'Satori',
-        'keys': ['SATORI_CLIENTS'],
-    },
-    {
-        'name': 'Minecraft',
-        'keys': ['MINECRAFT_WS_URLS', 'MINECRAFT_ACCESS_TOKEN'],
-    },
-]
+def build_env_schema() -> list[dict]:
+    """构建 .env 字段 Schema（每次调用返回全新结构）。"""
+    return [
+        {
+            'key': 'PORT',
+            'label': text('schema.env.PORT_label'),
+            'type': 'number',
+            'default': 8000,
+            'description': text('schema.env.PORT_description'),
+        },
+        {
+            'key': 'HOST',
+            'label': text('schema.env.HOST_label'),
+            'type': 'string',
+            'default': '127.0.0.1',
+            'description': text('schema.env.HOST_description'),
+        },
+        {
+            'key': 'SUPERUSERS',
+            'label': text('schema.env.SUPERUSERS_label'),
+            'type': 'list',
+            'default': [],
+            'description': text('schema.env.SUPERUSERS_description'),
+        },
+        {
+            'key': 'COMMAND_SEP',
+            'label': text('schema.env.COMMAND_SEP_label'),
+            'type': 'list',
+            'default': [' '],
+            'description': text('schema.env.COMMAND_SEP_description'),
+        },
+        {
+            'key': 'COMMAND_START',
+            'label': text('schema.env.COMMAND_START_label'),
+            'type': 'list',
+            'default': ['.'],
+            'description': text('schema.env.COMMAND_START_description'),
+        },
+        {
+            'key': 'LOG_LEVEL',
+            'label': text('schema.env.LOG_LEVEL_label'),
+            'type': 'string',
+            'default': 'INFO',
+            'description': text('schema.env.LOG_LEVEL_description'),
+        },
+        {
+            'key': 'DRIVER',
+            'label': text('schema.env.DRIVER_label'),
+            'type': 'string',
+            'default': '~fastapi',
+            'description': text('schema.env.DRIVER_description'),
+        },
+        # ===== OneBot V11 =====
+        {
+            'key': 'ONEBOT_ACCESS_TOKEN',
+            'label': text('schema.env.ONEBOT_ACCESS_TOKEN_label'),
+            'type': 'secret',
+            'default': '',
+            'description': text('schema.env.ONEBOT_ACCESS_TOKEN_description'),
+        },
+        # ===== QQ =====
+        {
+            'key': 'QQ_BOTS',
+            'label': text('schema.env.QQ_BOTS_label'),
+            'type': 'json',
+            'default': [],
+            'description': text('schema.env.QQ_BOTS_description'),
+            'form': {
+                'kind': 'array',
+                'item_title': text('schema.env.QQ_BOTS_form_item_title'),
+                # 扫码快速绑定：前端据此在机器人卡片上渲染「扫码」按钮，扫码成功回填 id / secret
+                'qr_connect': {
+                    'id_key': 'id',
+                    'secret_key': 'secret',
+                    'source': 'qq_official',
+                    'hint': text('schema.env.QQ_BOTS_form_qr_hint'),
+                },
+                'fields': [
+                    {
+                        'key': 'id',
+                        'label': text('schema.env.QQ_BOTS_field_id_label'),
+                        'type': 'string',
+                        'required': True,
+                        'description': text('schema.env.QQ_BOTS_field_id_description'),
+                    },
+                    {
+                        'key': 'secret',
+                        'label': text('schema.env.QQ_BOTS_field_secret_label'),
+                        'type': 'secret',
+                        'required': True,
+                        'description': text('schema.env.QQ_BOTS_field_secret_description'),
+                    },
+                    {
+                        'key': 'token',
+                        'label': text('schema.env.QQ_BOTS_field_token_label'),
+                        'type': 'secret',
+                        'description': text('schema.env.QQ_BOTS_field_token_description'),
+                    },
+                    {
+                        'key': 'intent',
+                        'label': text('schema.env.QQ_BOTS_field_intent_label'),
+                        'type': 'object',
+                        'kind': 'booleans',
+                        'fields': [
+                            {
+                                'key': intent_field['key'],
+                                'label': text(f'schema.intent.{intent_field["key"]}'),
+                                'type': intent_field['type'],
+                                'default': intent_field['default'],
+                            }
+                            for intent_field in QQ_INTENT_FIELDS
+                        ],
+                        'description': text('schema.env.QQ_BOTS_field_intent_description'),
+                    },
+                    {
+                        'key': 'use_websocket',
+                        'label': text('schema.env.QQ_BOTS_field_use_websocket_label'),
+                        'type': 'boolean',
+                        'default': True,
+                        'description': text('schema.env.QQ_BOTS_field_use_websocket_description'),
+                    },
+                ],
+            },
+        },
+        {
+            'key': 'QQ_IS_SANDBOX',
+            'label': text('schema.env.QQ_IS_SANDBOX_label'),
+            'type': 'boolean',
+            'default': False,
+            'description': text('schema.env.QQ_IS_SANDBOX_description'),
+        },
+        # ===== Telegram =====
+        {
+            'key': 'TELEGRAM_BOTS',
+            'label': text('schema.env.TELEGRAM_BOTS_label'),
+            'type': 'json',
+            'default': [],
+            'description': text('schema.env.TELEGRAM_BOTS_description'),
+            'form': {
+                'kind': 'array',
+                'item_title': text('schema.env.TELEGRAM_BOTS_form_item_title'),
+                'item_placeholder': text('schema.env.TELEGRAM_BOTS_form_item_placeholder'),
+                'fields': [
+                    {
+                        'key': 'token',
+                        'label': text('schema.env.TELEGRAM_BOTS_field_token_label'),
+                        'type': 'secret',
+                        'required': True,
+                        'description': text('schema.env.TELEGRAM_BOTS_field_token_description'),
+                    },
+                    {
+                        'key': 'is_webhook',
+                        'label': text('schema.env.TELEGRAM_BOTS_field_is_webhook_label'),
+                        'type': 'boolean',
+                        'default': False,
+                        'description': text('schema.env.TELEGRAM_BOTS_field_is_webhook_description'),
+                    },
+                ],
+            },
+        },
+        {
+            'key': 'TELEGRAM_WEBHOOK_URL',
+            'label': text('schema.env.TELEGRAM_WEBHOOK_URL_label'),
+            'type': 'string',
+            'default': '',
+            'description': text('schema.env.TELEGRAM_WEBHOOK_URL_description'),
+        },
+        {
+            'key': 'TELEGRAM_PROXY',
+            'label': text('schema.env.TELEGRAM_PROXY_label'),
+            'type': 'string',
+            'default': '',
+            'description': text('schema.env.TELEGRAM_PROXY_description'),
+        },
+        # ===== Discord =====
+        {
+            'key': 'DISCORD_BOTS',
+            'label': text('schema.env.DISCORD_BOTS_label'),
+            'type': 'json',
+            'default': [],
+            'description': text('schema.env.DISCORD_BOTS_description'),
+            'form': {
+                'kind': 'array',
+                'item_title': text('schema.env.DISCORD_BOTS_form_item_title'),
+                'fields': [
+                    {
+                        'key': 'token',
+                        'label': text('schema.env.DISCORD_BOTS_field_token_label'),
+                        'type': 'secret',
+                        'required': True,
+                        'description': text('schema.env.DISCORD_BOTS_field_token_description'),
+                    },
+                    {
+                        'key': 'intent',
+                        'label': text('schema.env.DISCORD_BOTS_field_intent_label'),
+                        'type': 'object',
+                        'kind': 'booleans',
+                        'fields': [
+                            {
+                                'key': 'guilds',
+                                'label': text('schema.env.DISCORD_BOTS_field_guilds_label'),
+                                'type': 'boolean',
+                                'default': True,
+                            },
+                            {
+                                'key': 'guild_messages',
+                                'label': text('schema.env.DISCORD_BOTS_field_guild_messages_label'),
+                                'type': 'boolean',
+                                'default': True,
+                            },
+                            {
+                                'key': 'direct_messages',
+                                'label': text('schema.env.DISCORD_BOTS_field_direct_messages_label'),
+                                'type': 'boolean',
+                                'default': True,
+                            },
+                            {
+                                'key': 'message_content',
+                                'label': text('schema.env.DISCORD_BOTS_field_message_content_label'),
+                                'type': 'boolean',
+                                'default': False,
+                                'description': text('schema.env.DISCORD_BOTS_field_message_content_description'),
+                            },
+                            {
+                                'key': 'guild_members',
+                                'label': text('schema.env.DISCORD_BOTS_field_guild_members_label'),
+                                'type': 'boolean',
+                                'default': True,
+                            },
+                        ],
+                    },
+                    {
+                        'key': 'application_commands',
+                        'label': text('schema.env.DISCORD_BOTS_field_application_commands_label'),
+                        'type': 'object',
+                        'kind': 'map',
+                        'value_type': 'list',
+                        'description': text('schema.env.DISCORD_BOTS_field_application_commands_description'),
+                    },
+                ],
+            },
+        },
+        {
+            'key': 'DISCORD_API_VERSION',
+            'label': text('schema.env.DISCORD_API_VERSION_label'),
+            'type': 'number',
+            'default': 10,
+            'description': text('schema.env.DISCORD_API_VERSION_description'),
+        },
+        {
+            'key': 'DISCORD_API_TIMEOUT',
+            'label': text('schema.env.DISCORD_API_TIMEOUT_label'),
+            'type': 'number',
+            'default': 30,
+            'description': text('schema.env.DISCORD_API_TIMEOUT_description'),
+        },
+        {
+            'key': 'DISCORD_COMPRESS',
+            'label': text('schema.env.DISCORD_COMPRESS_label'),
+            'type': 'boolean',
+            'default': False,
+            'description': text('schema.env.DISCORD_COMPRESS_description'),
+        },
+        {
+            'key': 'DISCORD_HANDLE_SELF_MESSAGE',
+            'label': text('schema.env.DISCORD_HANDLE_SELF_MESSAGE_label'),
+            'type': 'boolean',
+            'default': False,
+            'description': text('schema.env.DISCORD_HANDLE_SELF_MESSAGE_description'),
+        },
+        {
+            'key': 'DISCORD_PROXY',
+            'label': text('schema.env.DISCORD_PROXY_label'),
+            'type': 'string',
+            'default': '',
+            'description': text('schema.env.DISCORD_PROXY_description'),
+        },
+        # ===== DoDo =====
+        {
+            'key': 'DODO_BOTS',
+            'label': text('schema.env.DODO_BOTS_label'),
+            'type': 'json',
+            'default': [],
+            'description': text('schema.env.DODO_BOTS_description'),
+            'form': {
+                'kind': 'array',
+                'item_title': text('schema.env.DODO_BOTS_form_item_title'),
+                'fields': [
+                    {
+                        'key': 'client_id',
+                        'label': text('schema.env.DODO_BOTS_field_client_id_label'),
+                        'type': 'string',
+                        'required': True,
+                        'description': text('schema.env.DODO_BOTS_field_client_id_description'),
+                    },
+                    {
+                        'key': 'token',
+                        'label': text('schema.env.DODO_BOTS_field_token_label'),
+                        'type': 'secret',
+                        'required': True,
+                        'description': text('schema.env.DODO_BOTS_field_token_description'),
+                    },
+                ],
+            },
+        },
+        # ===== KOOK =====
+        {
+            'key': 'KAIHEILA_BOTS',
+            'label': text('schema.env.KAIHEILA_BOTS_label'),
+            'type': 'json',
+            'default': [],
+            'description': text('schema.env.KAIHEILA_BOTS_description'),
+            'form': {
+                'kind': 'array',
+                'item_title': text('schema.env.KAIHEILA_BOTS_form_item_title'),
+                'fields': [
+                    {
+                        'key': 'token',
+                        'label': text('schema.env.KAIHEILA_BOTS_field_token_label'),
+                        'type': 'secret',
+                        'required': True,
+                        'description': text('schema.env.KAIHEILA_BOTS_field_token_description'),
+                    },
+                ],
+            },
+        },
+        # ===== Satori =====
+        {
+            'key': 'SATORI_CLIENTS',
+            'label': text('schema.env.SATORI_CLIENTS_label'),
+            'type': 'json',
+            'default': [],
+            'description': text('schema.env.SATORI_CLIENTS_description'),
+            'form': {
+                'kind': 'array',
+                'item_title': text('schema.env.SATORI_CLIENTS_form_item_title'),
+                'item_placeholder': text('schema.env.SATORI_CLIENTS_form_item_placeholder'),
+                'fields': [
+                    {
+                        'key': 'host',
+                        'label': text('schema.env.SATORI_CLIENTS_field_host_label'),
+                        'type': 'string',
+                        'default': 'localhost',
+                        'description': text('schema.env.SATORI_CLIENTS_field_host_description'),
+                    },
+                    {
+                        'key': 'port',
+                        'label': text('schema.env.SATORI_CLIENTS_field_port_label'),
+                        'type': 'number',
+                        'default': 5500,
+                        'description': text('schema.env.SATORI_CLIENTS_field_port_description'),
+                    },
+                    {
+                        'key': 'path',
+                        'label': text('schema.env.SATORI_CLIENTS_field_path_label'),
+                        'type': 'string',
+                        'default': '',
+                        'description': text('schema.env.SATORI_CLIENTS_field_path_description'),
+                    },
+                    {
+                        'key': 'token',
+                        'label': text('schema.env.SATORI_CLIENTS_field_token_label'),
+                        'type': 'secret',
+                        'default': '',
+                        'description': text('schema.env.SATORI_CLIENTS_field_token_description'),
+                    },
+                    {
+                        'key': 'timeout',
+                        'label': text('schema.env.SATORI_CLIENTS_field_timeout_label'),
+                        'type': 'number',
+                        'default': 30,
+                        'description': text('schema.env.SATORI_CLIENTS_field_timeout_description'),
+                    },
+                    {
+                        'key': 'secure',
+                        'label': text('schema.env.SATORI_CLIENTS_field_secure_label'),
+                        'type': 'boolean',
+                        'default': False,
+                        'description': text('schema.env.SATORI_CLIENTS_field_secure_description'),
+                    },
+                ],
+            },
+        },
+        # ===== Minecraft =====
+        {
+            'key': 'MINECRAFT_WS_URLS',
+            'label': text('schema.env.MINECRAFT_WS_URLS_label'),
+            'type': 'json',
+            'default': {},
+            'description': text('schema.env.MINECRAFT_WS_URLS_description'),
+            'form': {
+                'kind': 'map',
+                'key_label': text('schema.env.MINECRAFT_WS_URLS_form_key_label'),
+                'value_type': 'list',
+                'value_placeholder': text('schema.env.MINECRAFT_WS_URLS_form_value_placeholder'),
+            },
+        },
+        {
+            'key': 'MINECRAFT_ACCESS_TOKEN',
+            'label': text('schema.env.MINECRAFT_ACCESS_TOKEN_label'),
+            'type': 'secret',
+            'default': '',
+            'description': text('schema.env.MINECRAFT_ACCESS_TOKEN_description'),
+        },
+    ]
+
+
+def build_env_groups() -> list[dict]:
+    """构建 .env 分组（每次调用返回全新结构）。"""
+    return [
+        {
+            'id': 'framework',
+            'name': text('schema.env.group_framework'),
+            'keys': ['PORT', 'HOST', 'SUPERUSERS', 'COMMAND_SEP', 'COMMAND_START', 'LOG_LEVEL', 'DRIVER'],
+        },
+        {
+            'id': 'onebot_v11',
+            'name': text('schema.env.group_onebot_v11'),
+            'keys': ['ONEBOT_ACCESS_TOKEN'],
+        },
+        {
+            'id': 'qq',
+            'name': text('schema.env.group_qq'),
+            'keys': ['QQ_BOTS', 'QQ_IS_SANDBOX'],
+        },
+        {
+            'id': 'telegram',
+            'name': text('schema.env.group_telegram'),
+            'keys': ['TELEGRAM_BOTS', 'TELEGRAM_WEBHOOK_URL', 'TELEGRAM_PROXY'],
+        },
+        {
+            'id': 'discord',
+            'name': text('schema.env.group_discord'),
+            'keys': [
+                'DISCORD_BOTS',
+                'DISCORD_API_VERSION',
+                'DISCORD_API_TIMEOUT',
+                'DISCORD_COMPRESS',
+                'DISCORD_HANDLE_SELF_MESSAGE',
+                'DISCORD_PROXY',
+            ],
+        },
+        {
+            'id': 'dodo',
+            'name': text('schema.env.group_dodo'),
+            'keys': ['DODO_BOTS'],
+        },
+        {
+            'id': 'kook',
+            'name': text('schema.env.group_kook'),
+            'keys': ['KAIHEILA_BOTS'],
+        },
+        {
+            'id': 'satori',
+            'name': text('schema.env.group_satori'),
+            'keys': ['SATORI_CLIENTS'],
+        },
+        {
+            'id': 'minecraft',
+            'name': text('schema.env.group_minecraft'),
+            'keys': ['MINECRAFT_WS_URLS', 'MINECRAFT_ACCESS_TOKEN'],
+        },
+    ]

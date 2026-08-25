@@ -23,6 +23,7 @@ class Config(BaseModel):
     command_start: list[str] = ['.']
 
     # 自定义配置（从 config.toml 读取）
+    language: str = 'zh'
     bot_prefix: str = ''
     admin_superusers: bool = True
 
@@ -55,6 +56,8 @@ class Config(BaseModel):
 
     @model_validator(mode='after')
     def normalize(self):
+        if self.language not in ('zh', 'en'):
+            raise ValueError(f'Unsupported language [{self.language}], only zh / en are allowed.')
         self.bot_prefix = self.bot_prefix.upper() if self.bot_prefix else ''
         return self
 

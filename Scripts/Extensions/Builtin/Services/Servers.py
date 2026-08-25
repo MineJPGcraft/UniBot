@@ -14,9 +14,10 @@ from nonebot.adapters.minecraft.message import Message
 from Scripts import Globals
 from Scripts.Extensions import Extension, Service
 from Scripts.Logging import logger
+from Scripts.Messages import messages
 from Scripts.Utils import strip_minecraft_color
 
-extension = Extension(id='Servers', name='Minecraft 服务器服务', version='1.0.0', types=('api',))
+extension = Extension(id='Servers', name=messages.builtin_extensions.servers, version='1.0.0', types=('api',))
 
 R = TypeVar('R')
 P = ParamSpec('P')

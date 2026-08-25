@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from pydantic import BaseModel
 
+from Scripts.Api.Locale import text
 from Scripts.Platforms.Connectors.QQOfficial import (
     cancel_qr_login,
     get_qr_login,
@@ -43,7 +44,7 @@ async def start_login(
     try:
         state = start_qr_login(source=body.source, env=body.env)
     except Exception as error:
-        return {'code': 1, 'data': None, 'message': f'启动扫码登录失败：{error}'}
+        return {'code': 1, 'data': None, 'message': text('qqbot.start_login_failed', error=error)}
     return {'code': 0, 'data': state.to_dict(), 'message': 'ok'}
 
 
@@ -86,7 +87,7 @@ async def get_login(user: dict = Depends(require_role('admin'))):
     """轮询当前扫码登录状态；完成时返回 app_id / app_secret 凭据。"""
     state = get_qr_login()
     if state is None:
-        return {'code': 1, 'data': None, 'message': '当前没有进行中的扫码登录'}
+        return {'code': 1, 'data': None,         'message': text('qqbot.no_active_login')}
     return {'code': 0, 'data': state.to_dict(), 'message': 'ok'}
 
 
@@ -95,5 +96,5 @@ async def cancel_login(user: dict = Depends(require_role('admin'))):
     """取消当前扫码登录并停止后台轮询。"""
     cancelled = cancel_qr_login()
     if not cancelled:
-        return {'code': 1, 'data': None, 'message': '当前没有进行中的扫码登录'}
+        return {'code': 1, 'data': None,         'message': text('qqbot.no_active_login')}
     return {'code': 0, 'data': None, 'message': 'ok'}

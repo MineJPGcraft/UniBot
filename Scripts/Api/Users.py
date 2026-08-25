@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 
+from Scripts.Api.Locale import text
 from Scripts.Api.Managers import data_manager
 
 from .Auth import require_role
@@ -38,10 +39,10 @@ async def get_users(
 async def create_user(body: CreateUserRequest, current_user: dict = Depends(require_role('admin'))):
     """创建新用户。"""
     if body.role not in ('admin', 'operator', 'viewer'):
-        return {'code': 1, 'data': None, 'message': '无效的角色'}
+        return {'code': 1, 'data': None, 'message': text('users.role_invalid')}
     user_info = await data_manager.create_user(body.username, body.password, body.nickname, body.role)
     if not user_info:
-        return {'code': 1, 'data': None, 'message': '用户名已存在'}
+        return {'code': 1, 'data': None, 'message': text('users.name_taken')}
     return {'code': 0, 'data': {'user_id': user_info['user_id']}, 'message': 'ok'}
 
 
@@ -50,7 +51,7 @@ async def get_user(user_id: str, current_user: dict = Depends(require_role('admi
     """获取指定用户详情。"""
     user_data = data_manager.get_user_by_id(user_id)
     if not user_data:
-        return {'code': 1, 'data': None, 'message': '用户不存在'}
+        return {'code': 1, 'data': None, 'message': text('users.user_not_found')}
     return {'code': 0, 'data': data_manager.public_user_info(user_data), 'message': 'ok'}
 
 
@@ -58,12 +59,12 @@ async def get_user(user_id: str, current_user: dict = Depends(require_role('admi
 async def update_user(user_id: str, body: UpdateUserRequest, current_user: dict = Depends(require_role('admin'))):
     """修改用户昵称或角色，不可修改自己的角色。"""
     if user_id == current_user['user_id'] and body.role is not None:
-        return {'code': 1, 'data': None, 'message': '不可修改自己的角色'}
+        return {'code': 1, 'data': None, 'message': text('users.cannot_change_own_role')}
     if body.role is not None and body.role not in ('admin', 'operator', 'viewer'):
-        return {'code': 1, 'data': None, 'message': '无效的角色'}
+        return {'code': 1, 'data': None, 'message': text('users.role_invalid')}
     success = await data_manager.update_user(user_id, nickname=body.nickname, role=body.role)
     if not success:
-        return {'code': 1, 'data': None, 'message': '用户不存在'}
+        return {'code': 1, 'data': None, 'message': text('users.user_not_found')}
     return {'code': 0, 'data': None, 'message': 'ok'}
 
 
@@ -74,7 +75,7 @@ async def reset_user_password(
     """重置指定用户密码。"""
     success = await data_manager.reset_password(user_id, body.password)
     if not success:
-        return {'code': 1, 'data': None, 'message': '用户不存在'}
+        return {'code': 1, 'data': None, 'message': text('users.user_not_found')}
     return {'code': 0, 'data': None, 'message': 'ok'}
 
 
@@ -82,8 +83,8 @@ async def reset_user_password(
 async def delete_user(user_id: str, current_user: dict = Depends(require_role('admin'))):
     """删除用户，不可删除自己。"""
     if user_id == current_user['user_id']:
-        return {'code': 1, 'data': None, 'message': '不可删除自己'}
+        return {'code': 1, 'data': None, 'message': text('users.cannot_delete_self')}
     success = await data_manager.delete_user(user_id)
     if not success:
-        return {'code': 1, 'data': None, 'message': '用户不存在'}
+        return {'code': 1, 'data': None, 'message': text('users.user_not_found')}
     return {'code': 0, 'data': None, 'message': 'ok'}

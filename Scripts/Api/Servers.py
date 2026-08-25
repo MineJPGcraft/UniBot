@@ -3,6 +3,7 @@ import asyncio
 from fastapi import APIRouter, Depends
 
 from Scripts import Globals
+from Scripts.Api.Locale import text
 from Scripts.Config import config
 from Scripts.Logging import logger
 from Scripts.Utils import strip_minecraft_color
@@ -28,7 +29,7 @@ async def get_servers(current_user: dict = Depends(get_current_user)):
     """获取所有服务器状态。"""
     server_service = Globals.server_service
     if server_service is None:
-        return {'code': 1, 'data': [], 'message': 'Minecraft 服务器服务不可用'}
+        return {'code': 1, 'data': [], 'message': text('servers.service_unavailable')}
     servers = server_service.servers
     statuses = await asyncio.gather(*(server_service.get_status(server) for server in servers.values()))
     server_list = [{'name': name, **status} for name, status in zip(servers, statuses)]
@@ -40,10 +41,10 @@ async def get_server_detail(name: str, current_user: dict = Depends(get_current_
     """获取单个服务器详情。"""
     server_service = Globals.server_service
     if server_service is None:
-        return {'code': 1, 'data': None, 'message': 'Minecraft 服务器服务不可用'}
+        return {'code': 1, 'data': None, 'message': text('servers.service_unavailable')}
     servers = server_service.servers
     if name not in servers:
-        return {'code': 1, 'data': None, 'message': f'服务器 [{name}] 不存在'}
+        return {'code': 1, 'data': None, 'message': text('servers.not_found', name=name)}
     status, player_data = await asyncio.gather(
         server_service.get_status(servers[name]),
         server_service.get_player_list(servers[name]),
@@ -68,10 +69,10 @@ async def get_server_players(name: str, current_user: dict = Depends(get_current
     """获取指定服务器的在线玩家列表。"""
     server_service = Globals.server_service
     if server_service is None:
-        return {'code': 1, 'data': None, 'message': 'Minecraft 服务器服务不可用'}
+        return {'code': 1, 'data': None, 'message': text('servers.service_unavailable')}
     servers = server_service.servers
     if name not in servers:
-        return {'code': 1, 'data': None, 'message': f'服务器 [{name}] 不存在'}
+        return {'code': 1, 'data': None, 'message': text('servers.not_found', name=name)}
     players, max_players = await server_service.get_player_list(servers[name])
     return {
         'code': 0,
@@ -86,13 +87,13 @@ async def execute_command(
 ):
     """在指定服务器执行 RCON 指令，name 为 all 时广播。"""
     if not body.command:
-        return {'code': 1, 'data': None, 'message': '指令不能为空'}
+        return {'code': 1, 'data': None, 'message': text('servers.command_empty')}
     if not check_command_allowed(body.command):
-        return {'code': 1, 'data': None, 'message': '该指令不在允许范围内'}
+        return {'code': 1, 'data': None, 'message': text('servers.command_not_allowed')}
 
     server_service = Globals.server_service
     if server_service is None:
-        return {'code': 1, 'data': None, 'message': 'Minecraft 服务器服务不可用'}
+        return {'code': 1, 'data': None, 'message': text('servers.service_unavailable')}
 
     if name == 'all':
         results = await server_service.execute(body.command)
@@ -100,13 +101,13 @@ async def execute_command(
 
     bot = server_service.get_server(name)
     if bot is None:
-        return {'code': 1, 'data': None, 'message': f'服务器 [{name}] 不存在'}
+        return {'code': 1, 'data': None, 'message': text('servers.not_found', name=name)}
 
     try:
         result = await bot.send_rcon_command(command=body.command)
     except Exception as error:
         logger.warning(f'Failed to send command to server [{name}]: {error}')
-        return {'code': 1, 'data': None, 'message': f'指令执行失败：{error}'}
+        return {'code': 1, 'data': None, 'message': text('servers.execute_failed', error=error)}
     response_text = strip_minecraft_color(result) if result else ''
     return {'code': 0, 'data': {'response': response_text}, 'message': 'ok'}
 
@@ -115,10 +116,10 @@ async def execute_command(
 async def broadcast_message(body: BroadcastRequest, current_user: dict = Depends(require_role('admin', 'operator'))):
     """广播消息到所有服务器。"""
     if not body.message:
-        return {'code': 1, 'data': None, 'message': '消息不能为空'}
+        return {'code': 1, 'data': None, 'message': text('servers.message_empty')}
     server_service = Globals.server_service
     if server_service is None:
-        return {'code': 1, 'data': None, 'message': 'Minecraft 服务器服务不可用'}
+        return {'code': 1, 'data': None, 'message': text('servers.service_unavailable')}
     await server_service.broadcast(body.message)
     logger.info(f'WebUI broadcast message: {body.message}')
     return {'code': 0, 'data': None, 'message': 'ok'}

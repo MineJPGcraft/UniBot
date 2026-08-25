@@ -12,7 +12,7 @@ from Scripts.Messages import messages
 from Scripts.Utils import get_permission, strip_minecraft_color, turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Command', name='控制台命令', version='1.0.0', types=('command',))
+extension = Extension(id='Command', name=messages.builtin_extensions.command, version='1.0.0', types=('command',))
 
 
 @extension.register_command
@@ -20,13 +20,13 @@ class CommandCommand(Command):
     """向指定服务器发送控制台命令。"""
 
     name = 'command'
-    description = '向指定服务器发送控制台命令。'
-    usage = '/command <服务器名称> <命令>'
+    description = messages.commands.command.description
+    usage = messages.commands.command.usage
 
     @override
     def declare(self) -> None:
-        self.register_arg('server', str, description='服务器名称')
-        self.register_arg('command', str, description='要执行的命令', multi=True)
+        self.register_arg('server', str, description=messages.commands.command.arg_server)
+        self.register_arg('command', str, description=messages.commands.command.arg_command, multi=True)
 
     @override
     async def handler(self, session: Uninfo, server: Match[str], command: Match[list[str]]):

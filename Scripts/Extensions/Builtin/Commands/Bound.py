@@ -12,7 +12,7 @@ from Scripts.Messages import messages
 from Scripts.Utils import check_player, get_permission
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Bound', name='玩家绑定', version='1.0.0', types=('command',))
+extension = Extension(id='Bound', name=messages.builtin_extensions.bound, version='1.0.0', types=('command',))
 
 
 @extension.register_command
@@ -20,12 +20,12 @@ class BoundCommand(Command):
     """管理玩家白名单绑定。"""
 
     name = 'bound'
-    description = '管理玩家白名单绑定。'
-    usage = '/bound [玩家名|子命令]'
+    description = messages.commands.bound.description
+    usage = messages.commands.bound.usage
 
     @override
     def declare(self) -> None:
-        self.register_option('player', str, description='要绑定的玩家名')
+        self.register_option('player', str, description=messages.commands.bound.option_player)
 
     @override
     async def handler(self, session: Uninfo, player: Match[str]):
@@ -59,7 +59,7 @@ class BoundCommand(Command):
         """列出所有绑定。"""
 
         name = 'list'
-        description = '列出所有绑定'
+        description = messages.commands.bound.list_desc
 
         @override
         async def handler(self, session: Uninfo):
@@ -89,11 +89,11 @@ class BoundCommand(Command):
         """查询指定用户的绑定。"""
 
         name = 'query'
-        description = '查询指定用户的绑定'
+        description = messages.commands.bound.query_desc
 
         @override
         def declare(self) -> None:
-            self.register_option('user_id', At | str, description='用户')
+            self.register_option('user_id', At | str, description=messages.commands.bound.arg_user)
 
         @override
         async def handler(self, session: Uninfo, user_id: Match[At | str]):
@@ -110,11 +110,11 @@ class BoundCommand(Command):
         """移除指定绑定。"""
 
         name = 'remove'
-        description = '移除指定绑定'
+        description = messages.commands.bound.remove_desc
 
         @override
         def declare(self) -> None:
-            self.register_option('player', At | str, description='玩家')
+            self.register_option('player', At | str, description=messages.commands.bound.arg_player)
 
         @override
         async def handler(self, session: Uninfo, player: Match[At | str]):
@@ -157,12 +157,12 @@ class BoundCommand(Command):
         """为指定用户添加绑定。"""
 
         name = 'append'
-        description = '为指定用户添加绑定'
+        description = messages.commands.bound.append_desc
 
         @override
         def declare(self) -> None:
-            self.register_arg('user_id', At | str, description='用户')
-            self.register_arg('player', str, description='玩家')
+            self.register_arg('user_id', At | str, description=messages.commands.bound.arg_user)
+            self.register_arg('player', str, description=messages.commands.bound.arg_player)
 
         @override
         async def handler(self, session: Uninfo, user_id: At | str, player: str):

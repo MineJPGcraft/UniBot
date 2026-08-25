@@ -4,6 +4,7 @@ import asyncio
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from Scripts.Api.Locale import text
 from Scripts.Api.Managers import studio_manager
 from Scripts.Config import config, reload_config
 from Scripts.Extensions import EXTENSIONS_DIR, ExtensionType, extension_manager, market_manager
@@ -47,7 +48,7 @@ def _ensure_extension_exists(extension_id: str) -> None:
         return
     if extension_id in extension_manager.no_code_info:
         return
-    raise HTTPException(status_code=404, detail=f'扩展 {extension_id} 不存在')
+    raise HTTPException(status_code=404, detail=text('extensions.not_found', extension_id=extension_id))
 
 
 @router.get('', summary='已安装扩展列表')
@@ -67,7 +68,7 @@ async def get_market(force: bool = False, current_user: dict = Depends(get_curre
 async def install_market_extension(body: MarketInstallRequest, user: dict = Depends(require_role('admin'))):
     """从市场下载并安装/升级扩展，重启后生效。"""
     if not body.id:
-        return {'code': 1, 'data': None, 'message': '缺少扩展 id'}
+        return {'code': 1, 'data': None, 'message': text('extensions.missing_id')}
     success, message = await market_manager.install(body.id, body.version)
     return {'code': 0 if success else 1, 'data': None, 'message': message}
 
@@ -142,7 +143,7 @@ async def get_extension_detail(extension_id: str, current_user: dict = Depends(g
     """获取扩展详情 + 配置 schema（供 WebUI 动态表单，含无代码模板包）。"""
     detail = extension_manager.get_extension_info(extension_id)
     if not detail:
-        raise HTTPException(status_code=404, detail=f'扩展 {extension_id} 不存在')
+        raise HTTPException(status_code=404, detail=text('extensions.not_found', extension_id=extension_id))
     return {'code': 0, 'data': detail, 'message': 'ok'}
 
 
@@ -171,7 +172,7 @@ async def get_extension_config(extension_id: str, current_user: dict = Depends(g
     registration = extension_manager.renderer_manager.templates.get(extension_id)
     if registration is not None:
         return {'code': 0, 'data': registration.config_store.value.model_dump(), 'message': 'ok'}
-    raise HTTPException(status_code=404, detail=f'扩展 {extension_id} 不存在')
+    raise HTTPException(status_code=404, detail=text('extensions.not_found', extension_id=extension_id))
 
 
 @router.patch('/{extension_id}/config', summary='更新扩展配置')
@@ -181,20 +182,20 @@ async def patch_extension_config(extension_id: str, request: Request, user: dict
     extension = extension_manager.registry.get(extension_id)
     if extension is not None:
         if not extension.is_bound:
-            return {'code': 1, 'data': None, 'message': '扩展当前未加载，无法修改配置'}
+            return {'code': 1, 'data': None,             'message': text('extensions.not_loaded')}
         try:
             extension.update_config(patch_data)
         except Exception as error:
-            return {'code': 1, 'data': None, 'message': f'配置校验失败：{error}'}
+            return {'code': 1, 'data': None,             'message': text('extensions.config_invalid', error=error)}
         return {'code': 0, 'data': None, 'message': 'ok'}
     registration = extension_manager.renderer_manager.templates.get(extension_id)
     if registration is not None:
         try:
             registration.config_store.update(patch_data)
         except Exception as error:
-            return {'code': 1, 'data': None, 'message': f'配置校验失败：{error}'}
+            return {'code': 1, 'data': None,             'message': text('extensions.config_invalid', error=error)}
         return {'code': 0, 'data': None, 'message': 'ok'}
-    raise HTTPException(status_code=404, detail=f'扩展 {extension_id} 不存在')
+    raise HTTPException(status_code=404, detail=text('extensions.not_found', extension_id=extension_id))
 
 
 @router.delete('/{extension_id}', summary='卸载扩展')
@@ -288,7 +289,7 @@ async def switch_renderer(body: NameSwitchRequest, user: dict = Depends(require_
         if ExtensionType.renderer in ext.metadata.types
     }
     if name not in installed:
-        return {'code': 1, 'data': None, 'message': f'渲染引擎 {name} 不存在'}
+        return {'code': 1, 'data': None,         'message': text('extensions.renderer_not_found', name=name)}
     _patch_image_config('renderer', name)
     return {'code': 0, 'data': None, 'message': 'ok'}
 
@@ -308,7 +309,7 @@ async def switch_template(body: NameSwitchRequest, user: dict = Depends(require_
     """切换模板包并立即使模板缓存失效。"""
     template_name = body.name
     if template_name not in extension_manager.templates:
-        return {'code': 1, 'data': None, 'message': f'模板 {template_name} 不存在'}
+        return {'code': 1, 'data': None,         'message': text('extensions.template_not_found', template_name=template_name)}
     _patch_image_config('template', template_name)
     # 标准用法：直接使全部模板环境失效
     extension_manager.renderer_manager.invalidate_all()

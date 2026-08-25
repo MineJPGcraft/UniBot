@@ -16,6 +16,7 @@ from pathlib import Path
 
 import psutil
 
+from Scripts.Api.Locale import text
 from Scripts.Logging import exception_logger, logger
 from Scripts.Network import download, request
 
@@ -146,23 +147,23 @@ class StudioManager:
     async def ensure_downloaded(self) -> tuple[bool, str]:
         """确保 Studio 已下载到 .studio 目录，返回 (成功, 消息)。"""
         if self.is_downloaded():
-            return True, 'Studio 已下载'
+            return True, text('studio.downloaded')
         try:
             release = await request(STUDIO_VERSION_URL)
             if not isinstance(release, dict):
-                return False, '获取 Studio 版本信息失败'
+                return False, text('studio.fetch_version_failed')
             files = release.get('files', {})
             expected_sha256 = files.get(self.asset_name, '')
             if not expected_sha256:
-                return False, f'版本清单中不存在当前平台的 Studio 文件：{self.asset_name}'
+                return False, text('studio.asset_missing', asset_name=self.asset_name)
             url = STUDIO_DOWNLOAD_BASE + self.asset_name
             response = await download(url)
             if response is None:
-                return False, f'下载 Studio 失败：{url}'
+                return False, text('studio.download_failed_with_url', url=url)
             archive_data = response.getvalue()
             actual_sha256 = hashlib.sha256(archive_data).hexdigest()
             if actual_sha256.lower() != expected_sha256.lower():
-                return False, 'Studio 文件校验失败（sha256 不匹配）'
+                return False, text('studio.checksum_mismatch')
             self.studio_dir.mkdir(parents=True, exist_ok=True)
             executable = self.executable_path()
             executable.write_bytes(archive_data)
@@ -170,10 +171,10 @@ class StudioManager:
             release_tag = release.get('release_tag', '')
             (self.studio_dir / VERSION_FILE_NAME).write_text(release_tag, encoding='Utf-8')
             logger.success(f'Extension Studio downloaded ({release_tag}).')
-            return True, f'Studio 下载完成（{release_tag}）'
+            return True, text('studio.download_completed', release_tag=release_tag)
         except Exception as error:
             exception_logger.error('Failed to download Extension Studio!')
-            return False, f'Studio 下载失败：{error}'
+            return False, text('studio.download_failed', error=error)
 
     # ===== 启动 / 停止 =====
 
@@ -183,9 +184,9 @@ class StudioManager:
             ready_url = self.read_ready_url()
             if ready_url:
                 return True, ready_url
-            return True, 'Studio 已在运行'
+            return True, text('studio.already_running')
         if not self.is_downloaded():
-            return False, 'Studio 尚未下载'
+            return False, text('studio.not_downloaded')
         executable = self.executable_path()
         command = [
             str(executable),
@@ -211,30 +212,30 @@ class StudioManager:
             ready_url = await self.wait_ready()
             if ready_url:
                 return True, ready_url
-            return True, 'Studio 已启动'
+            return True, text('studio.started')
         except Exception as error:
             exception_logger.error('Failed to launch Extension Studio!')
-            return False, f'Studio 启动失败：{error}'
+            return False, text('studio.launch_failed', error=error)
 
     async def stop(self) -> tuple[bool, str]:
         """停止 Studio 进程并清理 PID 状态文件（阻塞等待放入线程）。"""
         pid_file = self.studio_dir / PID_FILE_NAME
         if not pid_file.exists():
-            return False, 'Studio 未在运行'
+            return False, text('studio.not_running')
         try:
             pid = int(pid_file.read_text('Utf-8').strip())
         except ValueError:
-            return False, 'Studio 状态文件异常'
+            return False, text('studio.state_file_invalid')
         try:
             success = await asyncio.to_thread(self._terminate_process, pid)
             if not success:
-                return False, 'Studio 停止失败'
+                return False, text('studio.stop_failed')
         except Exception as error:
             exception_logger.error('Failed to stop Extension Studio!')
-            return False, f'Studio 停止失败：{error}'
+            return False, text('studio.stop_failed_with_error', error=error)
         self._cleanup_state_files()
         logger.success(f'Extension Studio stopped (pid={pid}).')
-        return True, 'Studio 已停止'
+        return True, text('studio.stopped')
 
     @staticmethod
     def _terminate_process(pid: int) -> bool:

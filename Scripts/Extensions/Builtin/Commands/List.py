@@ -15,7 +15,7 @@ from Scripts.Messages import messages
 from Scripts.Network import fetch_player_avatars
 from Scripts.Utils import turn_message_text
 
-extension = Extension(id='List', name='在线玩家', version='1.0.0', types=('command',))
+extension = Extension(id='List', name=messages.builtin_extensions.list, version='1.0.0', types=('command',))
 
 
 @extension.register_command
@@ -23,12 +23,12 @@ class ListCommand(Command):
     """查看服务器在线玩家列表。"""
 
     name = 'list'
-    description = '查看服务器在线玩家列表。'
-    usage = '/list [服务器名称]'
+    description = messages.commands.list.description
+    usage = messages.commands.list.usage
 
     @override
     def declare(self) -> None:
-        self.register_option('server', str, description='服务器名称')
+        self.register_option('server', str, description=messages.commands.list.option_server)
 
     @override
     async def handler(self, server: Match[str]):

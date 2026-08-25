@@ -9,7 +9,7 @@ from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Help', name='命令帮助', version='1.0.0', types=('command',))
+extension = Extension(id='Help', name=messages.builtin_extensions.help, version='1.0.0', types=('command',))
 
 
 def get_enabled_nodes() -> list[Command]:
@@ -59,7 +59,9 @@ def node_arg_rows(command: Command) -> list[dict]:
             'name': argument.name,
             'notice': argument.description,
             'required': argument.required,
-            'required_text': '必填' if argument.required else '可选',
+            'required_text': (
+                messages.commands.help.arg_required if argument.required else messages.commands.help.arg_optional
+            ),
         }
         for argument in command.arguments
     ]
@@ -106,12 +108,12 @@ class HelpCommand(Command):
     """查看所有可用命令的帮助信息。"""
 
     name = 'help'
-    description = '查看所有可用命令的帮助信息。'
-    usage = '/help [命令名称]'
+    description = messages.commands.help.description
+    usage = messages.commands.help.usage
 
     @override
     def declare(self) -> None:
-        self.register_option('command', str, description='命令名称')
+        self.register_option('command', str, description=messages.commands.help.option_command)
 
     @override
     async def handler(self, command: Match[str]):

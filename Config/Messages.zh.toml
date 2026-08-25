@@ -1,6 +1,7 @@
-# UniBot 消息文本配置
+# UniBot 消息文本配置（中文包）
 # 本文件定义机器人对外发送的所有提示/播报文本，支持 {占位符} 格式化。
-# 修改后重启机器人生效；缺失必填项会导致启动失败，请勿删除已有键。
+# 通过 Config.toml 的 language 字段选择加载 zh / en 对应的消息包；修改后保存即热生效。
+# 缺失必填项会导致启动失败，请勿删除已有键。
 #
 # 占位符说明（随具体消息不同，见各键注释）：
 #   {content}  消息内容    {server}  服务器名称
@@ -8,6 +9,45 @@
 #   {death}    Minecraft 返回的完整死亡消息（包含死因）
 #   {achievement} Minecraft 返回的完整成就消息
 # ...
+
+# Hidden Start
+
+# 下面这对标记之间的内容不会显示在 WebUI「消息文本」编辑器中：
+# 保存时自动保留、机器人照常加载，可放置不想被 WebUI 修改的键。
+
+# ===== 内置扩展显示名称（WebUI 扩展列表与文档使用） =====
+[builtin_extensions]
+send = "消息发送"
+bound = "玩家绑定"
+command = "控制台命令"
+help = "命令帮助"
+list = "在线玩家"
+luck = "今日人品"
+server = "服务器列表"
+bot = "机器人管理"
+servers = "Minecraft 服务器服务"
+players = "玩家账号服务"
+
+# ===== 内置插件元数据与回复 =====
+[plugins.events]
+name = "消息互通"
+description = "处理玩家事件以及聊天平台与 Minecraft 服务器之间的消息同步。"
+usage = "由相关消息与服务器事件自动触发。"
+
+[plugins.token]
+name = "认证令牌"
+description = "监听所有平台消息，校验认证令牌并授权群聊与用户。"
+usage = "在任意平台群聊中发送机器人打印的认证令牌即可完成授权。"
+# 认证结果播报：{results} 为多条结果的拼接文本
+auth_success = "认证成功：\n  {results}"
+result_separator = "；\n  "
+group_already_authorized = "本群已在授权列表中"
+group_authorized = "已将本群加入 {groups}"
+already_superuser = "你已是超级用户"
+superuser_write_failed = "超级用户写入失败"
+superuser_granted = "已将你设为超级用户"
+
+# Hidden End
 
 [events]
 # 玩家事件与消息同步相关播报
@@ -25,15 +65,44 @@ chat_forward = "[{server}] <{player}> {content}"
 sensitive_reply = "检测到消息包含敏感词，已丢弃！"
 need_content = "请在指令后输入要发送的消息！"
 sent_success = "消息已发送！"
+# 消息段落占位（转发到游戏内时替换图片/视频等非文本段）
+segment_at = "[@{target}]"
+segment_quote_with_content = "[引用：{content}]"
+segment_quote = "[引用消息]"
+segment_at_all = "[@全体成员]"
+segment_emoji = "[动画表情]"
+segment_image = "[图片]"
+segment_video = "[视频]"
+segment_audio = "[语音]"
+segment_file = "[文件]"
+# 死亡/成就播报兜底文案（服务器未返回完整文本时使用）
+death_fallback = "{player} 死亡了"
+achievement_fallback = "{player} 达成了成就 [{title}]"
+achievement_unknown = "未知成就"
 
 [commands.send]
 # 发送消息到服务器相关提示
+description = "向已连接的服务器发送消息。"
+usage = "/send <消息内容>"
+arg_message = "要发送的消息内容"
 param_error = "参数错误，请检查命令格式！"
 sent = "已向服务器发送消息：{content}。"
 not_bound = "未找到你的玩家名称，请绑定后再试！"
+# 转发到服务器内的消息格式；unknown_user_name 用于无法识别身份的场景
+broadcast_format = "[{platform}]<{name}> {content}"
+unknown_user_name = "未知用户"
 
 [commands.bound]
 # 白名单绑定相关提示
+description = "管理玩家白名单绑定。"
+usage = "/bound [玩家名|子命令]"
+option_player = "要绑定的玩家名"
+list_desc = "列出所有绑定"
+query_desc = "查询指定用户的绑定"
+remove_desc = "移除指定绑定"
+append_desc = "为指定用户添加绑定"
+arg_user = "用户"
+arg_player = "玩家"
 invalid_name = "此玩家名称非法！玩家名称应只包含字母、数字、下划线且长度不超过 16 个字符。"
 already_bound = "你已经绑定了此白名单！"
 occupied = "此玩家名称已经绑定过了，请换一个名称！"
@@ -55,6 +124,10 @@ remove_self_all = "已移除所有绑定的白名单！"
 
 [commands.command]
 # 控制台命令相关提示
+description = "向指定服务器发送控制台命令。"
+usage = "/command <服务器名称> <命令>"
+arg_server = "服务器名称"
+arg_command = "要执行的命令"
 no_permission = "缺少必要的管理员权限！"
 invalid_param = "参数不正确！请查看语法后再试。"
 command_forbidden = "命令 {command} 已被禁止！"
@@ -69,6 +142,9 @@ send_error = "向服务器 [{server_flag}] 发送指令失败：{error}"
 
 [commands.help]
 # 帮助信息相关提示
+description = "查看所有可用命令的帮助信息。"
+usage = "/help [命令名称]"
+option_command = "命令名称"
 title = "命令列表："
 footnote = "注：<name> 代表必填的参数，<*name> 代表此参数可选。"
 not_found = "命令 {name} 不存在或已被禁用！"
@@ -78,9 +154,22 @@ detail_description = "描述：{description}"
 detail_args_title = "参数："
 detail_subcommands_title = "子命令："
 arg_line = "{name} — {notice}"
+arg_required = "必填"
+arg_optional = "可选"
 
 [commands.bot]
 # 机器人管理指令相关提示
+description = "管理机器人。"
+usage = "/bot <superusers|about|check|update|restart>"
+superusers_desc = "管理超级用户"
+superusers_add_desc = "添加超级用户"
+superusers_remove_desc = "移除超级用户"
+target_arg = "目标（@用户 / 用户ID）"
+about_desc = "查看关于信息。"
+about_usage = "/bot about"
+check_desc = "检测是否有新版本"
+update_desc = "更新机器人到最新版本"
+restart_desc = "重启机器人"
 no_permission = "你没有权限执行此命令！"
 already_added = "{value} 已在 {name} 中！"
 not_found = "{value} 不在 {name} 中！"
@@ -88,9 +177,25 @@ add_success = "已将 {value} 添加到 {name}！"
 remove_success = "已将 {value} 从 {name} 中移除！"
 write_failed = "配置写入失败，请查看控制台日志！"
 restart_hint = "（重启机器人后框架权限完全生效）"
+about_document = "项目文档：{url}"
+about_repo = "项目地址 {url}"
+about_invite = "欢迎加入 QQ 交流群 {group}，对这个项目感兴趣不妨点个 Star 吧！"
+version_outdated = "当前版本为 {current}，发现新版本，请及时更新！"
+version_latest = "当前版本为 {current}，已是最新版本！"
+check_new_version = "发现新版本 {latest}，当前版本为 {current}，请及时更新！"
+check_up_to_date = "当前已是最新版本 {version}！"
+check_failed = "检测失败，请检查网络稍后再试！"
+update_watchdog_required = "机器人未通过 Watchdog 启动，无法自动更新！"
+update_failed = "更新失败：{error}"
+update_success = "更新成功，机器人正在重启，请稍候……"
+restart_watchdog_required = "机器人未通过 Watchdog 启动，无法自动重启！"
+restarting = "机器人正在重启，请稍候……"
 
 [commands.list]
 # 在线玩家相关提示
+description = "查看服务器在线玩家列表。"
+usage = "/list [服务器名称]"
+option_server = "服务器名称"
 server_not_found = "没有找到已连接的 [{server}] 服务器！请检查编号或名称是否输入正确。"
 no_server = "当前没有已连接的服务器！"
 no_player = "没有玩家在线！"
@@ -104,6 +209,9 @@ fake_section = "  ———— 假人 ————"
 
 [commands.luck]
 # 今日人品相关提示
+description = "查看今日人品值。"
+usage = "/luck [rank]"
+rank_desc = "查看今日运势排行。"
 result = "你今天的人品为 {point}，{tips}"
 good = "今日宜：{thing}"
 bad = "今日忌：{thing}"
@@ -126,7 +234,8 @@ rank_empty = "今天还没有人查看过运势哦~"
 
 [commands.server]
 # 服务器列表相关提示
+description = "查看已连接的服务器列表及其 CPU / 内存占用。"
+usage = "/server"
 no_server = "当前没有已连接的服务器！"
 server_line = "[{index}] {name}（CPU {cpu_percent}% · 内存 {memory_percent}% · {memory_used:.0f}/{memory_max:.0f}MB）"
 server_offline_line = "[{index}] {name}（离线或状态查询失败）"
-

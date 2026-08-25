@@ -9,7 +9,10 @@ from pathlib import Path
 CONFIG_TOML_PATH = Path('Config.toml')
 ENV_PATH = Path('.env')
 PYPROJECT_PATH = Path('pyproject.toml')
-MESSAGES_PATH = Path('Config') / 'Messages.toml'
+# 消息文本双语包：按 Config.toml 的 language 字段选择加载（旧版单文件仅作中文包回退）
+MESSAGES_ZH_PATH = Path('Config') / 'Messages.zh.toml'
+MESSAGES_EN_PATH = Path('Config') / 'Messages.en.toml'
+MESSAGES_LEGACY_PATH = Path('Config') / 'Messages.toml'
 
 # ===== 运行时数据 =====
 DATA_DIR = Path('Data')

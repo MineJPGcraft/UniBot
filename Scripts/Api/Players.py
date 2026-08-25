@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import FileResponse
 
 from Scripts import Globals
+from Scripts.Api.Locale import text
 from Scripts.Config import config
 from Scripts.Managers import cache_manager
 from Scripts.Network import AVATAR_SIZE, fetch_player_avatar
@@ -71,7 +72,7 @@ async def get_user_bindings(user: str, current_user: dict = Depends(get_current_
     player_service = Globals.player_service
     bindings = player_service.players if player_service else {}
     if user not in bindings:
-        return {'code': 1, 'data': None, 'message': '用户不存在'}
+        return {'code': 1, 'data': None, 'message': text('players.user_not_found')}
     return {'code': 0, 'data': {'user': user, 'players': bindings[user]}, 'message': 'ok'}
 
 
@@ -79,11 +80,11 @@ async def get_user_bindings(user: str, current_user: dict = Depends(get_current_
 async def bind_player(body: BindPlayerRequest, current_user: dict = Depends(require_role('admin', 'operator'))):
     """绑定用户与游戏 ID。"""
     if not body.user or not body.player:
-        return {'code': 1, 'data': None, 'message': 'user 和 player 不能为空'}
+        return {'code': 1, 'data': None, 'message': text('players.bind_fields_required')}
 
     player_service = Globals.player_service
     if player_service is None:
-        return {'code': 1, 'data': None, 'message': '玩家绑定服务不可用'}
+        return {'code': 1, 'data': None, 'message': text('players.service_unavailable')}
 
     # 检查该游戏 ID 是否已被其他用户绑定
     if await player_service.check_player_occupied(body.player):
@@ -96,18 +97,18 @@ async def bind_player(body: BindPlayerRequest, current_user: dict = Depends(requ
             None,
         )
         if existing_user and existing_user != body.user:
-            return {'code': 1, 'data': None, 'message': '该游戏 ID 已被其他用户绑定'}
+            return {'code': 1, 'data': None, 'message': text('players.bound_by_other_user')}
 
     if (
         body.user in player_service.players
         and config.qq_bound_max_number > 0
         and len(player_service.players[body.user]) >= config.qq_bound_max_number
     ):
-        return {'code': 1, 'data': None, 'message': '绑定数量已达上限'}
+        return {'code': 1, 'data': None, 'message': text('players.bind_limit_reached')}
 
     success = await player_service.append_player(body.user, body.player)
     if not success:
-        return {'code': 1, 'data': None, 'message': '绑定数量已达上限'}
+        return {'code': 1, 'data': None, 'message': text('players.bind_limit_reached')}
     return {'code': 0, 'data': None, 'message': 'ok'}
 
 
@@ -117,6 +118,6 @@ async def unbind_player(user: str, player: str, current_user: dict = Depends(req
     player_service = Globals.player_service
     bindings = player_service.players if player_service else {}
     if user not in bindings or player not in bindings.get(user, []):
-        return {'code': 1, 'data': None, 'message': '绑定关系不存在'}
+        return {'code': 1, 'data': None, 'message': text('players.binding_not_found')}
     await player_service.remove_player(user, player)
     return {'code': 0, 'data': None, 'message': 'ok'}

@@ -13,14 +13,15 @@ from Scripts import Globals
 from Scripts.Config import config
 from Scripts.Logging import logger
 from Scripts.Managers import config_manager
+from Scripts.Messages import messages
 
 TOKEN_LENGTH = 10
 """令牌显示长度（取哈希前 N 位，大写十六进制）。"""
 
 __plugin_meta__ = PluginMetadata(
-    name='认证令牌',
-    description='监听所有平台消息，校验认证令牌并授权群聊与用户。',
-    usage='在任意平台群聊中发送机器人打印的认证令牌即可完成授权。',
+    name=messages.plugins.token.name,
+    description=messages.plugins.token.description,
+    usage=messages.plugins.token.usage,
 )
 
 driver = get_driver()
@@ -76,8 +77,8 @@ async def handle_auth_token(session: Uninfo, message: UniMsg) -> None:
     if group_info := get_group_info(session):
         results.append(add_group(group_info))
     results.append(add_superuser(session))
-    results_text = '；\n  '.join(results)
-    await token_watcher.finish(f'认证成功：\n  {results_text}')
+    results_text = messages.plugins.token.result_separator.join(results)
+    await token_watcher.finish(messages.plugins.token.auth_success.format(results=results_text))
 
 
 def get_group_info(session: Uninfo) -> str | None:
@@ -103,8 +104,8 @@ def add_group(group_info: str) -> str:
         setattr(config, field_name, updated)
         added.append(field_name)
     if not added:
-        return '本群已在授权列表中'
-    return f'已将本群加入 {"、".join(added)}'
+        return messages.plugins.token.group_already_authorized
+    return messages.plugins.token.group_authorized.format(groups='、'.join(added))
 
 
 def add_superuser(session: Uninfo) -> str:
@@ -112,12 +113,12 @@ def add_superuser(session: Uninfo) -> str:
     user_id = str(session.user.id)
     current = list(config.superusers)
     if user_id in current:
-        return '你已是超级用户'
+        return messages.plugins.token.already_superuser
     updated = current + [user_id]
     try:
         config_manager.update_env({'SUPERUSERS': updated})
     except Exception as error:
         logger.warning(f'Failed to write .env: {error}')
-        return '超级用户写入失败'
+        return messages.plugins.token.superuser_write_failed
     config.superusers = updated
-    return '已将你设为超级用户'
+    return messages.plugins.token.superuser_granted

@@ -5,6 +5,7 @@ import psutil
 from fastapi import APIRouter, BackgroundTasks, Depends
 
 from Scripts import Globals
+from Scripts.Api.Locale import text
 from Scripts.Config import config
 from Scripts.Managers import version_manager
 from Scripts.Process import is_watchdog_process, request_restart
@@ -57,7 +58,7 @@ async def check_update(current_user: dict = Depends(get_current_user)):
     """主动从 GitHub 拉取最新发布版本并返回检测结果。"""
     success = await version_manager.fetch_latest()
     if not success:
-        return {'code': 1, 'data': None, 'message': '检测失败，请检查网络稍后再试'}
+        return {'code': 1, 'data': None, 'message': text('status.check_update_failed')}
     return {
         'code': 0,
         'data': {
@@ -86,13 +87,13 @@ async def update_bot(background_tasks: BackgroundTasks):
         return {
             'code': 1,
             'data': None,
-            'message': '机器人未通过 Watchdog 启动，无法自动更新',
+            'message': text('status.update_requires_watchdog'),
         }
     error_message = await version_manager.update()
     if error_message:
         return {'code': 1, 'data': None, 'message': error_message}
     background_tasks.add_task(request_restart)
-    return {'code': 0, 'data': None, 'message': '更新成功，机器人正在重启'}
+    return {'code': 0, 'data': None, 'message': text('status.update_success_restarting')}
 
 
 @router.post('/restart', summary='重启机器人', dependencies=[Depends(require_role('admin'))])
@@ -102,12 +103,12 @@ async def restart_bot(background_tasks: BackgroundTasks):
         return {
             'code': 1,
             'data': None,
-            'message': '机器人未通过 Watchdog 启动，无法自动重启',
+            'message': text('status.restart_requires_watchdog'),
         }
 
     background_tasks.add_task(request_restart)
     return {
         'code': 0,
         'data': {'started_at': start_time},
-        'message': '机器人正在重启',
+        'message': text('status.restarting'),
     }

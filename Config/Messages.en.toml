@@ -1,0 +1,244 @@
+# UniBot message text configuration (English pack)
+# This file defines all prompts / broadcasts sent by the bot, supporting {placeholder} formatting.
+# The message pack is selected by the language field in Config.toml (zh / en); edits apply instantly on save.
+# Missing required keys will cause a startup failure; do not remove existing keys.
+#
+# Placeholder notes (varies per message, see comments next to each key):
+#   {content}  message content    {server}  server name
+#   {player}   player name       {user}    user ID      {name} username
+#   {death}    full death message returned by Minecraft (including cause)
+#   {achievement} full advancement message returned by Minecraft
+# ...
+
+# Hidden Start
+
+# Content between the following markers is NOT shown in the WebUI message editor:
+# it is preserved automatically on save and still loaded by the bot.
+# Put keys you do not want edited from the WebUI here.
+
+# ===== Built-in extension display names (used by the WebUI extension list and docs) =====
+[builtin_extensions]
+send = "Message Sender"
+bound = "Player Binding"
+command = "Console Command"
+help = "Command Help"
+list = "Online Players"
+luck = "Daily Luck"
+server = "Server List"
+bot = "Bot Management"
+servers = "Minecraft Server Service"
+players = "Player Account Service"
+
+# ===== Built-in plugin metadata and replies =====
+[plugins.events]
+name = "Message Sync"
+description = "Handles player events and message syncing between chat platforms and Minecraft servers."
+usage = "Triggered automatically by related messages and server events."
+
+[plugins.token]
+name = "Auth Token"
+description = "Listens to messages on every platform, verifies auth tokens and authorizes groups and users."
+usage = "Send the auth token printed by the bot in any platform group chat to complete authorization."
+# Auth result broadcast: {results} is the joined text of multiple results
+auth_success = "Authentication succeeded:\n  {results}"
+result_separator = ";\n  "
+group_already_authorized = "This group is already authorized"
+group_authorized = "Added this group to {groups}"
+already_superuser = "You are already a superuser"
+superuser_write_failed = "Failed to write superuser config"
+superuser_granted = "You have been granted superuser permissions"
+
+# Hidden End
+
+[events]
+# Player events and message sync broadcasts
+player_join = "Player {player} joined the game."
+player_join_group = "Player {player} joined server [{server}], meow~"
+fake_join_game = "[{server}] Fake player {player} joined the game."
+fake_join_group = "Fake player {player} joined server [{server}]."
+player_quit = "Player {player} left the game."
+player_quit_group = "Player {player} left server [{server}]..."
+fake_quit_game = "Fake player {player} left the game."
+fake_quit_group = "Fake player {player} left server [{server}]."
+player_death = "{death}"
+player_achievement = "{achievement}"
+chat_forward = "[{server}] <{player}> {content}"
+sensitive_reply = "The message contains sensitive words and was dropped!"
+need_content = "Please type the message you want to send after the command!"
+sent_success = "Message sent!"
+# Message segment placeholders (replacing non-text segments such as images/videos when forwarding into the game)
+segment_at = "[@{target}]"
+segment_quote_with_content = "[Quote: {content}]"
+segment_quote = "[Quoted message]"
+segment_at_all = "[@everyone]"
+segment_emoji = "[Animated emoji]"
+segment_image = "[Image]"
+segment_video = "[Video]"
+segment_audio = "[Voice]"
+segment_file = "[File]"
+# Death/advancement broadcast fallbacks (used when the server does not return full text)
+death_fallback = "{player} died"
+achievement_fallback = "{player} made the advancement [{title}]"
+achievement_unknown = "unknown advancement"
+
+[commands.send]
+# Prompts for sending messages to servers
+description = "Send messages to connected Minecraft servers."
+usage = "/send <message>"
+arg_message = "the message content to send"
+param_error = "Invalid arguments, please check the command format!"
+sent = "Message sent to the server: {content}."
+not_bound = "Your player name was not found; please bind your account first!"
+# Format of messages forwarded into the server; unknown_user_name is used when the sender cannot be identified
+broadcast_format = "[{platform}]<{name}> {content}"
+unknown_user_name = "unknown user"
+
+[commands.bound]
+# Whitelist binding prompts
+description = "Manage player whitelist bindings."
+usage = "/bound [player|subcommand]"
+option_player = "The player name to bind"
+list_desc = "List all bindings"
+query_desc = "Query bindings of a specific user"
+remove_desc = "Remove bindings"
+append_desc = "Append a binding for a specific user"
+arg_user = "user"
+arg_player = "player"
+invalid_name = "Invalid player name! A player name may only contain letters, digits and underscores, and must be at most 16 characters long."
+already_bound = "You have already bound this whitelist entry!"
+occupied = "This player name is already bound; please choose another one!"
+server_offline = "No server is currently connected; binding failed! Please contact an administrator to reconnect and try again."
+bound_success = "User {name}({user}) has successfully bound the whitelist to player {player}."
+too_many = "You have bound too many players; binding failed!"
+no_permission = "You do not have permission to run this command!"
+no_binding = "No players are bound yet!"
+list_title = "Whitelist list:"
+not_bound_query = "User ({target_user}) has not bound any whitelist entries!"
+query_result = "Whitelist entries bound by user ({target_user}): {players}."
+invalid_name_short = "Invalid player name! A player name may only contain letters, digits and underscores, and must be at most 16 characters long."
+server_offline_try = "No server is currently connected; please try again later!"
+remove_success = "Removed whitelist entry {player_name}!"
+no_such_whitelist = "You have not bound a whitelist entry named {player_name}!"
+remove_user_all = "Removed all whitelist entries bound by user ({target_user})!"
+no_binding_self = "You have not bound any whitelist entries yet!"
+remove_self_all = "Removed all bound whitelist entries!"
+
+[commands.command]
+# Console command prompts
+description = "Run console commands on a specific server."
+usage = "/command <server> <command>"
+arg_server = "server name"
+arg_command = "the command to run"
+no_permission = "Administrator permission is required!"
+invalid_param = "Incorrect arguments! Please check the syntax and try again."
+command_forbidden = "Command {command} is forbidden!"
+no_server = "No server is currently connected; unable to run the command!"
+send_all_title = "Command sent to all servers:"
+send_result = "[{name}] -> {result}"
+no_return = "no output"
+send_failed = "[{name}] -> failed to send the command"
+server_not_found = "Server [{server_flag}] does not exist! Please check the plugin configuration."
+send_success = "Command sent to server [{server}]! Server replied: {result}"
+send_error = "Failed to send the command to server [{server_flag}]: {error}"
+
+[commands.help]
+# Help prompts
+description = "Show help for all available commands."
+usage = "/help [command]"
+option_command = "command name"
+title = "Command list:"
+footnote = "Note: <name> marks a required argument, <*name> marks an optional argument."
+not_found = "Command {name} does not exist or is disabled!"
+detail_title = "Details of command {name}:"
+detail_usage = "Usage: {usage}"
+detail_description = "Description: {description}"
+detail_args_title = "Arguments:"
+detail_subcommands_title = "Subcommands:"
+arg_line = "{name} — {notice}"
+arg_required = "Required"
+arg_optional = "Optional"
+
+[commands.bot]
+# Bot management prompts
+description = "Manage the bot."
+usage = "/bot <superusers|about|check|update|restart>"
+superusers_desc = "Manage superusers"
+superusers_add_desc = "Add a superuser"
+superusers_remove_desc = "Remove a superuser"
+target_arg = "target (@user / user ID)"
+about_desc = "Show about information."
+about_usage = "/bot about"
+check_desc = "Check for new versions"
+update_desc = "Update the bot to the latest version"
+restart_desc = "Restart the bot"
+no_permission = "You do not have permission to run this command!"
+already_added = "{value} is already in {name}!"
+not_found = "{value} is not in {name}!"
+add_success = "Added {value} to {name}!"
+remove_success = "Removed {value} from {name}!"
+write_failed = "Failed to write the configuration; please check the console logs!"
+restart_hint = " (Framework permissions fully take effect after restarting the bot.)"
+about_document = "Documentation: {url}"
+about_repo = "Source code: {url}"
+about_invite = "Feel free to join our QQ group 962802248 — if you like this project, please give it a star!"
+version_outdated = "Current version is {current}; a new version is available, please update soon!"
+version_latest = "Current version is {current}; already up to date!"
+check_new_version = "New version {latest} found; current version is {current}, please update soon!"
+check_up_to_date = "Already up to date with version {version}!"
+check_failed = "Check failed; please verify your network and try again later!"
+update_watchdog_required = "The bot was not started via Watchdog; automatic update is unavailable!"
+update_failed = "Update failed: {error}"
+update_success = "Update succeeded; the bot is restarting, please wait..."
+restart_watchdog_required = "The bot was not started via Watchdog; automatic restart is unavailable!"
+restarting = "The bot is restarting, please wait..."
+
+[commands.list]
+# Online player prompts
+description = "Show the online player list of servers."
+usage = "/list [server]"
+option_server = "server name"
+server_not_found = "Connected server [{server}] not found! Please check the index or name."
+no_server = "No server is currently connected!"
+no_player = "No players online!"
+no_fake = "No fake players online!"
+single_title = "===== {server} player list ====="
+global_title = "====== Player list ======"
+server_divider = " -------- {name} --------"
+player_total = "{count} players online in total"
+player_section = "  ———— Players ————"
+fake_section = "  ———— Fake players ————"
+
+[commands.luck]
+# Daily luck prompts
+description = "Check your daily luck value."
+usage = "/luck [rank]"
+rank_desc = "Show today's luck ranking."
+result = "Your luck today is {point}, {tips}"
+good = "Lucky today: {thing}"
+bad = "Avoid today: {thing}"
+tip_low = "Tsk..."
+tip_mid = "Sigh..."
+tip_high = "Meow~"
+tip_max = "Wow!"
+good_things = [
+    'building a world eater (runs perfectly', 'fixing machines (fixed on first try',
+    'mining (found ten diamonds', 'building (everything you need shows up',
+    'fishing (caught a godly bow', 'enchanting (hit the best one instantly',
+]
+bad_things = [
+    'building a world eater (flies off course', 'fixing machines (explodes on first try',
+    'mining (only cobblestone', 'building (nothing you need shows up',
+    'fishing (all junk', 'enchanting (only garbage rolls',
+]
+# Luck ranking
+rank_title = "Today's luck ranking:"
+rank_line = "({index}) {name}: {point}"
+rank_empty = "Nobody has checked their luck yet today~"
+
+[commands.server]
+# Server list prompts
+description = "Show connected servers with CPU / memory usage."
+usage = "/server"
+no_server = "No server is currently connected!"
+server_line = "[{index}] {name} (CPU {cpu_percent}% · Memory {memory_percent}% · {memory_used:.0f}/{memory_max:.0f}MB)"
+server_offline_line = "[{index}] {name} (offline or status query failed)"

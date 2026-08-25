@@ -11,7 +11,7 @@ from Scripts.Messages import messages
 from Scripts.Utils import get_platform_name
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Send', name='消息发送', version='1.0.0', types=('command',))
+extension = Extension(id='Send', name=messages.builtin_extensions.send, version='1.0.0', types=('command',))
 
 
 @extension.register_command
@@ -19,13 +19,13 @@ class SendCommand(Command):
     """向已连接的服务器发送消息。"""
 
     name = 'send'
-    description = '向已连接的服务器发送消息。'
-    usage = '/send <消息内容>'
+    description = messages.commands.send.description
+    usage = messages.commands.send.usage
     aliases = ('mc',)
 
     @override
     def declare(self) -> None:
-        self.register_arg('message', str, description='要发送的消息内容', multi=True)
+        self.register_arg('message', str, description=messages.commands.send.arg_message, multi=True)
 
     @override
     async def handler(self, session: Uninfo, message: Match[list[str]]):
@@ -44,7 +44,13 @@ class SendCommand(Command):
             if player_service
             else session.user.name
         ):
-            await server_service.broadcast(f'[{platform_name}]<{name}> {message_text}')
+            await server_service.broadcast(
+                messages.commands.send.broadcast_format.format(platform=platform_name, name=name, content=message_text)
+            )
             return messages.commands.send.sent.format(content=message_text)
-        await server_service.broadcast(f'[{platform_name}]<未知用户> {message_text}')
+        await server_service.broadcast(
+            messages.commands.send.broadcast_format.format(
+                platform=platform_name, name=messages.commands.send.unknown_user_name, content=message_text
+            )
+        )
         return messages.commands.send.not_bound

@@ -23,9 +23,9 @@ from Scripts.Rules import message_group_rule
 from Scripts.Utils import check_message, get_platform_name, send_message_to_groups
 
 __plugin_meta__ = PluginMetadata(
-    name='消息互通',
-    description='处理玩家事件以及聊天平台与 Minecraft 服务器之间的消息同步。',
-    usage='由相关消息与服务器事件自动触发。',
+    name=message_config.plugins.events.name,
+    description=message_config.plugins.events.description,
+    usage=message_config.plugins.events.usage,
 )
 
 # 玩家聊天中触发「转发到群聊」的指令前缀
@@ -38,17 +38,22 @@ message_watcher = on_message(rule=message_group_rule)
 # 持有后台广播任务引用，防止任务被垃圾回收
 _background_tasks: set[asyncio.Task] = set()
 
+# 非文本段转发到游戏内时替换为占位文本（占位文案取自消息包，热更新即时生效）
 segment_mapping = {
     'text': lambda segment: segment.text,
-    'at': lambda segment: f'[@{segment.target}]',
-    'reply': lambda segment: f'[引用{"：" + segment.msg.extract_plain_text() if segment.msg else ""}]',
-    'reference': lambda _: '[引用消息]',
-    'atall': lambda _: '[@全体成员]',
-    'emoji': lambda _: '[动画表情]',
-    'image': lambda _: '[图片]',
-    'video': lambda _: '[视频]',
-    'audio': lambda _: '[语音]',
-    'file': lambda _: '[文件]',
+    'at': lambda segment: message_config.events.segment_at.format(target=segment.target),
+    'reply': lambda segment: (
+        message_config.events.segment_quote_with_content.format(content=segment.msg.extract_plain_text())
+        if segment.msg
+        else message_config.events.segment_quote
+    ),
+    'reference': lambda _: message_config.events.segment_quote,
+    'atall': lambda _: message_config.events.segment_at_all,
+    'emoji': lambda _: message_config.events.segment_emoji,
+    'image': lambda _: message_config.events.segment_image,
+    'video': lambda _: message_config.events.segment_video,
+    'audio': lambda _: message_config.events.segment_audio,
+    'file': lambda _: message_config.events.segment_file,
 }
 
 
@@ -134,7 +139,7 @@ async def handle_player_death(event: PlayerDeathEvent):
     """处理玩家死亡事件。"""
     name = event.server_name
     player = event.player.nickname
-    death_message = event.death.text or f'{player} 死亡了'
+    death_message = event.death.text or message_config.events.death_fallback.format(player=player)
     logger.debug(f'Player death message received: {death_message}')
 
     if (not config.bot_prefix) or (not player.upper().startswith(config.bot_prefix)):
@@ -154,9 +159,13 @@ async def handle_player_achievement(event: PlayerAchievementEvent):
     if achievement.translate and achievement.translate.text:
         achievement_message = achievement.translate.text
     elif achievement.display and achievement.display.title and achievement.display.title.text:
-        achievement_message = f'{player} 达成了成就 [{achievement.display.title.text}]'
+        achievement_message = message_config.events.achievement_fallback.format(
+            player=player, title=achievement.display.title.text
+        )
     else:
-        achievement_message = f'{player} 达成了成就 [{achievement.key or "未知成就"}]'
+        achievement_message = message_config.events.achievement_fallback.format(
+            player=player, title=achievement.key or message_config.events.achievement_unknown
+        )
     logger.debug(f'Player achievement message received: {achievement_message}')
 
     if (not config.bot_prefix) or (not player.upper().startswith(config.bot_prefix)):

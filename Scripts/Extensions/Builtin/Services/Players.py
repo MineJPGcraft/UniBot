@@ -11,10 +11,11 @@ from typing import Any, TypedDict, override
 from Scripts import Globals
 from Scripts.Config import config
 from Scripts.Extensions import Extension, Service
+from Scripts.Messages import messages
 
 # 创建唯一扩展实例，能力经实例装饰器登记
 # 内置扩展数据存储指向 Data 根目录，Player 扩展读写 `Player.json`
-extension = Extension(id='Players', name='玩家账号服务', version='1.0.0', types=('api',))
+extension = Extension(id='Players', name=messages.builtin_extensions.players, version='1.0.0', types=('api',))
 
 # 玩家绑定数据文件名（位于 Data 根目录）
 DATA_FILE = 'Players.json'

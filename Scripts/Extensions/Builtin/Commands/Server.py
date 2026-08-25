@@ -9,7 +9,7 @@ from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Server', name='服务器列表', version='1.0.0', types=('command',))
+extension = Extension(id='Server', name=messages.builtin_extensions.server, version='1.0.0', types=('command',))
 
 
 @extension.register_command
@@ -17,8 +17,8 @@ class ServerCommand(Command):
     """查看已连接的服务器列表及其 CPU / 内存占用。"""
 
     name = 'server'
-    description = '查看已连接的服务器列表及其 CPU / 内存占用。'
-    usage = '/server'
+    description = messages.commands.server.description
+    usage = messages.commands.server.usage
 
     @override
     async def handler(self):

@@ -7,6 +7,7 @@ import jwt
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from Scripts.Api.Locale import text
 from Scripts.Api.Managers import data_manager
 from Scripts.Logging import logger
 
@@ -118,18 +119,18 @@ async def get_current_user(request: Request, authorization: str | None = Header(
     if not token:
         token = request.cookies.get(COOKIE_ACCESS_KEY)
     if not token:
-        raise HTTPException(status_code=401, detail='未认证')
+        raise HTTPException(status_code=401, detail=text('auth.unauthenticated'))
     try:
         payload = jwt.decode(token, data_manager.secret_key, algorithms=['HS256'])
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail='Token 已过期')
+        raise HTTPException(status_code=401, detail=text('auth.token_expired'))
     except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail='无效的 Token')
+        raise HTTPException(status_code=401, detail=text('auth.token_invalid'))
     if payload.get('type') != 'access':
-        raise HTTPException(status_code=401, detail='无效的 Token 类型')
+        raise HTTPException(status_code=401, detail=text('auth.token_type_invalid'))
     user_data = data_manager.get_user_by_id(payload['sub'])
     if not user_data:
-        raise HTTPException(status_code=401, detail='用户不存在')
+        raise HTTPException(status_code=401, detail=text('auth.user_not_found'))
     return user_data
 
 
@@ -138,7 +139,7 @@ def require_role(*roles: str):
 
     async def checker(user: dict = Depends(get_current_user)):
         if user['role'] not in roles:
-            raise HTTPException(status_code=403, detail='权限不足')
+            raise HTTPException(status_code=403, detail=text('auth.permission_denied'))
         return user
 
     return checker
@@ -166,12 +167,12 @@ async def setup(body: SetupRequest):
     """首次初始化：创建管理员账户，仅在无任何用户时可用。"""
     async with setup_lock:
         if data_manager.is_initialized:
-            return {'code': 1, 'data': None, 'message': '系统已初始化，禁止重复创建管理员账户'}
+            return {'code': 1, 'data': None, 'message': text('auth.already_initialized')}
         user_info = await data_manager.create_user(body.username, body.password, body.nickname, role='admin')
         if user_info is None:
-            return {'code': 1, 'data': None, 'message': '创建失败！'}
+            return {'code': 1, 'data': None, 'message': text('auth.setup_failed')}
     logger.success(f'WebUI admin account [{body.username}] created.')
-    return {'code': 0, 'data': {'user_id': user_info['user_id']}, 'message': '初始化成功'}
+    return {'code': 0, 'data': {'user_id': user_info['user_id']}, 'message': text('auth.setup_success')}
 
 
 @router.post('/login', summary='用户登录')
@@ -181,7 +182,7 @@ async def login(body: LoginRequest):
     # 未知用户也走一次哑校验，避免响应时延差异暴露用户名是否存在
     password_hash = user_data['password_hash'] if user_data else DUMMY_PASSWORD_HASH
     if not await data_manager.verify_password(body.password, password_hash):
-        return {'code': 1, 'data': None, 'message': '用户名或密码错误'}
+        return {'code': 1, 'data': None, 'message': text('auth.invalid_credentials')}
     assert user_data is not None  # 上面已校验过
     await data_manager.update_last_login(user_data['user_id'])
     access_token = create_access_token(user_data['user_id'], user_data['role'])
@@ -205,18 +206,18 @@ async def refresh(request: Request, body: RefreshRequest):
     """使用 refresh_token 换取新的 access_token（优先从 cookie 读取）。"""
     refresh_token = request.cookies.get(COOKIE_REFRESH_KEY) or body.refresh_token
     if not refresh_token:
-        raise HTTPException(status_code=401, detail='缺少 refresh_token')
+        raise HTTPException(status_code=401, detail=text('auth.refresh_token_missing'))
     if data_manager.is_refresh_token_revoked(refresh_token):
-        raise HTTPException(status_code=401, detail='Token 已失效')
+        raise HTTPException(status_code=401, detail=text('auth.refresh_token_revoked'))
     try:
         payload = jwt.decode(refresh_token, data_manager.secret_key, algorithms=['HS256'])
     except jwt.InvalidTokenError as error:
-        raise HTTPException(status_code=401, detail='无效的 refresh_token') from error
+        raise HTTPException(status_code=401, detail=text('auth.refresh_token_invalid')) from error
     if payload.get('type') != 'refresh':
-        raise HTTPException(status_code=401, detail='无效的 Token 类型')
+        raise HTTPException(status_code=401, detail=text('auth.token_type_invalid'))
     user_data = data_manager.get_user_by_id(payload['sub'])
     if not user_data:
-        raise HTTPException(status_code=401, detail='用户不存在')
+        raise HTTPException(status_code=401, detail=text('auth.user_not_found'))
     access_token = create_access_token(user_data['user_id'], user_data['role'])
     response = JSONResponse(
         {
@@ -250,7 +251,7 @@ async def get_me(user: dict = Depends(get_current_user)):
 async def change_password(body: ChangePasswordRequest, user: dict = Depends(get_current_user)):
     """修改当前用户密码。"""
     if not await data_manager.verify_password(body.old_password, user['password_hash']):
-        return {'code': 1, 'data': None, 'message': '原密码错误'}
+        return {'code': 1, 'data': None, 'message': text('auth.old_password_incorrect')}
     await data_manager.reset_password(user['user_id'], body.new_password)
     return {'code': 0, 'data': None, 'message': 'ok'}
 

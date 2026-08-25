@@ -1,9 +1,10 @@
 from contextlib import suppress
 from json import JSONDecodeError, dumps, loads
+from pathlib import Path
 
 import tomlkit
 
-from Scripts.Constants import CONFIG_TOML_PATH, ENV_PATH, MESSAGES_PATH, PYPROJECT_PATH
+from Scripts.Constants import CONFIG_TOML_PATH, ENV_PATH, PYPROJECT_PATH
 from Scripts.Logging import logger
 
 
@@ -17,7 +18,6 @@ class ConfigManager:
     def __init__(self) -> None:
         self.env_path = ENV_PATH
         self.pyproject_path = PYPROJECT_PATH
-        self.messages_path = MESSAGES_PATH
         self.config_path = CONFIG_TOML_PATH
         self.mapping: list = []
         self.environment: dict = {}
@@ -247,16 +247,31 @@ class ConfigManager:
             toml_document[key] = value
         self.config_path.write_text(tomlkit.dumps(toml_document), encoding='Utf-8')
 
-    # ===== Messages.toml 操作 =====
+    # ===== 消息文本双语包操作 =====
+
+    def active_messages_path(self) -> Path:
+        """获取当前配置语言实际生效的消息文件路径。"""
+        # 函数内导入：Scripts.Messages 顶层会触发 Scripts.Config 加载，避免进入早期导入链
+        from Scripts.Config import config
+        from Scripts.Messages import resolve_messages_path
+
+        return resolve_messages_path(config.language)
 
     def read_messages_raw(self) -> str:
-        """读取 Messages.toml 原始文本内容。"""
-        return self.messages_path.read_text('Utf-8')
+        """读取当前语言消息文件原始文本（隐藏块内容剥离，不返回给 WebUI）。"""
+        # 函数内导入：Scripts.Messages 顶层会触发 Scripts.Config 加载，避免进入早期导入链
+        from Scripts.Messages import strip_hidden_content
+
+        return strip_hidden_content(self.active_messages_path().read_text('Utf-8'))
 
     def write_messages_raw(self, content: str):
-        """以原始文本写回 Messages.toml，并校验语法。"""
-        tomlkit.parse(content)
-        self.messages_path.write_text(content, encoding='Utf-8')
+        """以原始文本写回当前语言消息文件（自动并回隐藏块），并校验语法。"""
+        # 函数内导入：Scripts.Messages 顶层会触发 Scripts.Config 加载，避免进入早期导入链
+        from Scripts.Messages import restore_hidden_content
+
+        merged = restore_hidden_content(content, self.active_messages_path().read_text('Utf-8'))
+        tomlkit.parse(merged)
+        self.active_messages_path().write_text(merged, encoding='Utf-8')
         # 函数内导入：Scripts.Messages 被 Scripts.Config 等模块加载链引用，延迟到调用时避免环
         from Scripts.Messages import reload_messages
 

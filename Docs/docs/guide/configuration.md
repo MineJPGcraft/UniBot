@@ -11,7 +11,7 @@ UniBot 采用 **双配置文件** 体系，分别管理框架层与业务层配�
 | `Config.toml` | 项目根目录 | 机器人自定义配置（指令、消息、图片等） | TOML |
 | `Config/Extensions.toml` | `Config/` 目录 | 扩展启停开关（每扩展一个键） | TOML |
 | `Config/Extensions/<id>.toml` | `Config/Extensions/` 目录 | 各扩展的独立配置（每扩展一个文件） | TOML |
-| `Config/Messages.toml` | `Config/` 目录 | 对外发送的消息文本（可自定义） | TOML |
+| `Config/Messages.zh.toml` / `Config/Messages.en.toml` | `Config/` 目录 | 机器人消息双语包（按 `language` 加载） | TOML |
 :::
 
 ==日常使用中，绝大多数配置都能在 WebUI 里可视化完成，无需手动编辑这些文件。== 本页面向需要深入调整或手动部署的场景。
@@ -79,6 +79,10 @@ ONEBOT_WS_URLS=["ws://127.0.0.1:6700"]
 - 配置示例
 
   ```toml
+  # 机器人消息语言：zh / en，决定加载哪个 Messages 消息包
+  # 仅影响机器人发送的消息；WebUI 面板语言在面板内独立切换
+  language = "zh"
+
   # 是否将所有的管理员视为超级用户
   admin_superusers = true
 
@@ -184,14 +188,17 @@ enabled = true
 
 ---
 
-## `Config/Messages.toml` — 消息文本
+## `Config/Messages.zh.toml` / `Config/Messages.en.toml` — 消息文本
 
-机器人的所有对外提示/播报文本均集中于此文件，支持 `{占位符}` 格式化，修改后重启生效。
+机器人的所有对外提示/播报文本均集中于消息包文件，支持 `{占位符}` 格式化；在 WebUI 保存后立即热生效。
+
+- `language = "zh"` 时加载 `Messages.zh.toml`（旧版单文件 `Messages.toml` 会自动作为中文包兼容回退）
+- `language = "en"` 时加载 `Messages.en.toml`
+- 两份语言包含完全相同的键，可分别自定义；切换语言通过 `Config.toml` 的 `language` 字段
 
 ```toml
 [events]
-player_join = "玩家 {player} 加入了游戏。"
-player_join_group = "玩家 {player} 加入了 [{server}] 服务器，喵～"
+player_join = "玩家 {player} 加入了游戏。"        # en 包: "Player {player} joined the game."
 
 [commands.send]
 sent = "已向服务器发送消息：{content}。"
@@ -201,6 +208,18 @@ result = "你今天的人品为 {point}，{tips}"
 ```
 
 *注意：请勿删除已有键。* 缺失必填项将导致机器人启动失败。
+
+::: tip 隐藏区块（# Hidden Start / # Hidden End）
+消息包中 `# Hidden Start` 与 `# Hidden End` 两行注释连同其之间的内容**完全不会出现**在 WebUI「消息文本」编辑器中：
+保存时自动按原位置并回（依据区块前方的可见内容定位）、机器人照常加载。
+若区块前的定位内容被删除，该区块会在保存时以完整标记对追加到文件末尾，数据不会丢失。
+请勿在 WebUI 编辑器中手动输入这两个标记（会被忽略）。
+:::
+
+::: tip 界面语言与消息语言相互独立
+WebUI 管理面板的界面语言（中/英）在面板右上角切换、仅保存在浏览器本地；
+机器人 API 返回的动态提示会跟随浏览器语言自动切换，均与 `language` 字段无关。
+:::
 
 ---
 

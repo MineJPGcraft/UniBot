@@ -13,7 +13,7 @@ from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Luck', name='今日人品', version='1.0.1', types=('command',))
+extension = Extension(id='Luck', name=messages.builtin_extensions.luck, version='1.0.1', types=('command',))
 
 # 内存中的今日运势排行：桶结构，索引即人品值（10-100），每桶存该分值的用户记录，跨天自动清空
 luck_rank: list[list[dict[str, str | int]]] = [[] for _ in range(101)]
@@ -41,8 +41,8 @@ class LuckCommand(Command):
     """查看今日人品值。"""
 
     name = 'luck'
-    description = '查看今日人品值。'
-    usage = '/luck [rank]'
+    description = messages.commands.luck.description
+    usage = messages.commands.luck.usage
 
     @override
     async def handler(self, session: Uninfo):
@@ -94,7 +94,7 @@ class LuckCommand(Command):
         """查看今日运势排行。"""
 
         name = 'rank'
-        description = '查看今日运势排行。'
+        description = messages.commands.luck.rank_desc
 
         @override
         async def handler(self, session: Uninfo):

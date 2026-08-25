@@ -38,3 +38,11 @@ def setup_cors(app: FastAPI) -> None:
         allow_methods=['*'],
         allow_headers=['*'],
     )
+
+
+def setup_request_language(app: FastAPI) -> None:
+    """注册请求语言中间件：API 动态提示按 Accept-Language 返回（与机器人消息语言无关）。"""
+    # 函数内导入：Locale 与路由模块同属聚合导入链，保持延迟加载一致
+    from .Locale import setup_request_language as setup_middleware
+
+    setup_middleware(app)

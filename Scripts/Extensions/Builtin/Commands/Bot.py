@@ -15,12 +15,12 @@ from Scripts.Process import is_watchdog_process, request_restart
 from Scripts.Utils import get_permission, turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Bot', name='机器人管理', version='1.0.0', types=('command',))
+extension = Extension(id='Bot', name=messages.builtin_extensions.bot, version='1.0.0', types=('command',))
 
-# 关于信息固定文本（不依赖 messages.toml）
-_DOCUMENT_LINE = '项目文档：https://bot.mcjpg.dev/'
-_REPO_LINE = '项目地址 https://github.com/MineJPGcraft/UniBot'
-_INVITE_LINE = '欢迎加入 QQ 交流群 962802248，对这个项目感兴趣不妨点个 Star 吧！'
+# 固定链接与群号信息（语言无关，文案模板见消息包 [commands.bot]）
+_DOCUMENT_URL = 'https://bot.mcjpg.dev/'
+_REPO_URL = 'https://github.com/MineJPGcraft/UniBot'
+_INVITE_GROUP = '962802248'
 
 
 @extension.register_command
@@ -28,8 +28,8 @@ class BotCommand(Command):
     """管理机器人（超级用户 / 关于信息 / 检查更新 / 更新 / 重启）。"""
 
     name = 'bot'
-    description = '管理机器人。'
-    usage = '/bot <superusers|about|check|update|restart>'
+    description = messages.commands.bot.description
+    usage = messages.commands.bot.usage
 
     # ===== 公用处理函数（被多个子命令共用，定义在父命令类下） =====
 
@@ -53,7 +53,7 @@ class BotCommand(Command):
         """管理超级用户。"""
 
         name = 'superusers'
-        description = '管理超级用户'
+        description = messages.commands.bot.superusers_desc
 
         def update_superusers(self, target: At | str, remove: bool) -> str:
             """增删超级用户：写回 .env 持久化并热更新内存。"""
@@ -81,11 +81,11 @@ class BotCommand(Command):
             """添加超级用户。"""
 
             name = 'add'
-            description = '添加超级用户'
+            description = messages.commands.bot.superusers_add_desc
 
             @override
             def declare(self) -> None:
-                self.register_arg('target', At | str, description='目标（@用户 / 用户ID）')
+                self.register_arg('target', At | str, description=messages.commands.bot.target_arg)
 
             @override
             async def handler(self, session: Uninfo, target: At | str):
@@ -97,11 +97,11 @@ class BotCommand(Command):
             """移除超级用户。"""
 
             name = 'remove'
-            description = '移除超级用户'
+            description = messages.commands.bot.superusers_remove_desc
 
             @override
             def declare(self) -> None:
-                self.register_arg('target', At | str, description='目标（@用户 / 用户ID）')
+                self.register_arg('target', At | str, description=messages.commands.bot.target_arg)
 
             @override
             async def handler(self, session: Uninfo, target: At | str):
@@ -113,8 +113,8 @@ class BotCommand(Command):
         """查看关于信息。"""
 
         name = 'about'
-        description = '查看关于信息。'
-        usage = '/bot about'
+        description = messages.commands.bot.about_desc
+        usage = messages.commands.bot.about_usage
 
         @override
         async def handler(self):
@@ -127,20 +127,20 @@ class BotCommand(Command):
 
         async def about_handler(self):
             version_line = (
-                f'当前版本为 {version_manager.version}，发现新版本，请及时更新！'
+                messages.commands.bot.version_outdated.format(current=version_manager.version)
                 if version_manager.check_update()
-                else f'当前版本为 {version_manager.version}，已是最新版本！'
+                else messages.commands.bot.version_latest.format(current=version_manager.version)
             )
             yield version_line
-            yield _DOCUMENT_LINE
-            yield _REPO_LINE
-            yield _INVITE_LINE
+            yield messages.commands.bot.about_document.format(url=_DOCUMENT_URL)
+            yield messages.commands.bot.about_repo.format(url=_REPO_URL)
+            yield messages.commands.bot.about_invite.format(group=_INVITE_GROUP)
 
     class Check(SubCommand['BotCommand']):
         """检测是否有新版本。"""
 
         name = 'check'
-        description = '检测是否有新版本'
+        description = messages.commands.bot.check_desc
 
         @override
         async def handler(self):
@@ -155,17 +155,19 @@ class BotCommand(Command):
         async def check_handler(self):
             if await version_manager.fetch_latest():
                 if version_manager.check_update():
-                    yield f'发现新版本 {version_manager.latest_version}，当前版本为 {version_manager.version}，请及时更新！'
+                    yield messages.commands.bot.check_new_version.format(
+                        latest=version_manager.latest_version, current=version_manager.version
+                    )
                     return
-                yield f'当前已是最新版本 {version_manager.version}！'
+                yield messages.commands.bot.check_up_to_date.format(version=version_manager.version)
                 return
-            yield '检测失败，请检查网络稍后再试！'
+            yield messages.commands.bot.check_failed
 
     class Update(SubCommand['BotCommand']):
         """从 GitHub Release 更新机器人到最新版本。"""
 
         name = 'update'
-        description = '更新机器人到最新版本'
+        description = messages.commands.bot.update_desc
 
         @override
         async def handler(self, session: Uninfo):
@@ -176,19 +178,19 @@ class BotCommand(Command):
         async def update_handler(self) -> str:
             """从 GitHub Release 下载最新代码并重启机器人，完成更新。"""
             if not is_watchdog_process():
-                return '机器人未通过 Watchdog 启动，无法自动更新！'
+                return messages.commands.bot.update_watchdog_required
             error_message = await version_manager.update()
             if error_message:
-                return f'更新失败：{error_message}'
+                return messages.commands.bot.update_failed.format(error=error_message)
             logger.success('Update succeeded, preparing to restart the bot.')
             asyncio.create_task(self.parent._delayed_restart())
-            return '更新成功，机器人正在重启，请稍候……'
+            return messages.commands.bot.update_success
 
     class Restart(SubCommand['BotCommand']):
         """重启机器人。"""
 
         name = 'restart'
-        description = '重启机器人'
+        description = messages.commands.bot.restart_desc
 
         @override
         async def handler(self, session: Uninfo):
@@ -199,9 +201,9 @@ class BotCommand(Command):
         def restart_handler(self) -> str:
             """请求守护进程重启机器人。"""
             if not is_watchdog_process():
-                return '机器人未通过 Watchdog 启动，无法自动重启！'
+                return messages.commands.bot.restart_watchdog_required
             asyncio.create_task(self.parent._delayed_restart())
-            return '机器人正在重启，请稍候……'
+            return messages.commands.bot.restarting
 
 
 # 深层子命令的父命令类型别名：供 SubCommand 泛型引用，获得完整的 parent 类型提示
