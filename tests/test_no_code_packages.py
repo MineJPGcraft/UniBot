@@ -1,11 +1,15 @@
-"""无代码扩展包测试：template/resources 扩展的发现、校验与注册（[types] 含 template/resources）。"""
+"""无代码扩展包测试：template/resources 扩展的发现、校验与注册（[types] 含 template/resources）。
 
+代码能力与无代码类型可混用在同一个扩展中（混合扩展同时走代码加载与静态注册）。
+"""
+
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from Scripts.Extensions import ExtensionState, ExtensionType, extension_manager
+from Scripts.Extensions import ExtensionState, ExtensionType, command_manager, extension_manager
 from Scripts.Extensions.Base import TemplateFieldConfig, parse_manifest
 from Scripts.Extensions.Errors import ExtensionError, ManifestError
 from Scripts.Extensions.Loader import ExtensionLoader
@@ -158,10 +162,18 @@ class TestResourcesPackage:
 
 
 class TestCommitNoCodePackage:
-    def test_mixed_code_and_no_code_rejected(self, tmp_path):
-        # 代码类型与无代码类型混用在清单解析阶段即被 model_validator 拦截
-        with pytest.raises(ManifestError, match='cannot be mixed with code capabilities'):
-            parse_manifest(_MIXED_TOML)
+    def test_mixed_manifest_allowed(self):
+        # 代码类型与无代码类型允许混用在同一个清单中
+        manifest = parse_manifest(_MIXED_TOML)
+        assert set(manifest.extension.types) == {ExtensionType.template, ExtensionType.api}
+
+    def test_mixed_commit_registers_template_part(self, tmp_path):
+        # 混合扩展的无代码部分照常静态注册
+        (tmp_path / 'Templates').mkdir()
+        loader = ExtensionLoader(extension_manager)
+        loader._commit_no_code_package('Mixed', _info(tmp_path, _MIXED_TOML))
+        assert 'Mixed' in extension_manager.templates
+        assert extension_manager.templates['Mixed'].templates_dir == tmp_path / 'Templates'
 
     def test_combined_template_resources_registers_both(self, tmp_path):
         # template+resources 组合包：一次提交同时注册模板与资源
@@ -194,3 +206,94 @@ class TestExtensionTypes:
         assert ExtensionType.resources.value == 'resources'
         # render 类型已删除
         assert 'render' not in {t.value for t in ExtensionType}
+
+
+# ===== 混合扩展（代码 + 无代码）端到端加载 =====
+
+_HYBRID_TOML = """
+[manifest]
+schema_version = 1
+
+[extension]
+id = "Hybrid"
+name = "混合扩展"
+version = "1.0.0"
+types = ["template", "command"]
+
+[template]
+entry = "Templates"
+
+[template.config_schema.title]
+type = "string"
+default = "hi"
+"""
+
+_HYBRID_CODE = """\
+from Scripts.Extensions import Command, Extension
+
+extension = Extension(id="Hybrid", name="Hybrid", version="1.0.0", types=("template", "command"))
+
+
+@extension.register_command
+class PingCommand(Command):
+    name = 'ping'
+    description = 'hybrid ping'
+
+    async def handler(self) -> str:
+        return 'pong'
+"""
+
+
+class TestHybridExtension:
+    @pytest.fixture
+    def hybrid_extension_dir(self, tmp_path, monkeypatch):
+        """隔离的临时扩展环境（内置目录重定向为空目录）。"""
+        extension_dir = tmp_path / 'Extensions'
+        extension_dir.mkdir()
+        builtin_dir = tmp_path / 'Builtin'
+        (builtin_dir / 'Commands').mkdir(parents=True)
+        (builtin_dir / 'Services').mkdir()
+        ext_dir = extension_dir / 'Hybrid'
+        (ext_dir / 'Templates').mkdir(parents=True)
+        (ext_dir / 'Extension.toml').write_text(_HYBRID_TOML, encoding='Utf-8')
+        (ext_dir / '__init__.py').write_text(_HYBRID_CODE, encoding='Utf-8')
+        sys.path.insert(0, str(tmp_path))
+        monkeypatch.setattr('Scripts.Extensions.Loader.EXTENSIONS_DIR', extension_dir)
+        monkeypatch.setattr('Scripts.Extensions.Loader.BUILTIN_DIR', builtin_dir)
+        monkeypatch.setattr('Scripts.Extensions.Loader.CONFIG_ROOT', tmp_path / 'Config')
+        monkeypatch.setattr('Scripts.Extensions.Loader.DATA_ROOT', tmp_path / 'Data')
+        yield extension_dir
+        sys.path.remove(str(tmp_path))
+        for name in list(sys.modules):
+            if name.startswith('Extensions.'):
+                sys.modules.pop(name, None)
+        command_manager.cleanup_matchers()
+
+    def test_hybrid_loads_code_and_template_parts(self, hybrid_extension_dir):
+        extension_manager.load()
+
+        # 代码部分：进入 registry，命令已注册
+        extension = extension_manager.registry['Hybrid']
+        assert extension.state is ExtensionState.loaded
+        assert set(extension.metadata.types) == {ExtensionType.template, ExtensionType.command}
+        assert 'extension:Hybrid:ping' in command_manager._commands
+        # 无代码部分：模板包已静态注册（配置 schema 编译自清单）
+        registration = extension_manager.templates['Hybrid']
+        assert registration.templates_dir == hybrid_extension_dir / 'Hybrid' / 'Templates'
+        assert registration.config_store.value.title == 'hi'
+        # 混合扩展以 registry 实例为准，不写 no_code_info
+        assert 'Hybrid' not in extension_manager.no_code_info
+        info = extension_manager.get_extension_info('Hybrid')
+        assert info['types'] == ['template', 'command']
+        assert info['state'] == 'loaded'
+
+    def test_pure_no_code_package_still_skips_entry_module(self, hybrid_extension_dir):
+        # 纯无代码包仍无需 __init__.py 入口
+        tpl_dir = hybrid_extension_dir / 'Tpl'
+        (tpl_dir / 'Templates').mkdir(parents=True)
+        (tpl_dir / 'Extension.toml').write_text(_TEMPLATE_TOML.replace('TestTemplate', 'Tpl'), encoding='Utf-8')
+
+        extension_manager.load()
+
+        assert 'Tpl' not in extension_manager.registry
+        assert extension_manager.no_code_info['Tpl']['state'] == 'enabled'

@@ -19,6 +19,8 @@ if TYPE_CHECKING:
 from Scripts.Config import config
 
 from .Base import (
+    _CODE_TYPES,
+    _NO_CODE_TYPES,
     Extension,
     ExtensionManifest,
     ExtensionMetadata,
@@ -242,11 +244,9 @@ class ExtensionLoader:
             manifest = info.manifest
             try:
                 self._validate_compatibility(extension_id, manifest)
-                if not info.single_file:
-                    # 无代码扩展包没有 __init__.py 入口，跳过入口模块校验
-                    is_no_code = self._is_no_code(manifest)
-                    if not is_no_code:
-                        self._validate_entry_module(extension_id, info.directory)
+                # 纯无代码扩展包没有 __init__.py 入口，跳过入口模块校验
+                if not info.single_file and self._has_code_part(manifest):
+                    self._validate_entry_module(extension_id, info.directory)
             except (CompatibilityError, ManifestError) as error:
                 # 单个扩展校验失败不阻断整体加载：标记为 blocked 并跳过导入
                 info.blocked_reason = str(error)
@@ -255,9 +255,14 @@ class ExtensionLoader:
                 continue
 
     @staticmethod
-    def _is_no_code(manifest: ExtensionManifest) -> bool:
-        """判断清单是否为无代码扩展包（template/resources）。"""
-        return bool({ExtensionType.template, ExtensionType.resources} & set(manifest.extension.types))
+    def _has_no_code_part(manifest: ExtensionManifest) -> bool:
+        """清单是否声明了无代码类型（template/resources）。"""
+        return bool(_NO_CODE_TYPES & set(manifest.extension.types))
+
+    @staticmethod
+    def _has_code_part(manifest: ExtensionManifest) -> bool:
+        """清单是否声明了代码能力（api/command/renderer）。"""
+        return bool(_CODE_TYPES & set(manifest.extension.types))
 
     def _validate_compatibility(self, extension_id: str, manifest) -> None:
         """校验扩展与当前 UniBot 版本的兼容性。"""
@@ -333,8 +338,8 @@ class ExtensionLoader:
             if not config.image.mode and ExtensionType.renderer in info.manifest.extension.types:
                 self._register_display(extension_id, info, ExtensionState.disabled, '图片模式未开启，渲染扩展不加载')
                 continue
-            # 无代码扩展包（template/resources）：不导入入口、无 Extension 实例
-            if self._is_no_code(info.manifest):
+            # 纯无代码扩展包（template/resources）：不导入入口、无 Extension 实例
+            if not self._has_code_part(info.manifest):
                 try:
                     self._commit_no_code_package(extension_id, info)
                 except Exception as error:
@@ -373,6 +378,9 @@ class ExtensionLoader:
                 self._commit_services(extension)
                 self._commit_commands(extension_id, extension, builtin=info.builtin)
                 self._commit_renderers(extension)
+                # 混合扩展（代码 + template/resources）：代码部分提交成功后追加注册无代码部分
+                if self._has_no_code_part(info.manifest):
+                    self._commit_no_code_package(extension_id, info)
             except Exception as error:
                 extension.mark_failed(f'Declaration stage failed: {error}')
                 blocked_reasons[extension_id] = f'声明阶段失败：{error}'
@@ -452,14 +460,9 @@ class ExtensionLoader:
     # ===== 无代码扩展包（template/resources） =====
 
     def _commit_no_code_package(self, extension_id: str, info: DiscoveredExtension) -> None:
-        """提交无代码扩展包：按声明类型分别注册（template 编译配置、resources 校验根目录）。"""
+        """提交无代码部分：按声明类型分别注册（template 编译配置、resources 校验根目录）。"""
         manifest = info.manifest
         types = set(manifest.extension.types)
-        allowed = {ExtensionType.template, ExtensionType.resources}
-        if not types <= allowed:
-            raise ManifestError(
-                f'No-code extension {extension_id} has invalid type combination: {sorted(t.value for t in types)}!'
-            )
         if ExtensionType.template in types:
             self._commit_template_package(extension_id, info)
         if ExtensionType.resources in types:

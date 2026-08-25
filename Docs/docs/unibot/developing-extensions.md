@@ -120,6 +120,10 @@ Extensions/Default/
 
 无代码扩展不导入 Python 模块、不执行生命周期钩子，也不创建 `Extension` 实例。
 
+> 类型可自由组合：扩展可以同时声明代码能力与无代码类型（如 `types = ["command", "template"]`），
+> 此时扩展按普通代码扩展加载（需要 `__init__.py` 入口），其模板/资源部分也会被静态注册。
+> 仅当 `types` 只含 `template`/`resources` 时才无需入口文件。
+
 ## 编写 `Extension.toml` 清单
 
 目录型扩展的元数据、兼容性与依赖都声明在清单中。清单由框架严格校验，未知字段、非法类型或无效版本约束会直接阻止加载。
@@ -171,7 +175,7 @@ root = "Resources"              # 资源根目录（相对扩展包根目录）
 | `[resources]` | `root` | 资源根目录 |
 :::
 
-> 注意：`renderer`、`template`、`resources` 专用段不能与其它类型混用。`template` 与 `resources` 可以组合在同一个扩展包中，但均不能与代码型能力混用。
+> 注意：`renderer`、`template`、`resources` 专用段只在清单声明了对应类型时生效；五种类型可自由组合，声明 `renderer` 时必须在 `[renderer]` 段提供 `name`。
 
 ### 模板配置声明
 
@@ -576,7 +580,7 @@ class MyRenderer(BaseRenderer):
 
 ## 开发模板与资源扩展
 
-模板与资源扩展是无代码包，不需要 `__init__.py`，只参与静态注册。
+纯模板与资源扩展是无代码包，不需要 `__init__.py`，只参与静态注册；与代码能力混用时按混合扩展规则加载（需要入口）。
 
 ### 模板扩展
 

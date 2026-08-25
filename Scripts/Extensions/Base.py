@@ -58,7 +58,8 @@ _STATE_TRANSITIONS: dict[ExtensionState, set[ExtensionState]] = {
 class ExtensionType(StrEnum):
     """扩展类型。
 
-    `api`/`command`/`renderer` 为代码型能力；`template`/`resources` 为无代码扩展包。
+    `api`/`command`/`renderer` 为代码型能力；`template`/`resources` 为无代码扩展包；
+    两者可自由组合在同一个扩展中。
     """
 
     api = 'api'
@@ -68,7 +69,7 @@ class ExtensionType(StrEnum):
     resources = 'resources'
 
 
-# 无代码扩展包只能单独成包，不能与任何代码能力混用
+# 代码能力与无代码扩展包类型，同一扩展可同时声明两类
 _CODE_TYPES = {ExtensionType.api, ExtensionType.command, ExtensionType.renderer}
 _NO_CODE_TYPES = {ExtensionType.template, ExtensionType.resources}
 
@@ -171,15 +172,8 @@ class ExtensionManifest(BaseModel):
 
     @model_validator(mode='after')
     def _validate_types(self) -> ExtensionManifest:
-        """校验类型互斥：无代码类型（template/resources）不能与代码能力混用，renderer 独立成包。"""
-        types = set(self.extension.types)
-        no_code = types & _NO_CODE_TYPES
-        code = types & _CODE_TYPES
-        if no_code and code:
-            raise ValueError(
-                f'No-code extension types {sorted(t.value for t in no_code)} cannot be mixed with code capabilities {sorted(t.value for t in code)}!'
-            )
-        if types == {ExtensionType.renderer} and not self.renderer.name:
+        """校验类型声明：代码能力与无代码类型可混用，renderer 必须声明名称。"""
+        if ExtensionType.renderer in set(self.extension.types) and not self.renderer.name:
             raise ValueError('renderer extensions must declare name in the [renderer] section!')
         return self
 
@@ -207,7 +201,7 @@ class ExtensionMetadata:
 
     @property
     def is_no_code(self) -> bool:
-        """是否为无代码扩展包（template/resources）。"""
+        """是否声明了无代码类型（template/resources）。"""
         return any(entry in _NO_CODE_TYPES for entry in self.types)
 
     def to_dict(self) -> dict:

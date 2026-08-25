@@ -268,19 +268,22 @@ async def get_render_configs(current_user: dict = Depends(get_current_user)):
                 'values': _mask_config(extension),
             }
         )
-    # 模板类型扩展（无代码包）
+    # 模板类型扩展（纯无代码包 + 混合扩展的模板部分）
     for extension_id, registration in extension_manager.templates.items():
+        # 混合扩展在 registry 中有实例，展示信息优先取实例
+        registry_extension = extension_manager.registry.get(extension_id)
         no_code = extension_manager.no_code_info.get(extension_id, {})
+        display_name = (registry_extension.metadata.name if registry_extension else '') or no_code.get('name')
         items.append(
             {
                 'id': extension_id,
                 'kind': 'template',
-                'name': no_code.get('name') or extension_id,
                 'template_id': extension_id,
+                'name': display_name or extension_id,
                 'current': extension_id == config.image.template,
                 'available': True,
-                'state': 'enabled',
-                'reason': None,
+                'state': registry_extension.state.value if registry_extension else 'enabled',
+                'reason': registry_extension.failure_reason if registry_extension else None,
                 'schema': registration.config_model.model_json_schema(),
                 'values': registration.config_store.value.model_dump(mode='json'),
             }

@@ -171,7 +171,7 @@ root = "Resources"              # Resources root directory (relative to the exte
 | `[resources]` | `root` | Resources root directory |
 :::
 
-> Note: the dedicated `renderer`, `template`, and `resources` sections cannot be mixed with other types. `template` and `resources` can be combined in the same extension package, but neither can be mixed with code capabilities.
+> Note: the dedicated `renderer`, `template`, and `resources` sections only take effect when the corresponding type is declared. All five types can be freely combined in one extension; declaring the `renderer` type requires a `name` in the `[renderer]` section.
 
 ### Template Config Schema
 

@@ -1,7 +1,7 @@
 import { h } from 'vue'
 import { Layout } from 'vuepress-theme-plume/client'
-import PageContextMenu from 'vuepress-theme-plume/features/PageContextMenu.vue'
 import { defineClientConfig } from 'vuepress/client'
+import PageContextMenu from 'vuepress-theme-plume/features/PageContextMenu.vue'
 
 export default defineClientConfig({
   layouts: {
