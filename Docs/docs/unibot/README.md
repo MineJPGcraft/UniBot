@@ -1,10 +1,6 @@
 ---
 title: UniBot 核心
 description: UniBot 核心文档：基于 NoneBot2 的 Minecraft 群服互通机器人本体，兼容 NB 插件商店；包含架构设计、扩展系统、REST API 与扩展开发指南。
-tags:
-  - UniBot
-  - NoneBot2
-  - 核心文档
 ---
 
 # UniBot

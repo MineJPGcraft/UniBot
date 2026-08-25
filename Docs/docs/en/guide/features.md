@@ -2,10 +2,6 @@
 title: "Features"
 date: 2026-08-21
 description: "UniBot feature overview: QQ–Minecraft group-server interop, cross-server chat, cross-platform commands, image rendering cards, WebUI management, whitelist and the extension system."
-tags:
-  - features
-  - group-server interop
-  - extensions
 ---
 
 # Features

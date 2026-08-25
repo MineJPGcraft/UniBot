@@ -2,10 +2,6 @@
 title: "MC Adapter"
 date: 2026-08-21
 description: "Usage of nonebot-adapter-minecraft: UniBot's built-in Minecraft protocol adapter, interconnecting with server-side plugins / Mods via the QueQiao protocol for group-server messaging."
-tags:
-  - MC adapter
-  - QueQiao protocol
-  - nonebot-adapter-minecraft
 ---
 
 # MC Adapter

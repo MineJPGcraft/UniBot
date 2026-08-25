@@ -2,10 +2,6 @@
 title: 架构设计
 date: 2026-08-04
 description: Minecraft UniBot 架构设计详解：NoneBot2 事件驱动架构、核心与扩展体系分离、聊天平台适配器与鹊桥协议如何连接多台 Minecraft 服务器。
-tags:
-  - 架构
-  - NoneBot2
-  - 鹊桥
 ---
 
 # 架构设计

@@ -2,10 +2,6 @@
 title: "Image Rendering"
 date: 2026-08-23
 description: "UniBot image rendering guide: enable image mode to render command output as polished image cards, combining renderer engine, template and resource extensions."
-tags:
-  - image rendering
-  - renderer
-  - templates
 ---
 
 # Image Rendering

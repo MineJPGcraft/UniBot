@@ -1,10 +1,6 @@
 ---
 title: "UniBot Core"
 description: "UniBot core documentation: a Minecraft cross-server bridge bot built on NoneBot2, compatible with the NB Plugin Store — architecture, extension system, REST API and development guides."
-tags:
-  - UniBot
-  - NoneBot2
-  - core
 ---
 
 # UniBot

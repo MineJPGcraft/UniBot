@@ -2,10 +2,6 @@
 title: "Connecting Chat Platforms"
 date: 2026-08-21
 description: "How to connect QQ, QQ Official, Telegram, Discord, DoDo and KOOK to UniBot: per-platform adapter fields in .env and filling bot cards in the WebUI."
-tags:
-  - chat platforms
-  - configuration
-  - .env
 ---
 
 # Connecting Chat Platforms

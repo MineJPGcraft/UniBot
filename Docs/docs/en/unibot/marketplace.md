@@ -2,9 +2,6 @@
 title: "Publishing to the Marketplace"
 date: 2026-08-21
 description: "How to publish UniBot extensions: submit your extension to the UniBot.Market registry via Pull Request so users can find and install it from the WebUI with one click."
-tags:
-  - marketplace
-  - publishing
 ---
 
 # Publishing to the Marketplace

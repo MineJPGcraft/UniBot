@@ -2,10 +2,6 @@
 title: "REST API Reference"
 date: 2026-08-21
 description: "REST API reference for UniBot's WebUI backend: JWT authentication, login, server and player management, config read/write — all endpoints under the /api prefix with parameters and responses."
-tags:
-  - API
-  - WebUI
-  - REST
 ---
 
 # REST API Reference

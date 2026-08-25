@@ -1,10 +1,6 @@
 ---
 title: "Adapters"
 description: "UniBot adapter overview: connect QQ, QQ Official, Telegram, Discord, DoDo, KOOK and Satori chat platforms via NoneBot2 adapters, plus the MC adapter using the QueQiao protocol."
-tags:
-  - adapters
-  - chat platforms
-  - NoneBot2
 ---
 
 # Adapters

@@ -2,10 +2,6 @@
 title: MC 适配器
 date: 2026-08-04
 description: nonebot-adapter-minecraft MC 适配器使用说明：UniBot 内置的 Minecraft 协议适配器，通过鹊桥协议与服务器端插件 / Mod 互通，实现群服消息同步。
-tags:
-  - MC 适配器
-  - 鹊桥协议
-  - nonebot-adapter-minecraft
 ---
 
 # MC 适配器

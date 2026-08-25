@@ -2,10 +2,6 @@
 title: "Developing Extensions"
 date: 2026-08-21
 description: "UniBot extension development guide: write, configure and distribute extensions from scratch — project structure, manifest, command and service registration, rendering templates and marketplace publishing."
-tags:
-  - extension development
-  - guide
-  - plugins
 ---
 
 # Developing Extensions

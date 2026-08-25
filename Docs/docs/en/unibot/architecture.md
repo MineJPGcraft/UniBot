@@ -2,10 +2,6 @@
 title: "Architecture"
 date: 2026-08-21
 description: "Minecraft UniBot architecture: NoneBot2 event-driven design, separation of core and extension system, and how chat platform adapters plus the QueQiao protocol connect multiple MC servers."
-tags:
-  - architecture
-  - NoneBot2
-  - QueQiao
 ---
 
 # Architecture

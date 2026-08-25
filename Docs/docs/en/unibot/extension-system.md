@@ -2,10 +2,6 @@
 title: "Extension System"
 date: 2026-08-21
 description: "UniBot extension system: five extension types (command, service, renderer engine, template, resource), manifest structure, lifecycle and isolation, fully compatible with NoneBot2 and the NB Plugin Store."
-tags:
-  - extensions
-  - NoneBot2
-  - plugins
 ---
 
 # Extension System

@@ -1,10 +1,6 @@
 ---
 title: "Guide"
 description: "Minecraft UniBot user manual overview: quick start, command reference, features, WebUI admin panel, image rendering and configuration — everything to deploy your Minecraft cross-server bridge bot."
-tags:
-  - Minecraft UniBot
-  - Guide
-  - Cross-server bridge
 ---
 
 # Guide

@@ -2,10 +2,6 @@
 title: 接入聊天平台
 date: 2026-08-04
 description: UniBot 接入 QQ、QQ 官方、Telegram、Discord、DoDo、KOOK 等聊天平台的配置教程：各平台适配器在 .env 中的接入字段说明与 WebUI 机器人卡片填写方法。
-tags:
-  - 聊天平台
-  - 配置
-  - .env
 ---
 
 # 接入聊天平台

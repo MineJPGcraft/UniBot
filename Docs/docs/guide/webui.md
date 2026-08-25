@@ -1,11 +1,7 @@
 ---
-title: WebUI 管理面板
+title: 管理面板
 date: 2026-08-20
-description: UniBot 内置 Web 管理面板使用指南：可视化配置环境变量、实时监控、服务器与玩家管理、白名单、日志查看，基于 Vue 3 与 REST API / WebSocket 的现代化管理界面。
-tags:
-  - WebUI
-  - 管理面板
-  - 可视化配置
+description: UniBot 内置 WebUI 管理面板使用指南：可视化配置环境变量、实时监控、服务器与玩家管理、白名单、日志查看，基于 Vue 3 与 REST API / WebSocket 的现代化管理界面。
 ---
 
 # 管理面板
