@@ -15,6 +15,7 @@ from .WebSocket import ws_clients
 
 router = APIRouter(prefix='/api/status', tags=['Status'])
 
+process = psutil.Process()
 start_time = time.time()
 
 
@@ -24,7 +25,6 @@ def get_status_data() -> dict:
     player_service, server_service = Globals.player_service, Globals.server_service
     servers = server_service.servers if server_service else {}
     players_bound = len(player_service.players) if player_service else 0
-    process = psutil.Process()
     return {
         'version': version_manager.version,
         'latest_version': version_manager.latest_version,
