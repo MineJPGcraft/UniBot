@@ -175,6 +175,7 @@ class TestReloadCycle:
 
         extension_manager.load()
         command_manager.build()
+        asyncio.run(extension_manager.start())
         assert extension_manager.registry['Greet'].metadata.version == '1.0.0'
         assert command_manager.get_command('extension:Greet:greet').description == 'v1 description'
         old_matcher = command_manager._matchers[0]
@@ -202,6 +203,7 @@ class TestReloadCycle:
         (greet_extension_dir / 'Greet.py').write_text(_GREET_V1, encoding='Utf-8')
         extension_manager.load()
         command_manager.build()
+        asyncio.run(extension_manager.start())
         old_extension = extension_manager.registry['Greet']
         old_matcher = command_manager._matchers[0]
 
@@ -215,3 +217,206 @@ class TestReloadCycle:
         assert command_manager.get_command('extension:Greet:greet').description == 'v1 description'
         assert old_matcher in nonebot_matchers[_MATCHER_PRIORITY]
         assert command_manager._built is True
+
+
+# ===== 服务类型扩展重载 =====
+
+_SERVICE_V1 = """\
+from Scripts.Extensions import Extension, Service
+
+extension = Extension(id="Svc", name="Svc", version="1.0.0", types=("api",))
+
+
+@extension.register_service
+class GreetService(Service):
+    name = "greet"
+
+    def __init__(self) -> None:
+        self.disabled = False
+
+    async def on_disable(self) -> None:
+        self.disabled = True
+
+    def say(self) -> str:
+        return "hello v1"
+"""
+
+_SERVICE_V2 = """\
+from Scripts.Extensions import Extension, Service
+
+extension = Extension(id="Svc", name="Svc", version="2.0.0", types=("api",))
+
+
+@extension.register_service
+class GreetService(Service):
+    name = "greet"
+
+    def __init__(self) -> None:
+        self.disabled = False
+
+    async def on_disable(self) -> None:
+        self.disabled = True
+
+    def say(self) -> str:
+        return "hello v2"
+"""
+
+
+class TestReloadServices:
+    def test_reload_replaces_service_instances(self, greet_extension_dir):
+        (greet_extension_dir / 'Svc.py').write_text(_SERVICE_V1, encoding='Utf-8')
+
+        extension_manager.load()
+        command_manager.build()
+        asyncio.run(extension_manager.start())
+        old_extension = extension_manager.registry['Svc']
+        old_service = extension_manager.get_service('greet')
+        assert old_service.say() == 'hello v1'
+
+        (greet_extension_dir / 'Svc.py').write_text(_SERVICE_V2, encoding='Utf-8')
+        asyncio.run(extension_manager.reload())
+
+        new_service = extension_manager.get_service('greet')
+        assert new_service is not old_service
+        assert new_service.say() == 'hello v2'
+        assert old_service.disabled is True  # 旧服务已完成 on_disable
+        assert extension_manager.registry['Svc'] is not old_extension
+        assert extension_manager.registry['Svc'].metadata.version == '2.0.0'
+
+
+# ===== 渲染器类型扩展重载（目录式） =====
+
+_RENDERER_TOML = """\
+[manifest]
+schema_version = 1
+
+[extension]
+id = "Rend"
+name = "Rend"
+version = "1.0.0"
+types = ["renderer"]
+
+[renderer]
+name = "test_renderer"
+"""
+
+_RENDERER_CODE = """\
+from Scripts.Extensions import Extension
+from Scripts.Extensions.Renderer import BaseRenderer
+
+extension = Extension(id="Rend", name="Rend", version="1.0.0", types=("renderer",))
+
+
+@extension.register_renderer
+class TestRenderer(BaseRenderer):
+    name = "test_renderer"
+"""
+
+
+class TestReloadRenderers:
+    def test_reload_replaces_renderer_instances(self, greet_extension_dir, monkeypatch):
+        from Scripts.Config import config
+
+        monkeypatch.setattr(config.image, 'mode', True)
+        monkeypatch.setattr(config.image, 'renderer', 'test_renderer')
+        render_dir = greet_extension_dir / 'Rend'
+        render_dir.mkdir()
+        (render_dir / 'Extension.toml').write_text(_RENDERER_TOML, encoding='Utf-8')
+        (render_dir / '__init__.py').write_text(_RENDERER_CODE, encoding='Utf-8')
+
+        extension_manager.load()
+        command_manager.build()
+        asyncio.run(extension_manager.start())
+        old_renderer = extension_manager.renderers['test_renderer']
+        old_extension = extension_manager.registry['Rend']
+
+        (render_dir / 'Extension.toml').write_text(
+            _RENDERER_TOML.replace('1.0.0', '2.0.0'), encoding='Utf-8'
+        )
+        (render_dir / '__init__.py').write_text(
+            _RENDERER_CODE.replace('1.0.0', '2.0.0'), encoding='Utf-8'
+        )
+        asyncio.run(extension_manager.reload())
+
+        new_renderer = extension_manager.renderers['test_renderer']
+        assert new_renderer is not old_renderer
+        assert extension_manager.registry['Rend'] is not old_extension
+        assert extension_manager.registry['Rend'].metadata.version == '2.0.0'
+
+
+# ===== 无代码扩展包重载（template + resources） =====
+
+_TEMPLATE_TOML_V1 = """\
+[manifest]
+schema_version = 1
+
+[extension]
+id = "Tpl"
+name = "Tpl"
+version = "1.0.0"
+types = ["template"]
+
+[template]
+entry = "Templates"
+
+[template.config_schema.title]
+type = "string"
+default = "v1"
+"""
+
+_TEMPLATE_TOML_V2 = _TEMPLATE_TOML_V1.replace('1.0.0', '2.0.0')
+
+_RESOURCES_TOML = """\
+[manifest]
+schema_version = 1
+
+[extension]
+id = "Res"
+name = "Res"
+version = "1.0.0"
+types = ["resources"]
+
+[resources]
+root = "Resources"
+"""
+
+
+class TestReloadNoCodePackages:
+    def test_reload_template_package_keeps_config(self, greet_extension_dir):
+        tpl_dir = greet_extension_dir / 'Tpl'
+        (tpl_dir / 'Templates').mkdir(parents=True)
+        (tpl_dir / 'Extension.toml').write_text(_TEMPLATE_TOML_V1, encoding='Utf-8')
+
+        extension_manager.load()
+        command_manager.build()
+        asyncio.run(extension_manager.start())
+        old_registration = extension_manager.templates['Tpl']
+        assert extension_manager.no_code_info['Tpl']['version'] == '1.0.0'
+        assert old_registration.config_store.value.title == 'v1'
+
+        (tpl_dir / 'Extension.toml').write_text(_TEMPLATE_TOML_V2, encoding='Utf-8')
+        asyncio.run(extension_manager.reload())
+
+        new_registration = extension_manager.templates['Tpl']
+        assert new_registration is not old_registration
+        assert extension_manager.no_code_info['Tpl']['version'] == '2.0.0'
+        # 配置持久化在磁盘，重载不丢失
+        assert new_registration.config_store.value.title == 'v1'
+
+    def test_reload_resources_package(self, greet_extension_dir):
+        res_dir = greet_extension_dir / 'Res'
+        (res_dir / 'Resources').mkdir(parents=True)
+        (res_dir / 'Extension.toml').write_text(_RESOURCES_TOML, encoding='Utf-8')
+
+        extension_manager.load()
+        command_manager.build()
+        asyncio.run(extension_manager.start())
+        assert extension_manager.resources['Res'] == res_dir / 'Resources'
+
+        (res_dir / 'Extension.toml').write_text(
+            _RESOURCES_TOML.replace('1.0.0', '2.0.0'), encoding='Utf-8'
+        )
+        asyncio.run(extension_manager.reload())
+
+        assert extension_manager.resources['Res'] == res_dir / 'Resources'
+        assert extension_manager.no_code_info['Res']['version'] == '2.0.0'
