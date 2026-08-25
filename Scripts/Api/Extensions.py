@@ -8,6 +8,7 @@ from Scripts.Api.Locale import text
 from Scripts.Api.Managers import studio_manager
 from Scripts.Config import config, reload_config
 from Scripts.Extensions import EXTENSIONS_DIR, ExtensionType, extension_manager, market_manager
+from Scripts.Logging import exception_logger
 from Scripts.Managers import config_manager
 
 from .Auth import get_current_user, require_role
@@ -145,6 +146,17 @@ async def get_extension_detail(extension_id: str, current_user: dict = Depends(g
     if not detail:
         raise HTTPException(status_code=404, detail=text('extensions.not_found', extension_id=extension_id))
     return {'code': 0, 'data': detail, 'message': 'ok'}
+
+
+@router.post('/reload', summary='热重载扩展')
+async def reload_extensions(user: dict = Depends(require_role('admin'))):
+    """热重载全部扩展：重新导入代码并重建命令，无需重启 Bot。"""
+    try:
+        await extension_manager.reload()
+    except Exception as error:
+        exception_logger.error(f'Extension reload failed: {error}')
+        return {'code': 1, 'data': None, 'message': text('extensions.reload_failed', error=error)}
+    return {'code': 0, 'data': None, 'message': 'ok'}
 
 
 @router.post('/{extension_id}/enable', summary='启用扩展')

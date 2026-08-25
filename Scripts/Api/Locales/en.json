@@ -72,7 +72,8 @@
     "not_loaded": "Extension is not loaded; its configuration cannot be modified",
     "config_invalid": "Configuration validation failed: {error}",
     "renderer_not_found": "Renderer {name} does not exist",
-    "template_not_found": "Template {template_name} does not exist"
+    "template_not_found": "Template {template_name} does not exist",
+    "reload_failed": "Extension reload failed: {error}"
   },
   "studio": {
     "downloaded": "Studio is already downloaded",

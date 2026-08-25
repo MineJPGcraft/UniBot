@@ -7,8 +7,8 @@ from nonebot_plugin_alconna import At
 from nonebot_plugin_uninfo import Uninfo
 
 from Scripts.Config import config
-from Scripts.Extensions import Command, Extension, SubCommand
-from Scripts.Logging import logger
+from Scripts.Extensions import Command, Extension, SubCommand, extension_manager
+from Scripts.Logging import exception_logger, logger
 from Scripts.Managers import config_manager, version_manager
 from Scripts.Messages import messages
 from Scripts.Process import is_watchdog_process, request_restart
@@ -204,6 +204,23 @@ class BotCommand(Command):
                 return messages.commands.bot.restart_watchdog_required
             asyncio.create_task(self.parent._delayed_restart())
             return messages.commands.bot.restarting
+
+    class Reload(SubCommand['BotCommand']):
+        """热重载扩展。"""
+
+        name = 'reload'
+        description = messages.commands.bot.reload_desc
+
+        @override
+        async def handler(self, session: Uninfo):
+            if not get_permission(session):
+                return messages.commands.bot.no_permission
+            try:
+                await extension_manager.reload()
+            except Exception as error:
+                exception_logger.error(f'Extension reload failed: {error}')
+                return messages.commands.bot.reload_failed.format(error=error)
+            return messages.commands.bot.reload_success
 
 
 # 深层子命令的父命令类型别名：供 SubCommand 泛型引用，获得完整的 parent 类型提示

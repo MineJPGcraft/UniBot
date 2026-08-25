@@ -161,7 +161,7 @@ arg_optional = "Optional"
 [commands.bot]
 # Bot management prompts
 description = "Manage the bot."
-usage = "/bot <superusers|about|check|update|restart>"
+usage = "/bot <superusers|about|check|update|restart|reload>"
 superusers_desc = "Manage superusers"
 superusers_add_desc = "Add a superuser"
 superusers_remove_desc = "Remove a superuser"
@@ -171,6 +171,7 @@ about_usage = "/bot about"
 check_desc = "Check for new versions"
 update_desc = "Update the bot to the latest version"
 restart_desc = "Restart the bot"
+reload_desc = "Reload extensions"
 no_permission = "You do not have permission to run this command!"
 already_added = "{value} is already in {name}!"
 not_found = "{value} is not in {name}!"
@@ -191,6 +192,8 @@ update_failed = "Update failed: {error}"
 update_success = "Update succeeded; the bot is restarting, please wait..."
 restart_watchdog_required = "The bot was not started via Watchdog; automatic restart is unavailable!"
 restarting = "The bot is restarting, please wait..."
+reload_success = "Extensions reloaded!"
+reload_failed = "Extension reload failed: {error}"
 
 [commands.list]
 # Online player prompts

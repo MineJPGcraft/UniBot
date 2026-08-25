@@ -427,6 +427,17 @@ class CommandManager:
 
         return dispatched
 
+    def cleanup_matchers(self) -> None:
+        """注销全部已构建 matcher 并复位注册状态（热重载前调用）。"""
+        for matcher in self._matchers:
+            try:
+                matcher.clean()
+            except Exception as error:
+                logger.error(f'Failed to unregister matcher {matcher}: {error}')
+        self._commands.clear()
+        self._matchers = []
+        self._built = False
+
     def build(self) -> list:
         """校验全部命令并构建 matcher，任一失败则整体失败。"""
         if self._built:

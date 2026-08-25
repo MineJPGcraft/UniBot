@@ -1,5 +1,6 @@
 """扩展管理器单例：注册表、服务、渲染器、启停状态与加载编排。"""
 
+import asyncio
 from pathlib import Path
 
 import tomlkit
@@ -30,6 +31,8 @@ class ExtensionManager:
         self.no_code_info: dict[str, dict] = {}
         self.loader = ExtensionLoader(self)
         self.renderer_manager = RendererManager(self.get_renderer)
+        # 串行化热重载，防止 WebUI 与指令并发触发
+        self._reload_lock = asyncio.Lock()
 
     @property
     def templates(self) -> dict[str, TemplateRegistration]:
@@ -58,6 +61,23 @@ class ExtensionManager:
         """发现、校验、排序并加载扩展（声明 + on_load），重复调用前自动重置状态。"""
         self.reset()
         self.loader.load()
+
+    async def reload(self) -> None:
+        """热重载全部扩展：停用 → 注销命令 → 清理模块缓存 → 重新加载 → 重建命令 → 重新启用。"""
+        # 函数内导入：Command 模块顶层不依赖 Manager，但保持 __init__ 固定导入顺序（Base → Command → … → Manager）
+        from .Command import command_manager
+
+        async with self._reload_lock:
+            if failed := self.loader.check_syntax():
+                raise RuntimeError(f'Extension syntax check failed: {", ".join(failed)}')
+            logger.info('Reloading all extensions...')
+            await self.shutdown()
+            command_manager.cleanup_matchers()
+            self.loader.purge_modules()
+            self.load()
+            command_manager.build()
+            await self.start()
+            logger.success('All extensions reloaded.')
 
     async def start(self) -> None:
         """按拓扑顺序调用 on_load 与 on_enable，失败时回滚已启用扩展；渲染引擎失败仅降级图片功能。"""

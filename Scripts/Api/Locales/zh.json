@@ -72,7 +72,8 @@
     "not_loaded": "扩展当前未加载，无法修改配置",
     "config_invalid": "配置校验失败：{error}",
     "renderer_not_found": "渲染引擎 {name} 不存在",
-    "template_not_found": "模板 {template_name} 不存在"
+    "template_not_found": "模板 {template_name} 不存在",
+    "reload_failed": "热重载失败：{error}"
   },
   "studio": {
     "downloaded": "Studio 已下载",

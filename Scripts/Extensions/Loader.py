@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import ast
 import importlib
+import shutil
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -90,6 +93,46 @@ class ExtensionLoader:
         self.extensions.clear()
         self._builtin_command_classes.clear()
         self._enabled_config = None
+
+    def check_syntax(self) -> list[str]:
+        """对所有扩展源码做语法预检，返回语法错误的文件路径列表（空表示全部通过）。"""
+        broken: list[str] = []
+        targets: list[Path] = []
+        for subpackage in ('Commands', 'Services'):
+            targets.extend((BUILTIN_DIR / subpackage).rglob('*.py'))
+        if EXTENSIONS_DIR.exists():
+            targets.extend(EXTENSIONS_DIR.rglob('*.py'))
+        for file in targets:
+            if file.name.startswith(('.', '_')):
+                continue
+            try:
+                ast.parse(file.read_text('Utf-8'))
+            except (OSError, SyntaxError, UnicodeDecodeError) as error:
+                broken.append(f'{file}: {error}')
+        return broken
+
+    def purge_modules(self) -> None:
+        """
+        清理扩展模块的 sys.modules 与字节码缓存（热重载前调用）。
+
+        删除用户扩展（`Extensions.` 前缀）与内置扩展（`Scripts.Extensions.Builtin.` 前缀）
+        的模块条目；同时删除扩展目录下的 `__pycache__`，避免 Python 在源码等长同秒修改时
+        复用陈旧 pyc 导致新代码不生效。
+        """
+        targets = [
+            name
+            for name in sys.modules
+            if name.startswith('Extensions.')
+            or name == 'Scripts.Extensions.Builtin'
+            or name.startswith('Scripts.Extensions.Builtin.')
+        ]
+        for name in targets:
+            sys.modules.pop(name, None)
+        for root in (BUILTIN_DIR, EXTENSIONS_DIR):
+            if not root.exists():
+                continue
+            for pycache in root.rglob('__pycache__'):
+                shutil.rmtree(pycache, ignore_errors=True)
 
     def load(self) -> list[Extension]:
         """执行完整加载流程：发现 -> 校验 -> 拓扑排序 -> 导入 -> 声明 -> on_load。"""

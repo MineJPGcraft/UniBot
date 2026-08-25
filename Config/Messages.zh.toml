@@ -160,7 +160,7 @@ arg_optional = "可选"
 [commands.bot]
 # 机器人管理指令相关提示
 description = "管理机器人。"
-usage = "/bot <superusers|about|check|update|restart>"
+usage = "/bot <superusers|about|check|update|restart|reload>"
 superusers_desc = "管理超级用户"
 superusers_add_desc = "添加超级用户"
 superusers_remove_desc = "移除超级用户"
@@ -170,6 +170,7 @@ about_usage = "/bot about"
 check_desc = "检测是否有新版本"
 update_desc = "更新机器人到最新版本"
 restart_desc = "重启机器人"
+reload_desc = "热重载扩展"
 no_permission = "你没有权限执行此命令！"
 already_added = "{value} 已在 {name} 中！"
 not_found = "{value} 不在 {name} 中！"
@@ -190,6 +191,8 @@ update_failed = "更新失败：{error}"
 update_success = "更新成功，机器人正在重启，请稍候……"
 restart_watchdog_required = "机器人未通过 Watchdog 启动，无法自动重启！"
 restarting = "机器人正在重启，请稍候……"
+reload_success = "扩展已热重载！"
+reload_failed = "扩展热重载失败：{error}"
 
 [commands.list]
 # 在线玩家相关提示
