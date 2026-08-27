@@ -8,6 +8,9 @@
   4. 创建时若面板数量已达上限（官方错误 40030013），自动清理最旧的
      非 `UniBot` 面板（覆盖全部生效场景）腾出名额后重试一次
 
+配置 `sync_command_panels = false` 时不再同步，改为删除所有 remark 为
+`UniBot` 的遗留面板（覆盖全部生效场景），保证关闭开关后面板被彻底回收。
+
 任何失败只告警不抛出，保证不阻断机器人启动。
 """
 
@@ -15,6 +18,7 @@ from __future__ import annotations
 
 from nonebot.log import logger
 
+from Scripts.Config import config
 from Scripts.Extensions import command_manager
 from Scripts.Managers import config_manager
 from Scripts.Platforms.Panels.Base import MAX_ITEMS_PER_PANEL, PanelError
@@ -70,6 +74,27 @@ async def _cleanup_stale_panels(client: QQPanelClient) -> int:
     return removed
 
 
+async def _remove_managed_panels(client: QQPanelClient) -> int:
+    """删除所有 remark 为 UniBot 的遗留面板（覆盖全部生效场景），返回删除数量。"""
+    managed_panels: list[tuple[str, str]] = []
+    for scope in PANEL_SCOPES:
+        for panel in await client.list_panels(scope):
+            if (panel.get('panel') or {}).get('remark') == PANEL_REMARK:
+                panel_id = panel.get('panel_id')
+                if panel_id:
+                    managed_panels.append((str(panel_id), str(scope)))
+    removed = 0
+    for panel_id, scope in managed_panels:
+        try:
+            await client.delete_panel(panel_id)
+        except PanelError as error:
+            logger.warning(f'Failed to remove leftover panel: {panel_id} ({scope}) {error}!')
+            continue
+        logger.info(f'Removed leftover command panel: {panel_id} ({scope})!')
+        removed += 1
+    return removed
+
+
 async def _sync_one_bot(app_id: str, client_secret: str, panel_items: list[dict]) -> None:
     """把指令同步到单个机器人的 group 全局面板：无则创建，有则更新。"""
     async with QQPanelClient(app_id=app_id, client_secret=client_secret) as client:
@@ -110,10 +135,16 @@ async def _sync_one_bot(app_id: str, client_secret: str, panel_items: list[dict]
 
 
 async def sync_panels_for_all_bots() -> None:
-    """为 .env 中配置的每个 QQ 机器人同步群指令面板。"""
+    """为 .env 中配置的每个 QQ 机器人同步群指令面板。
+
+    `sync_command_panels` 关闭时改为删除遗留的 UniBot 面板（不再创建/更新）。
+    """
     bots = config_manager.read_env().get('QQ_BOTS') or []
     if not bots:
         logger.info('QQ_BOTS not configured, skipping panel sync!')
+        return
+    if not config.sync_command_panels:
+        await remove_panels_for_all_bots(bots)
         return
     panel_items = _build_panel_items()
     for bot in bots:
@@ -128,3 +159,31 @@ async def sync_panels_for_all_bots() -> None:
             logger.warning(f'Failed to sync panel for QQ bot {app_id}: {error}')
         except Exception as error:
             logger.warning(f'Failed to sync panel for QQ bot {app_id}: {error}')
+
+
+async def remove_panels_for_all_bots(bots: list[dict] | None = None) -> None:
+    """删除每个 QQ 机器人遗留的 UniBot 指令面板（开关关闭时由同步入口调用）。"""
+    if bots is None:
+        bots = config_manager.read_env().get('QQ_BOTS') or []
+    if not bots:
+        logger.info('QQ_BOTS not configured, skipping leftover panel cleanup!')
+        return
+    for bot in bots:
+        app_id = str(bot.get('id') or '')
+        client_secret = str(bot.get('secret') or '')
+        if not app_id or not client_secret:
+            logger.warning(f'QQ bot missing AppID/Secret, skipping panel cleanup: {bot}')
+            continue
+        try:
+            async with QQPanelClient(app_id=app_id, client_secret=client_secret) as client:
+                removed = await _remove_managed_panels(client)
+        except PanelError as error:
+            logger.warning(f'Failed to clean up panels for QQ bot {app_id}: {error}')
+            continue
+        except Exception as error:
+            logger.warning(f'Failed to clean up panels for QQ bot {app_id}: {error}')
+            continue
+        if removed:
+            logger.success(f'Removed {removed} leftover command panels for bot {app_id}!')
+            continue
+        logger.info(f'No leftover command panels found for bot {app_id}.')

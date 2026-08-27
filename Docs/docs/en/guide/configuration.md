@@ -127,6 +127,10 @@ For other platforms (Telegram, Discord, Kook, etc.), refer to the corresponding 
   # Whether to broadcast player join/leave
   broadcast_player = true
 
+  # Whether to sync UniBot commands as group command panels for official QQ bots
+  # When disabled, leftover panels are removed on bot connection
+  sync_command_panels = true
+
   # Whether to forward all messages in message groups to the server in-game
   sync_all_qq_message = true
 

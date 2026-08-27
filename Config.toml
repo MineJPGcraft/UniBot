@@ -40,6 +40,10 @@ broadcast_player = true
 # 检测到新版本后，机器人连接时是否向消息群发送一次更新提醒。
 broadcast_update = true
 
+# 是否把 UniBot 指令同步为 QQ 官方机器人的群指令面板。
+# 关闭后机器人连接时会检查并删除之前同步遗留的指令面板。
+sync_command_panels = true
+
 # 是否把消息群内的所有消息转发到服务器内。关闭后如需向服务器发送消息，请使用 .send 指令。
 sync_all_qq_message = true
 

@@ -125,6 +125,10 @@ ONEBOT_WS_URLS=["ws://127.0.0.1:6700"]
   # 是否播报玩家进入/离开
   broadcast_player = true
 
+  # 是否把 UniBot 指令同步为 QQ 官方机器人的群指令面板
+  # 关闭后机器人连接时会删除之前同步遗留的面板
+  sync_command_panels = true
+
   # 是否把消息群内的所有消息转发到服务器内
   sync_all_qq_message = true
 

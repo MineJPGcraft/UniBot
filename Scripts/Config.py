@@ -41,6 +41,8 @@ class Config(BaseModel):
     broadcast_player: bool = True
     broadcast_update: bool = True
 
+    sync_command_panels: bool = True
+
     sync_all_qq_message: bool = True
     sync_all_game_message: bool = False
     sync_message_between_servers: bool = True

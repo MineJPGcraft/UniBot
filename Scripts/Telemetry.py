@@ -107,7 +107,7 @@ class Telemetry:
 
     async def report(self) -> bool:
         """上报一次在线状态和运行统计。"""
-        data = await post_request(f'{TELEMETRY_SERVER_URL}/report.php', self.collect_report())
+        data = await post_request(f'{TELEMETRY_SERVER_URL}/report', self.collect_report())
         if data is not None and data.get('code') == 0:
             logger.success('Telemetry data submitted.')
             return True
@@ -117,7 +117,7 @@ class Telemetry:
 
     async def stop(self) -> bool:
         """停止上报并通知服务器离线。"""
-        data = await post_request(f'{TELEMETRY_SERVER_URL}/offline.php', {'id': self.machine_id})
+        data = await post_request(f'{TELEMETRY_SERVER_URL}/offline', {'id': self.machine_id})
         if data is not None and data.get('code') == 0:
             logger.success('Telemetry marked offline.')
             return True

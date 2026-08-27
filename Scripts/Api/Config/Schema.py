@@ -92,6 +92,13 @@ def build_config_schema() -> list[dict]:
             'description': text('schema.config.broadcast_update_description'),
         },
         {
+            'key': 'sync_command_panels',
+            'label': text('schema.config.sync_command_panels_label'),
+            'type': 'boolean',
+            'default': True,
+            'description': text('schema.config.sync_command_panels_description'),
+        },
+        {
             'key': 'sync_all_qq_message',
             'label': text('schema.config.sync_all_qq_message_label'),
             'type': 'boolean',
@@ -199,7 +206,7 @@ def build_config_groups() -> list[dict]:
         {
             'id': 'broadcast',
             'name': text('schema.config.group_broadcast'),
-            'keys': ['broadcast_server', 'broadcast_player', 'broadcast_update'],
+            'keys': ['broadcast_server', 'broadcast_player', 'broadcast_update', 'sync_command_panels'],
         },
         {
             'id': 'sync',

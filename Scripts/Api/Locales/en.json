@@ -117,6 +117,8 @@
       "broadcast_player_description": "Whether to announce players joining or leaving the server",
       "broadcast_update_label": "Broadcast version updates",
       "broadcast_update_description": "When a new version is detected, send a one-time update notice to message groups on bot connection",
+      "sync_command_panels_label": "Sync command panels",
+      "sync_command_panels_description": "Whether to sync UniBot commands as group command panels for official QQ bots; when disabled, leftover panels are removed on bot connection",
       "sync_all_qq_message_label": "Sync all group messages",
       "sync_all_qq_message_description": "Whether to forward every message group message into the server; when disabled, use the send command to send messages",
       "sync_all_game_message_label": "Sync all game messages",

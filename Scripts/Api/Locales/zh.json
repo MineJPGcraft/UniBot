@@ -117,6 +117,8 @@
       "broadcast_player_description": "是否播报玩家进入或离开服务器",
       "broadcast_update_label": "播报版本更新",
       "broadcast_update_description": "检测到新版本后，机器人连接时向消息群发送一次更新提醒",
+      "sync_command_panels_label": "同步指令面板",
+      "sync_command_panels_description": "是否把 UniBot 指令同步为 QQ 官方机器人的群指令面板；关闭后机器人连接时会删除之前同步遗留的面板",
       "sync_all_qq_message_label": "同步全部群消息",
       "sync_all_qq_message_description": "是否将消息群内的所有消息转发到服务器；关闭后可使用 send 指令发送消息",
       "sync_all_game_message_label": "同步全部游戏消息",
