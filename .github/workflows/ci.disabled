@@ -22,6 +22,27 @@ permissions:
   contents: read
 
 jobs:
+  # 检测本次变更涉及哪些路径，供各 job 按需触发
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            # 仅 Docs/ 下内容变化才触发文档构建
+            docs:
+              - 'Docs/**'
+
   lint-and-test:
     name: Lint & Test (Python)
     runs-on: ubuntu-latest
@@ -56,6 +77,9 @@ jobs:
 
   build-docs:
     name: Build Docs (VuePress)
+    needs: changes
+    # 只在 Docs/ 内容变更时构建文档
+    if: needs.changes.outputs.docs == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
