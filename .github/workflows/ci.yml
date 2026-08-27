@@ -1,0 +1,77 @@
+name: CI
+
+# 持续集成：推送到 main 或提交 PR 时自动运行质量检查
+#   - Python 静态检查（ruff）与编译检查（compileall）
+#   - 全量单元测试（pytest）
+#   - 文档构建（VuePress，Docs/ 走 npm，勿用 bun）
+#
+# 也可通过 Actions 页面的「Run workflow」手动触发验证改动。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# 同一分支的新提交会取消正在运行的旧 CI，节省资源
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    name: Lint & Test (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # 与 Watchdog 保持一致：同时安装 extensions 与 webui 两组 extra，
+      # 避免单 extra 同步移除其他组的包；--frozen 使用提交的 uv.lock，保证可复现。
+      - name: Sync dependencies
+        run: uv sync --frozen --extra extensions --extra webui
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Compile check
+        run: uv run python -m compileall -q Scripts
+
+      - name: Run tests
+        run: uv run pytest -q
+
+  build-docs:
+    name: Build Docs (VuePress)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Docs/package-lock.json
+
+      - name: Install dependencies
+        working-directory: Docs
+        run: npm ci
+
+      - name: Build docs
+        working-directory: Docs
+        run: npm run docs:build
