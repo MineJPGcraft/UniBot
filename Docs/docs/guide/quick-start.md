@@ -8,6 +8,12 @@ description: Minecraft UniBot 快速开始教程：约 10 分钟完成部署—�
 
 欢迎使用 **Minecraft UniBot**。本页将带你走完从零到可正常使用的完整部署流程，整个过程大约 *==10 分钟==*。
 
+::: tip
+下面是从零开始部署对接官方 QQ 机器人的保姆级教程，可供参考：
+
+[https://www.bilibili.com/video/BV1xW8R6gEE8](https://www.bilibili.com/video/BV1xW8R6gEE8)
+:::
+
 ## 术语说明
 
 在开始之前，先明确以下术语的含义，以避免后续产生歧义：
