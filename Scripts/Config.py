@@ -16,6 +16,10 @@ class WebUiConfig(BaseModel):
     enabled: bool = False
 
 
+class TelemetryConfig(BaseModel):
+    enabled: bool = True
+
+
 class Config(BaseModel):
     # NoneBot 内置配置（从 .env / 环境变量读取）
     port: int = 8000
@@ -53,6 +57,7 @@ class Config(BaseModel):
 
     image: ImageConfig = ImageConfig()
     webui: WebUiConfig = WebUiConfig()
+    telemetry: TelemetryConfig = TelemetryConfig()
 
     @model_validator(mode='after')
     def normalize(self):

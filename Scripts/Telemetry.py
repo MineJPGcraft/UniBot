@@ -11,13 +11,13 @@ from Scripts.Logging import logger
 from Scripts.Managers import task_manager
 from Scripts.Network import post_request
 
-REPORTER_SERVER_URL = 'https://bot-api.mcjpg.dev'
+TELEMETRY_SERVER_URL = 'https://bot-api.mcjpg.dev'
 REPORT_INTERVAL_SECONDS = 300
 # 启动后首次上报的延迟（秒），等待统计等管理器完成初始化
 INITIAL_REPORT_DELAY_SECONDS = 5
 
 
-class Reporter:
+class Telemetry:
     """负责机器在线状态、连接机器人数量和消息统计的匿名上报。"""
 
     machine_id: str = ''
@@ -25,9 +25,9 @@ class Reporter:
     def init(self) -> None:
         """初始化机器 ID 并登记首报与心跳定时事务。"""
         self.machine_id = self.generate_machine_id()
-        task_manager.add_once('reporter-first-report', self.report, INITIAL_REPORT_DELAY_SECONDS)
-        task_manager.add('reporter-heartbeat', self.report, REPORT_INTERVAL_SECONDS)
-        logger.info('Reporter identifier initialized.')
+        task_manager.add_once('telemetry-first-report', self.report, INITIAL_REPORT_DELAY_SECONDS)
+        task_manager.add('telemetry-heartbeat', self.report, REPORT_INTERVAL_SECONDS)
+        logger.info('Telemetry identifier initialized.')
 
     def generate_machine_id(self) -> str:
         """基于固定机器标识生成不可逆机器 ID。"""
@@ -107,21 +107,21 @@ class Reporter:
 
     async def report(self) -> bool:
         """上报一次在线状态和运行统计。"""
-        data = await post_request(f'{REPORTER_SERVER_URL}/report.php', self.collect_report())
+        data = await post_request(f'{TELEMETRY_SERVER_URL}/report.php', self.collect_report())
         if data is not None and data.get('code') == 0:
-            logger.success('Reporter data submitted.')
+            logger.success('Telemetry data submitted.')
             return True
         if data is not None:
-            logger.warning(f'Reporter submission rejected: {data.get("message", "unknown reason")}')
+            logger.warning(f'Telemetry submission rejected: {data.get("message", "unknown reason")}')
         return False
 
     async def stop(self) -> bool:
         """停止上报并通知服务器离线。"""
-        data = await post_request(f'{REPORTER_SERVER_URL}/offline.php', {'id': self.machine_id})
+        data = await post_request(f'{TELEMETRY_SERVER_URL}/offline.php', {'id': self.machine_id})
         if data is not None and data.get('code') == 0:
-            logger.success('Reporter marked offline.')
+            logger.success('Telemetry marked offline.')
             return True
         return False
 
 
-reporter = Reporter()
+telemetry = Telemetry()

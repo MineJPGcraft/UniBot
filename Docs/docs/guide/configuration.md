@@ -165,6 +165,17 @@ list_compatible_mode = false
 enabled = true
 ```
 
+### 匿名数据上报（Telemetry）
+
+UniBot 默认启用匿名运行数据上报，定期向官方服务器发送聚合统计（不含消息内容或用户身份信息）。如需关闭，在 `Config.toml` 中添加：
+
+```toml
+[telemetry]
+enabled = false
+```
+
+关闭后 UniBot 功能不受影响，但不会出现在官方统计面板中。
+
 ### 图片渲染
 
 图片渲染的 `[image]` 配置、启用步骤与外观调整，见 [图片渲染](/guide/image-rendering.html)。

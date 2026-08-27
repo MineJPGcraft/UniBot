@@ -75,6 +75,12 @@ qq_bound_max_number = 1
 # 启用后将在机器人端口上挂载 Web API 与 WebSocket，配合 WebUi 前端使用。
 enabled = true
 
+[telemetry]
+# 是否启用匿名运行数据上报（Telemetry）。
+# 启用后定期向官方服务器发送聚合统计（不含消息内容或用户身份）。
+# 关闭后功能不受影响，但不会出现在官方统计面板中。
+enabled = true
+
 [image]
 # 是否启用图片模式。
 # 启用后机器人将会把所发送的消息渲染为图片，但需额外配置，且响应速度会变慢。

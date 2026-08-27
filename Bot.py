@@ -21,9 +21,10 @@ async def startup() -> None:
     from Scripts.Config import config
     from Scripts.Extensions import extension_manager
     from Scripts.Managers import task_manager, version_manager
-    from Scripts.Reporter import reporter
+    from Scripts.Telemetry import telemetry
 
-    reporter.init()
+    if config.telemetry.enabled:
+        telemetry.init()
 
     asyncio.create_task(version_manager.init())
 
@@ -45,9 +46,10 @@ async def shutdown() -> None:
     from Scripts.Config import config
     from Scripts.Extensions import extension_manager
     from Scripts.Managers import task_manager
-    from Scripts.Reporter import reporter
+    from Scripts.Telemetry import telemetry
 
-    await reporter.stop()
+    if config.telemetry.enabled:
+        await telemetry.stop()
     await extension_manager.shutdown()
     await task_manager.stop()
 
