@@ -15,7 +15,7 @@ from Scripts import Globals
 from Scripts.Extensions import Extension, Service
 from Scripts.Logging import logger
 from Scripts.Messages import messages
-from Scripts.Utils import strip_minecraft_color
+from Scripts.Utils import flatten_minecraft_motd, strip_minecraft_color
 
 extension = Extension(id='Servers', name=messages.builtin_extensions.servers, version='1.0.0', types=('api',))
 
@@ -117,7 +117,7 @@ class ServerService(Service):
             'players': int(player_status.online) if player_status else 0,
             'max_players': int(player_status.max) if player_status else 0,
             'version': version_status.name if version_status else status.server_version,
-            'motd': server_ping.description,
+            'motd': flatten_minecraft_motd(server_ping.description),
             'cpu_load': round(max(cpu_info.system_load, cpu_info.process_load), 1),
             'memory_percent': round(jvm_memory.percentage, 1),
             'jvm_memory_used': round(jvm_memory.used / 1024 / 1024, 1),

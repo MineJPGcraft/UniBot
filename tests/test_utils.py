@@ -1,6 +1,6 @@
 """通用工具函数测试。"""
 
-from Scripts.Utils import strip_minecraft_color
+from Scripts.Utils import flatten_minecraft_motd, strip_minecraft_color
 
 
 class TestStripMinecraftColor:
@@ -21,3 +21,36 @@ class TestStripMinecraftColor:
 
     def test_empty_string(self):
         assert strip_minecraft_color('') == ''
+
+class TestFlattenMinecraftMotd:
+    def test_plain_string(self):
+        assert flatten_minecraft_motd('A Minecraft Server') == 'A Minecraft Server'
+
+    def test_json_component_with_extra(self):
+        description = {'text': 'Hello ', 'extra': [{'text': 'World', 'color': 'red'}]}
+        assert flatten_minecraft_motd(description) == 'Hello World'
+
+    def test_nested_component_array(self):
+        description = [
+            {'text': '✦ ', 'color': 'yellow'},
+            {'text': 'NowaDream', 'color': 'red'},
+            ' | ',
+            {'text': '⛏ 纯净生存', 'color': 'green'},
+        ]
+        assert flatten_minecraft_motd(description) == '✦ NowaDream | ⛏ 纯净生存'
+
+    def test_legacy_color_codes_stripped(self):
+        assert flatten_minecraft_motd('§a在线 §7玩家') == '在线 玩家'
+
+    def test_multiline_collapsed_to_single_line(self):
+        description = {'text': '第一行\n第二行', 'extra': [{'text': ' 尾部'}]}
+        assert flatten_minecraft_motd(description) == '第一行 第二行 尾部'
+
+    def test_translate_component(self):
+        description = {'translate': 'multiplayer.player.joined', 'with': [{'text': 'Steve'}]}
+        assert flatten_minecraft_motd(description) == 'multiplayer.player.joinedSteve'
+
+    def test_none_and_empty(self):
+        assert flatten_minecraft_motd(None) == ''
+        assert flatten_minecraft_motd('') == ''
+        assert flatten_minecraft_motd({}) == ''

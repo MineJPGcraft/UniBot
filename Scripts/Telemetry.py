@@ -12,7 +12,7 @@ from Scripts.Managers import task_manager
 from Scripts.Network import post_request
 
 TELEMETRY_SERVER_URL = 'https://bot-api.mcjpg.dev'
-REPORT_INTERVAL_SECONDS = 300
+REPORT_INTERVAL_SECONDS = 10 * 60  # 上报间隔（秒）
 # 启动后首次上报的延迟（秒），等待统计等管理器完成初始化
 INITIAL_REPORT_DELAY_SECONDS = 5
 

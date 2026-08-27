@@ -3,6 +3,7 @@ import re
 from collections.abc import AsyncIterable, Iterable
 from io import BytesIO
 from pathlib import Path
+from typing import Any
 from zipfile import ZipFile, is_zipfile
 
 from nonebot_plugin_alconna import SupportScope as AlconnaSupportScope
@@ -43,6 +44,40 @@ async def turn_message_text(iterator: AsyncIterable[str] | Iterable[str]) -> str
 def strip_minecraft_color(text: str) -> str:
     """去除字符串中的 Minecraft 颜色与格式代码。"""
     return minecraft_color_pattern.sub('', text)
+
+
+def flatten_minecraft_component(component: Any) -> str:
+    """
+    将 Minecraft JSON 文本组件递归展平为纯文本。
+
+        兼容字符串、组件对象（text / translate / extra）与组件数组三种形态。
+    """
+    if component is None:
+        return ''
+    if isinstance(component, str):
+        return component
+    if isinstance(component, (list, tuple)):
+        return ''.join(flatten_minecraft_component(item) for item in component)
+    if not isinstance(component, dict):
+        return str(component)
+    parts: list[str] = []
+    if isinstance(component.get('text'), str):
+        parts.append(component['text'])
+    elif isinstance(component.get('translate'), str):
+        parts.append(component['translate'])
+        with_list = component.get('with')
+        if isinstance(with_list, list):
+            parts.extend(flatten_minecraft_component(item) for item in with_list)
+    extra = component.get('extra')
+    if isinstance(extra, list):
+        parts.extend(flatten_minecraft_component(item) for item in extra)
+    return ''.join(parts)
+
+
+def flatten_minecraft_motd(description: Any) -> str:
+    """将服务器 MOTD（字符串或 JSON 组件）转为去除颜色代码的单行纯文本。"""
+    text = flatten_minecraft_component(description)
+    return ' '.join(strip_minecraft_color(text).split())
 
 
 def check_player(player: str) -> bool:
