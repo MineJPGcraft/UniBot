@@ -87,7 +87,7 @@ async def get_login(user: dict = Depends(require_role('admin'))):
     """轮询当前扫码登录状态；完成时返回 app_id / app_secret 凭据。"""
     state = get_qr_login()
     if state is None:
-        return {'code': 1, 'data': None,         'message': text('qqbot.no_active_login')}
+        return {'code': 1, 'data': None, 'message': text('qqbot.no_active_login')}
     return {'code': 0, 'data': state.to_dict(), 'message': 'ok'}
 
 
@@ -96,5 +96,5 @@ async def cancel_login(user: dict = Depends(require_role('admin'))):
     """取消当前扫码登录并停止后台轮询。"""
     cancelled = cancel_qr_login()
     if not cancelled:
-        return {'code': 1, 'data': None,         'message': text('qqbot.no_active_login')}
+        return {'code': 1, 'data': None, 'message': text('qqbot.no_active_login')}
     return {'code': 0, 'data': None, 'message': 'ok'}

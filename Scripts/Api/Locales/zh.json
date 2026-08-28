@@ -97,6 +97,11 @@
     "start_login_failed": "启动扫码登录失败：{error}",
     "no_active_login": "当前没有进行中的扫码登录"
   },
+  "webui": {
+    "assets_missing_title": "WebUI 资源加载失败",
+    "assets_missing_message": "WebUI assets download 失败，前端页面无法加载。",
+    "assets_missing_retry": "请检查网络连接，重启机器人后将自动重试下载。"
+  },
   "schema": {
     "config": {
       "admin_superusers_label": "管理员视为超级用户",

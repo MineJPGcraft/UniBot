@@ -22,6 +22,7 @@ class TestStripMinecraftColor:
     def test_empty_string(self):
         assert strip_minecraft_color('') == ''
 
+
 class TestFlattenMinecraftMotd:
     def test_plain_string(self):
         assert flatten_minecraft_motd('A Minecraft Server') == 'A Minecraft Server'

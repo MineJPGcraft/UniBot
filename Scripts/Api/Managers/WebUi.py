@@ -3,11 +3,55 @@ import shutil
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
+from Scripts.Api.Locale import get_language, text
 from Scripts.Logging import exception_logger, logger
 from Scripts.Managers import config_manager
 from Scripts.Network import github_download
+
+assets_missing_template = """
+<!DOCTYPE html>
+<html lang="{lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title}</title>
+<style>
+  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+  body {{
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(135deg, #1f2937, #111827);
+    color: #f9fafb;
+  }}
+  .card {{
+    max-width: 480px;
+    margin: 24px;
+    padding: 40px 36px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  }}
+  .icon {{ font-size: 56px; }}
+  h1 {{ margin: 16px 0 12px; font-size: 22px; }}
+  p {{ font-size: 15px; line-height: 1.8; color: #d1d5db; }}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">⚠️</div>
+  <h1>{title}</h1>
+  <p>{message}<br>{retry}</p>
+</div>
+</body>
+</html>
+"""
 
 
 class WebUiManager:
@@ -91,6 +135,7 @@ class WebUiManager:
             return
         if not (self.webui_dir / 'index.html').exists():
             logger.warning('WebUI static assets missing, only API routes are mounted.')
+            self.mount_assets_missing_page()
             return
 
         @self.app.get('/', include_in_schema=False)
@@ -101,13 +146,31 @@ class WebUiManager:
         self.app.frontend('/webui', directory=self.webui_dir, fallback='index.html')
         logger.success('WebUI static files mounted. Visit the root path below to open the WebUi.')
 
+    def mount_assets_missing_page(self):
+        """WebUI 资源缺失时挂载根路径提示页，告知静态资源下载失败。"""
+        if self.app is None:
+            logger.warning('WebUI API routes not mounted yet, cannot serve static files.')
+            return
+
+        @self.app.get('/', include_in_schema=False)
+        async def assets_missing_page():
+            """根路径返回 WebUI 资源加载失败提示页。"""
+            lang = 'zh-CN' if get_language() == 'zh' else 'en'
+            title = text('webui.assets_missing_title')
+            message = text('webui.assets_missing_message')
+            retry = text('webui.assets_missing_retry')
+            return HTMLResponse(assets_missing_template.format(lang=lang, title=title, message=message, retry=retry))
+
     async def init(self):
         """初始化：校验并下载 WebUI 静态资源，随后挂载静态文件。"""
         try:
             await self.ensure_downloaded()
-            self.mount_static()
         except Exception as error:
             exception_logger.error(f'WebUi download failed, WebUi has been disabled automatically: {error}')
+        try:
+            self.mount_static()
+        except Exception as error:
+            exception_logger.error(f'Failed to mount WebUi static files: {error}')
 
 
 webui_manager = WebUiManager()

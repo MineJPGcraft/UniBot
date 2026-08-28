@@ -285,7 +285,8 @@ async def uninstall_adapter(body: UninstallAdapterRequest, current_user: dict = 
     new_driver, removed_drivers = shrink_driver(redundant)
     message = text('config.adapter.uninstall_success')
     if removed_drivers:
-        message += text('config.adapter.uninstall_drivers_removed', drivers=format_driver(removed_drivers), driver=new_driver
+        message += text(
+            'config.adapter.uninstall_drivers_removed', drivers=format_driver(removed_drivers), driver=new_driver
         )
     return {'code': 0, 'data': None, 'message': message}
 

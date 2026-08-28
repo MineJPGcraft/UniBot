@@ -61,11 +61,7 @@ class TestCleanupMatchers:
 @pytest.fixture(autouse=True)
 def _protect_builtin_modules():
     """快照并恢复内置扩展模块身份，防止热重载后其他测试的模块引用不匹配。"""
-    snapshot = {
-        name: sys.modules[name]
-        for name in sys.modules
-        if name.startswith('Scripts.Extensions.Builtin')
-    }
+    snapshot = {name: sys.modules[name] for name in sys.modules if name.startswith('Scripts.Extensions.Builtin')}
     yield
     for name, module in snapshot.items():
         sys.modules[name] = module
@@ -330,12 +326,8 @@ class TestReloadRenderers:
         old_renderer = extension_manager.renderers['test_renderer']
         old_extension = extension_manager.registry['Rend']
 
-        (render_dir / 'Extension.toml').write_text(
-            _RENDERER_TOML.replace('1.0.0', '2.0.0'), encoding='Utf-8'
-        )
-        (render_dir / '__init__.py').write_text(
-            _RENDERER_CODE.replace('1.0.0', '2.0.0'), encoding='Utf-8'
-        )
+        (render_dir / 'Extension.toml').write_text(_RENDERER_TOML.replace('1.0.0', '2.0.0'), encoding='Utf-8')
+        (render_dir / '__init__.py').write_text(_RENDERER_CODE.replace('1.0.0', '2.0.0'), encoding='Utf-8')
         asyncio.run(extension_manager.reload())
 
         new_renderer = extension_manager.renderers['test_renderer']
@@ -413,9 +405,7 @@ class TestReloadNoCodePackages:
         asyncio.run(extension_manager.start())
         assert extension_manager.resources['Res'] == res_dir / 'Resources'
 
-        (res_dir / 'Extension.toml').write_text(
-            _RESOURCES_TOML.replace('1.0.0', '2.0.0'), encoding='Utf-8'
-        )
+        (res_dir / 'Extension.toml').write_text(_RESOURCES_TOML.replace('1.0.0', '2.0.0'), encoding='Utf-8')
         asyncio.run(extension_manager.reload())
 
         assert extension_manager.resources['Res'] == res_dir / 'Resources'

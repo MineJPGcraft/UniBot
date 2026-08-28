@@ -97,6 +97,11 @@
     "start_login_failed": "Failed to start QR code login: {error}",
     "no_active_login": "No QR code login is currently in progress"
   },
+  "webui": {
+    "assets_missing_title": "WebUI resources failed to load",
+    "assets_missing_message": "WebUI assets download failed, the frontend page could not be loaded.",
+    "assets_missing_retry": "Please check your network connection; the bot will retry automatically after restart."
+  },
   "schema": {
     "config": {
       "admin_superusers_label": "Treat admins as superusers",

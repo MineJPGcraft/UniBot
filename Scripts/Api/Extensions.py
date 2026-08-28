@@ -194,18 +194,18 @@ async def patch_extension_config(extension_id: str, request: Request, user: dict
     extension = extension_manager.registry.get(extension_id)
     if extension is not None:
         if not extension.is_bound:
-            return {'code': 1, 'data': None,             'message': text('extensions.not_loaded')}
+            return {'code': 1, 'data': None, 'message': text('extensions.not_loaded')}
         try:
             extension.update_config(patch_data)
         except Exception as error:
-            return {'code': 1, 'data': None,             'message': text('extensions.config_invalid', error=error)}
+            return {'code': 1, 'data': None, 'message': text('extensions.config_invalid', error=error)}
         return {'code': 0, 'data': None, 'message': 'ok'}
     registration = extension_manager.renderer_manager.templates.get(extension_id)
     if registration is not None:
         try:
             registration.config_store.update(patch_data)
         except Exception as error:
-            return {'code': 1, 'data': None,             'message': text('extensions.config_invalid', error=error)}
+            return {'code': 1, 'data': None, 'message': text('extensions.config_invalid', error=error)}
         return {'code': 0, 'data': None, 'message': 'ok'}
     raise HTTPException(status_code=404, detail=text('extensions.not_found', extension_id=extension_id))
 
@@ -304,7 +304,7 @@ async def switch_renderer(body: NameSwitchRequest, user: dict = Depends(require_
         if ExtensionType.renderer in ext.metadata.types
     }
     if name not in installed:
-        return {'code': 1, 'data': None,         'message': text('extensions.renderer_not_found', name=name)}
+        return {'code': 1, 'data': None, 'message': text('extensions.renderer_not_found', name=name)}
     _patch_image_config('renderer', name)
     return {'code': 0, 'data': None, 'message': 'ok'}
 
@@ -324,7 +324,7 @@ async def switch_template(body: NameSwitchRequest, user: dict = Depends(require_
     """切换模板包并立即使模板缓存失效。"""
     template_name = body.name
     if template_name not in extension_manager.templates:
-        return {'code': 1, 'data': None,         'message': text('extensions.template_not_found', template_name=template_name)}
+        return {'code': 1, 'data': None, 'message': text('extensions.template_not_found', template_name=template_name)}
     _patch_image_config('template', template_name)
     # 标准用法：直接使全部模板环境失效
     extension_manager.renderer_manager.invalidate_all()
