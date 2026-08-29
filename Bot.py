@@ -4,6 +4,7 @@ import signal
 from pathlib import Path
 
 import nonebot
+from pydantic import ValidationError
 
 from Scripts import Process
 from Scripts.Logging import configure_handlers, configure_logging, logger
@@ -72,6 +73,39 @@ async def notify_update_on_connect() -> None:
     await sync_panels_for_all_bots()
 
 
+def fix_config_type(driver, error: ValidationError) -> list[str]:
+    """
+    把被 NoneBot 按 JSON 误解析为数字/布尔的适配器字符串配置修正回字符串。
+
+    .env 中 MINECRAFT_ACCESS_TOKEN="123456" 这类值：dotenv 解析时剥掉外层引号，
+    NoneBot 对额外配置项会再做一次 JSON 解析，纯数字/true/false 会变成 int/bool，
+    导致适配器声明的 str 字段校验失败。这里按校验错误定位顶层字段，优先使用
+    config_manager 保留的原始字符串修正 driver.config，返回修正的字段名列表。
+    """
+    driver_config = getattr(driver, 'config', None)
+    if driver_config is None:
+        return []
+    fixed_fields: list[str] = []
+    for item in error.errors():
+        # 仅处理顶层额外字段的字符串类型错误，嵌套结构（如 QQ_BOTS 列表项）不自动修正
+        if item.get('type') != 'string_type' or len(item.get('loc', [])) != 1:
+            continue
+        field_name = str(item['loc'][0])
+        if field_name in fixed_fields:
+            continue
+        print(item)
+        value = getattr(driver_config, field_name, None)
+        if value is None:
+            fixed_value = ''
+        elif isinstance(value, bool):
+            fixed_value = str(value).lower()
+        else:
+            fixed_value = str(value)
+        setattr(driver_config, field_name, fixed_value)
+        fixed_fields.append(field_name)
+    return fixed_fields
+
+
 def register_adapters(driver, adapters: list[dict]) -> None:
     """注册已配置的 NoneBot 适配器，单个适配器加载失败不影响其他适配器。"""
     for adapter in adapters:
@@ -84,6 +118,19 @@ def register_adapters(driver, adapters: list[dict]) -> None:
                 continue
             logger.info(f'Registering <cyan>{adapter_class}</cyan> adapter.')
             driver.register_adapter(adapter_class)
+        except ValidationError as error:
+            # 纯数字/布尔配置被 NoneBot 解析为非字符串时，自动转为字符串并重试一次
+            if fixed_fields := fix_config_type(driver, error):
+                logger.warning(
+                    f'Adapter {module_name} config {fixed_fields} was parsed as non-string, '
+                    'converted to string automatically.'
+                )
+                try:
+                    driver.register_adapter(adapter_class)
+                    continue
+                except Exception as retry_error:
+                    error = retry_error
+            logger.warning(f'Failed to load adapter {module_name}, skipped. Reason: {error}')
         except Exception as error:
             logger.warning(f'Failed to load adapter {module_name}, skipped. Reason: {error}')
 
