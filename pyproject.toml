@@ -1,6 +1,6 @@
 [project]
 name = "Minecraft_UniBot"
-version = "v1.0.3"
+version = "v1.0.4"
 description = "一款与 Minecraft 互通的 Nonebot2 机器人。"
 readme = "README.md"
 requires-python = ">=3.11, <4.0"
@@ -53,7 +53,7 @@ index-url = "https://mirrors.huaweicloud.com/repository/pypi/simple"
 
 [tool.unibot]
 # 此版本对应的 WebUi 版本
-webui_version = 'v1.0.3'
+webui_version = 'v1.0.4'
 
 [tool.nonebot]
 plugins = [
