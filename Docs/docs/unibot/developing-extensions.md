@@ -838,10 +838,6 @@ enabled = true
   <AiStudioDownload />
 </ClientOnly>
 
-<script setup>
-import AiStudioDownload from '../.vuepress/components/AiStudioDownload.vue'
-</script>
-
 #### 核心功能
 
 - **自然语言开发**：在对话中输入一句话描述需求，例如「做一个天气查询指令，支持指定城市，并把结果渲染成图片」。AiStudio 会先理解需求、规划扩展结构，再编写出完整可运行的代码，无需手写任何代码。
