@@ -18,11 +18,13 @@ import psutil
 
 from Scripts.Api.Locale import text
 from Scripts.Logging import exception_logger, logger
-from Scripts.Network import download, request
+from Scripts.Network import github_download, request
 
-# Studio 版本清单与下载地址（私有仓库经 bot-api 分发）
-STUDIO_VERSION_URL = 'https://bot-api.mcjpg.dev/files/version.json'
-STUDIO_DOWNLOAD_BASE = 'https://bot-api.mcjpg.dev/files/'
+# Studio 发布仓库与最新 release 查询地址
+STUDIO_REPO = 'Minecraft-UniBot/AiStudio'
+STUDIO_LATEST_RELEASE_API = f'https://api.github.com/repos/{STUDIO_REPO}/releases/latest'
+# release 资产下载地址模板
+STUDIO_DOWNLOAD_URL_TEMPLATE = f'https://github.com/{STUDIO_REPO}/releases/download/{{release_tag}}/{{asset_name}}'
 
 # Studio 数据目录名（相对 UniBot 根目录）
 STUDIO_DIR_NAME = '.studio'
@@ -44,7 +46,7 @@ UNIBOT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def _platform_asset_name() -> str:
-    """根据当前平台返回 version.json 中的资源文件名。"""
+    """根据当前平台返回 AiStudio release 中的资源文件名。"""
     system = sys.platform
     machine = platform.machine().lower()
     if system == 'darwin':
@@ -149,15 +151,25 @@ class StudioManager:
         if self.is_downloaded():
             return True, text('studio.downloaded')
         try:
-            release = await request(STUDIO_VERSION_URL)
+            release = await request(STUDIO_LATEST_RELEASE_API)
             if not isinstance(release, dict):
                 return False, text('studio.fetch_version_failed')
-            files = release.get('files', {})
-            expected_sha256 = files.get(self.asset_name, '')
+            release_tag = release.get('tag_name', '')
+            if not release_tag:
+                return False, text('studio.fetch_version_failed')
+            # 在当前平台资产中查找匹配项，取其 sha256 digest 作为校验值
+            expected_sha256 = ''
+            for asset in release.get('assets', []):
+                if asset.get('name') != self.asset_name:
+                    continue
+                digest = asset.get('digest', '')
+                if digest.startswith('sha256:'):
+                    expected_sha256 = digest.removeprefix('sha256:')
+                break
             if not expected_sha256:
                 return False, text('studio.asset_missing', asset_name=self.asset_name)
-            url = STUDIO_DOWNLOAD_BASE + self.asset_name
-            response = await download(url)
+            url = STUDIO_DOWNLOAD_URL_TEMPLATE.format(release_tag=release_tag, asset_name=self.asset_name)
+            response = await github_download(url)
             if response is None:
                 return False, text('studio.download_failed_with_url', url=url)
             archive_data = response.getvalue()
@@ -168,7 +180,6 @@ class StudioManager:
             executable = self.executable_path()
             executable.write_bytes(archive_data)
             executable.chmod(0o755)
-            release_tag = release.get('release_tag', '')
             (self.studio_dir / VERSION_FILE_NAME).write_text(release_tag, encoding='Utf-8')
             logger.success(f'Extension Studio downloaded ({release_tag}).')
             return True, text('studio.download_completed', release_tag=release_tag)
