@@ -1,5 +1,5 @@
 import tomlkit
-from nonebot import get_plugin_config
+from nonebot import get_driver
 from pydantic import BaseModel, model_validator
 
 from Scripts.Constants import CONFIG_TOML_PATH
@@ -70,8 +70,15 @@ class Config(BaseModel):
 
 
 def _merge_toml(content: str) -> dict:
-    """解析 Config.toml 文本内容，并合并到模型默认值上。"""
-    merged = get_plugin_config(Config).model_dump()
+    """解析 Config.toml 文本内容，并合并到模型默认值上。
+
+    优先级：Config.toml > .env / 环境变量 > 模型默认值。
+    基础层取自 NoneBot 全局配置（get_driver().config），它已包含 .env / 环境变量
+    注入的框架字段（port / superusers / command_start 等），但不会对自定义字段
+    （如 language）做校验，因此不会因系统环境变量（如 Debian 的 LANGUAGE）污染
+    自定义字段而在合并前崩溃。
+    """
+    merged = get_driver().config.model_dump()
     merged.update(tomlkit.parse(content))
     return merged
 
