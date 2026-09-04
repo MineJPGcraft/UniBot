@@ -1,6 +1,6 @@
 [project]
 name = "Minecraft_UniBot"
-version = "v1.0.4"
+version = "v1.0.5"
 description = "一款与 Minecraft 互通的 Nonebot2 机器人。"
 readme = "README.md"
 requires-python = ">=3.11, <4.0"
