@@ -8,7 +8,7 @@ import uuid
 from pathlib import Path
 
 from Scripts.Logging import logger
-from Scripts.Managers import task_manager
+from Scripts.Managers import config_manager, statistics_manager, task_manager
 from Scripts.Network import post_request
 
 TELEMETRY_SERVER_URL = 'https://bot-api.mcjpg.dev'
@@ -92,11 +92,10 @@ class Telemetry:
         """收集不含机器身份和消息内容的运行统计。"""
         from nonebot import get_bots
 
-        from Scripts.Managers import statistics_manager
-
         summary = statistics_manager.summary()
         return {
             'id': self.machine_id,
+            'version': config_manager.version or '未知',
             'bot_count': len(get_bots()),
             'group_count': summary['tracked_groups'],
             'today_sent': summary['today_sent'],
