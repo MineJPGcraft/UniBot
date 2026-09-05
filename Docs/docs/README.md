@@ -102,3 +102,4 @@ import MachineStats from './.vuepress/components/MachineStats.vue'
 - [扩展系统](/unibot/extension-system.html) — 扩展类型、渲染体系与可视化管理
 - [架构设计](/unibot/architecture.html) — 深入了解项目架构
 - [MC 适配器](/adapter/) — 鹊桥协议与服务器端接入方式
+- [鸣谢](/acknowledgements/) — 感谢每一位贡献者与赞助者

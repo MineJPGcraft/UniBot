@@ -78,8 +78,9 @@ export default defineUserConfig({
         navbar: [
           { text: '首页', link: '/' },
           { text: '指南', link: '/guide/' },
-          { text: 'UniBot', link: '/unibot/' },
+          { text: '核心', link: '/unibot/' },
           { text: '适配器', link: '/adapter/' },
+          { text: '鸣谢', link: '/acknowledgements/' },
         ],
 
         sidebar: {
@@ -123,6 +124,16 @@ export default defineUserConfig({
               ],
             },
           ],
+          '/acknowledgements/': [
+            {
+              text: '鸣谢',
+              collapsed: false,
+              items: [
+                '/acknowledgements/',
+                '/acknowledgements/sponsors.md',
+              ],
+            },
+          ],
         },
       },
 
@@ -134,6 +145,7 @@ export default defineUserConfig({
           { text: 'Guide', link: '/en/guide/' },
           { text: 'UniBot', link: '/en/unibot/' },
           { text: 'Adapters', link: '/en/adapter/' },
+          { text: 'Acknowledgements', link: '/en/acknowledgements/' },
         ],
 
         sidebar: {
@@ -174,6 +186,16 @@ export default defineUserConfig({
                 '/en/adapter/',
                 '/en/adapter/connect-chat-platforms.md',
                 '/en/adapter/usage.md',
+              ],
+            },
+          ],
+          '/acknowledgements/': [
+            {
+              text: 'Acknowledgements',
+              collapsed: false,
+              items: [
+                '/en/acknowledgements/',
+                '/en/acknowledgements/sponsors.md',
               ],
             },
           ],

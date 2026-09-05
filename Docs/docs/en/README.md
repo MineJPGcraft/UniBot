@@ -109,3 +109,4 @@ import MachineStats from '../.vuepress/components/MachineStats.vue'
 - [Extension System](/en/unibot/extension-system.html) — extension types, rendering system and visual management
 - [Architecture](/en/unibot/architecture.html) — dive into the project architecture
 - [MC Adapter](/en/adapter/) — QueQiao protocol and server-side integration
+- [Acknowledgements](/en/acknowledgements/) — thanks to every contributor and sponsor
