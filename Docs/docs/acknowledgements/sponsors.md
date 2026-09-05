@@ -13,6 +13,9 @@ description: Minecraft UniBot 赞助记录模板：记录每一位赞助者的�
 
 - **爱发电**：<https://afdian.com/a/lonelysail>
 - **QQ 群**：加入 [QQ 群](https://qm.qq.com/q/qyq2XH6qkw) 联系管理员
+- **微信赞赏**：扫描下方赞赏码，感谢你的支持！
+
+<img src="/images/donate.jpg" alt="微信赞赏码" style="width:200px;border-radius:8px;" />
 
 ## 赞助者
 
