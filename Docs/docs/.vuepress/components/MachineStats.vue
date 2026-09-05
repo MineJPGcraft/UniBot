@@ -185,6 +185,7 @@ onBeforeUnmount(() => {
 
 .stat-value {
   margin-top: 0.25rem;
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 1.75rem;
   font-weight: 700;
   color: var(--vp-c-text-1, #1a1a1a);
