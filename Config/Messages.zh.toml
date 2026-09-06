@@ -27,6 +27,7 @@ server = "服务器列表"
 bot = "机器人管理"
 servers = "Minecraft 服务器服务"
 players = "玩家账号服务"
+task = "定时任务服务"
 
 # ===== 内置插件元数据与回复 =====
 [plugins.events]

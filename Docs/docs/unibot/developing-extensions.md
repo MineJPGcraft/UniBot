@@ -389,13 +389,14 @@ if service is not None:
 
 ## 使用内置 API 服务
 
-UniBot 随框架内置两个 `api` 类型扩展，开箱即用，通过 `extension.api.get(...)` 获取：
+UniBot 随框架内置三个 `api` 类型扩展，开箱即用，通过 `extension.api.get(...)` 获取：
 
 ::: table title="内置 API 服务" copy="all"
 | 扩展 | 服务类 | 注册名 | 说明 |
 |------|--------|--------|------|
 | `Players` | `PlayerService` | `player` | 玩家绑定数据管理 |
 | `Servers` | `ServerService` | `server` | Minecraft 服务器交互 |
+| `Task` | `TaskService` | `task` | 定时任务管理 |
 :::
 
 获取方式支持按**服务类**或**注册名**两种写法，按类获取会额外校验实际类型：
@@ -403,9 +404,11 @@ UniBot 随框架内置两个 `api` 类型扩展，开箱即用，通过 `extensi
 ```python
 from Scripts.Extensions.Builtin.Services.Players import PlayerService
 from Scripts.Extensions.Builtin.Services.Servers import ServerService
+from Scripts.Extensions.Builtin.Services.Task import TaskService
 
 player_service = extension.api.get(PlayerService)  # 按类获取，类型不匹配抛 TypeError
 server_service = extension.api.get('server')  # 按注册名获取
+task_service = extension.api.get(TaskService)
 if player_service is None:
     # 服务未注册或所在扩展被禁用，使用前应判空
     ...
@@ -440,6 +443,24 @@ if player_service is None:
 | `get_status(server) -> dict` | 获取单台服务器状态（在线、版本、人数、CPU、内存等） |
 | `get_player_list(server) -> tuple[list[str], int]` | 获取单台服务器玩家列表与人数上限 |
 | `broadcast(message, except_server='') -> dict[str, None]` | 向所有服务器广播消息，可排除指定服务器 |
+:::
+
+### TaskService — 定时任务服务
+
+扩展 id `Task`，封装全局 `TaskManager` 的定时任务调度能力，代理 `Scripts.Managers.task_manager` 单例，不复制调度状态。
+
+::: table title="TaskService 方法" copy="all"
+| 方法 | 说明 |
+|------|------|
+| `started`（属性） | 任务管理器是否已启动调度 |
+| `task_names`（属性） | 全部已注册任务的名称列表 |
+| `add(name, runner, interval, *, immediate=False) -> bool` | 注册按固定间隔循环执行的任务，`immediate` 为 `True` 时先执行再等待 |
+| `add_once(name, runner, delay) -> bool` | 注册延迟指定秒数后仅执行一次的事务，执行完毕自动注销 |
+| `remove(name) -> bool` | 注销并停止指定任务，未注册返回 `False` |
+| `get(name) -> ScheduledTask \| None` | 按名称获取任务对象 |
+| `status() -> dict` | 全部任务的配置与运行状态快照，供调试与 WebUI 展示 |
+| `start_task(name) -> bool` | 启动单个已注册任务的调度，已在运行时跳过 |
+| `stop_task(name) -> bool` | 停止单个任务的调度，不影响其注册信息 |
 :::
 
 ### 示例：广播扩展

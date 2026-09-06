@@ -2,3 +2,4 @@
 
 from .Players import PlayerService as PlayerService
 from .Servers import ServerService as ServerService
+from .Task import TaskService as TaskService

@@ -385,13 +385,14 @@ Load-order guarantees:
 
 ## Using the Built-In API Services
 
-UniBot ships two `api` type extensions with the framework, ready to use out of the box, obtained via `extension.api.get(...)`:
+UniBot ships three `api` type extensions with the framework, ready to use out of the box, obtained via `extension.api.get(...)`:
 
 ::: table title="Built-In API Services" copy="all"
 | Extension | Service Class | Registered Name | Description |
 |------|--------|--------|------|
 | `Players` | `PlayerService` | `player` | Player binding data management |
 | `Servers` | `ServerService` | `server` | Minecraft server interaction |
+| `Task` | `TaskService` | `task` | Scheduled task management |
 :::
 
 Lookup supports both **service class** and **registered name** forms; looking up by class additionally validates the actual type:
@@ -399,9 +400,11 @@ Lookup supports both **service class** and **registered name** forms; looking up
 ```python
 from Scripts.Extensions.Builtin.Services.Players import PlayerService
 from Scripts.Extensions.Builtin.Services.Servers import ServerService
+from Scripts.Extensions.Builtin.Services.Task import TaskService
 
 player_service = extension.api.get(PlayerService)  # by class; raises TypeError on type mismatch
 server_service = extension.api.get('server')  # by registered name
+task_service = extension.api.get(TaskService)
 if player_service is None:
     # Service not registered or its extension is disabled; check for None before use
     ...
@@ -436,6 +439,24 @@ Extension id `Servers`; encapsulates server query, command execution, and messag
 | `get_status(server) -> dict` | Get a single server's status (online, version, player count, CPU, memory, etc.) |
 | `get_player_list(server) -> tuple[list[str], int]` | Get a single server's player list and player cap |
 | `broadcast(message, except_server='') -> dict[str, None]` | Broadcast a message to all servers, optionally excluding a specific server |
+:::
+
+### TaskService — Scheduled Task Service
+
+Extension id `Task`; wraps the global `TaskManager` scheduling capability, proxying the `Scripts.Managers.task_manager` singleton without duplicating scheduling state.
+
+::: table title="TaskService Methods" copy="all"
+| Method | Description |
+|------|------|
+| `started` (property) | Whether the task manager has started scheduling |
+| `task_names` (property) | Names of all registered tasks |
+| `add(name, runner, interval, *, immediate=False) -> bool` | Register a task that runs at a fixed interval; with `immediate=True` it runs once first, then waits |
+| `add_once(name, runner, delay) -> bool` | Register a one-shot task that runs once after the given delay and auto-unregisters |
+| `remove(name) -> bool` | Unregister and stop a task; returns `False` if not registered |
+| `get(name) -> ScheduledTask \| None` | Get a task object by name |
+| `status() -> dict` | Snapshot of all tasks' config and running state, for debugging and WebUI display |
+| `start_task(name) -> bool` | Start scheduling a single registered task; skips if already running |
+| `stop_task(name) -> bool` | Stop scheduling a single task without affecting its registration |
 :::
 
 ### Example: Broadcast Extension

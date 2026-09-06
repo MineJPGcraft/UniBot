@@ -28,6 +28,7 @@ server = "Server List"
 bot = "Bot Management"
 servers = "Minecraft Server Service"
 players = "Player Account Service"
+task = "Scheduled Task Service"
 
 # ===== Built-in plugin metadata and replies =====
 [plugins.events]
