@@ -169,11 +169,12 @@ POST /api/extensions/{id}/disable
 ### 扩展配置
 
 ```
-GET  /api/extensions/{id}/config
+GET   /api/extensions/config-items     # 全部带配置项的扩展（含无代码模板包）
+GET   /api/extensions/{id}/config
 PATCH /api/extensions/{id}/config
 ```
 
-读取与更新扩展配置。配置更新会经过扩展模型校验，失败时返回字段级错误且不修改原配置。
+读取与更新扩展配置。`config-items` 供配置中心一次性拉取全部可编辑扩展的 schema 与当前值。配置更新会经过扩展模型校验，失败时返回字段级错误且不修改原配置；键名含 `key` / `secret` / `token` 的字段以 `<configured>` 占位返回，回传该占位符表示不修改原值。
 
 ### 渲染引擎管理
 

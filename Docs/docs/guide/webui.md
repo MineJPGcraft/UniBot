@@ -21,7 +21,7 @@ description: UniBot 内置 WebUI 管理面板使用指南：可视化配置环�
 | **::fluent-color:puzzle-piece-24:: 适配器** | 查看 / 安装 / 启用 / 配置各平台通信适配器（Minecraft、OneBot V11 等） |
 | **::fluent-color:apps-list-24:: 插件管理** | 查看已加载的 NoneBot2 插件列表及启停状态 |
 | **::fluent-color:toolbox-24:: 扩展管理** | 管理 UniBot 扩展：启停、配置、切换渲染引擎与模板、访问扩展市场 |
-| **::fluent-color:settings-24:: 配置中心** | 可视化编辑 `Config.toml` 与 `.env`，Schema 校验、分组展示、支持源码模式 |
+| **::fluent-color:settings-24:: 配置中心** | 可视化编辑 `Config.toml`、`.env`、`Messages.toml` 与扩展配置，Schema 校验、分组展示、支持源码模式 |
 | **::fluent-color:document-24:: 日志查看** | 实时滚动查看运行日志，支持文件切换与分级筛选 |
 | **::fluent-color:person-24:: 用户管理** | 管理 WebUI 登录账户、角色与权限 |
 | **::fluent-color:person-key-24:: 个人设置** | 查看当前账户信息、修改密码 |
@@ -164,6 +164,7 @@ UniBot 扩展系统的管理入口（需管理员权限）：
 - **`Config.toml`**：分组展示配置项，支持 Schema 校验，修改后保存并（按需）重启。
 - **`.env`**：分组展示环境变量（含机器人列表字段如 `QQ_BOTS`、`TELEGRAM_BOTS` 等的**机器人卡片**编辑），保存后需**重启机器人生效**。
 - **`Messages.toml`**：消息模板文本编辑。
+- **扩展配置**：集中编辑全部声明了配置项的扩展（含无代码模板包），保存后立即生效；被禁用或阻塞的扩展只读。
 - 也提供**源码模式**，直接编辑 TOML / env 源码。
 
 ::: warning

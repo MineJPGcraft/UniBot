@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from Scripts.Api.Locale import text
 from Scripts.Api.Managers import studio_manager
 from Scripts.Config import config, reload_config
-from Scripts.Extensions import EXTENSIONS_DIR, ExtensionType, extension_manager, market_manager
+from Scripts.Extensions import EXTENSIONS_DIR, ExtensionState, ExtensionType, extension_manager, market_manager
 from Scripts.Logging import exception_logger
 from Scripts.Managers import config_manager
 
@@ -24,6 +24,9 @@ IMAGE_MODE_REQUIRED_EXTENSIONS = [
     ('Default', '默认模板 & 资源'),
 ]
 
+# 密钥字段脱敏占位符：前端原样回传时视为“未修改”，服务端还原为当前真实值
+MASKED_PLACEHOLDER = '<configured>'
+
 
 def _extension_downloaded(extension_id: str) -> bool:
     """判断扩展是否已下载（扩展目录存在且含 Extension.toml 清单）。"""
@@ -39,8 +42,19 @@ def _mask_config(extension) -> dict:
     for key, value in raw.items():
         masked[key] = value
         if 'key' in key.lower() or 'secret' in key.lower() or 'token' in key.lower():
-            masked[key] = '<configured>' if value else ''
+            masked[key] = MASKED_PLACEHOLDER if value else ''
     return masked
+
+
+def _restore_masked(current: dict, patch_data: dict) -> dict:
+    """把前端回传的脱敏占位符还原为当前真实值，避免仅修改其它字段时覆盖密钥。"""
+    restored = {}
+    for key, value in patch_data.items():
+        if value == MASKED_PLACEHOLDER and key in current:
+            restored[key] = current[key]
+            continue
+        restored[key] = value
+    return restored
 
 
 def _ensure_extension_exists(extension_id: str) -> None:
@@ -196,14 +210,15 @@ async def patch_extension_config(extension_id: str, request: Request, user: dict
         if not extension.is_bound:
             return {'code': 1, 'data': None, 'message': text('extensions.not_loaded')}
         try:
-            extension.update_config(patch_data)
+            extension.update_config(_restore_masked(extension.config.value.model_dump(), patch_data))
         except Exception as error:
             return {'code': 1, 'data': None, 'message': text('extensions.config_invalid', error=error)}
         return {'code': 0, 'data': None, 'message': 'ok'}
     registration = extension_manager.renderer_manager.templates.get(extension_id)
     if registration is not None:
         try:
-            registration.config_store.update(patch_data)
+            current = registration.config_store.value.model_dump(mode='json')
+            registration.config_store.update(_restore_masked(current, patch_data))
         except Exception as error:
             return {'code': 1, 'data': None, 'message': text('extensions.config_invalid', error=error)}
         return {'code': 0, 'data': None, 'message': 'ok'}
@@ -239,6 +254,52 @@ async def get_renderers(current_user: dict = Depends(get_current_user)):
             }
         )
     items.sort(key=lambda item: (not item['available'], item['name']))
+    return {'code': 0, 'data': items, 'message': 'ok'}
+
+
+@router.get('/config-items', summary='全部扩展配置列表')
+async def get_config_items(current_user: dict = Depends(get_current_user)):
+    """返回全部可编辑扩展（代码扩展 + 无代码模板包）的配置 schema 与当前值，供配置中心统一编辑。"""
+    items = []
+    for extension in extension_manager.registry.values():
+        # 未绑定扩展（禁用 / 阻塞的展示实例）无配置模型，无配置项可编辑
+        if not extension.is_bound:
+            continue
+        schema = extension.get_config_schema()
+        if not (schema or {}).get('properties'):
+            continue
+        metadata = extension.metadata
+        items.append(
+            {
+                'id': metadata.id,
+                'name': metadata.name,
+                'description': metadata.description,
+                'types': [entry.value for entry in metadata.types],
+                'state': extension.state.value,
+                'schema': schema,
+                'values': _mask_config(extension),
+            }
+        )
+    # 纯无代码模板包（混合扩展已在 registry 中展示，跳过避免同一 id 重复）
+    for extension_id, registration in extension_manager.templates.items():
+        if extension_id in extension_manager.registry:
+            continue
+        schema = registration.config_model.model_json_schema()
+        if not (schema or {}).get('properties'):
+            continue
+        no_code = extension_manager.no_code_info.get(extension_id, {})
+        items.append(
+            {
+                'id': extension_id,
+                'name': no_code.get('name') or extension_id,
+                'description': no_code.get('description') or '',
+                'types': no_code.get('types') or [ExtensionType.template.value],
+                'state': no_code.get('state') or ExtensionState.enabled.value,
+                'schema': schema,
+                'values': registration.config_store.value.model_dump(mode='json'),
+            }
+        )
+    items.sort(key=lambda item: item['id'])
     return {'code': 0, 'data': items, 'message': 'ok'}
 
 

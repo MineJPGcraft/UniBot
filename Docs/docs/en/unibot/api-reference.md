@@ -148,11 +148,12 @@ Persists the enable/disable intent, taking effect after restart. The enable API 
 ### Extension Config
 
 ```
-GET  /api/extensions/{id}/config
+GET   /api/extensions/config-items     # every extension declaring config options (incl. no-code template packs)
+GET   /api/extensions/{id}/config
 PATCH /api/extensions/{id}/config
 ```
 
-Read and update the extension config. Config updates are validated against the extension model; on failure, field-level errors are returned and the original config is left unchanged.
+Read and update the extension config. `config-items` lets the Config Center fetch the schema and current values of all editable extensions at once. Config updates are validated against the extension model; on failure, field-level errors are returned and the original config is left unchanged. Secret fields are returned as the `<configured>` placeholder; sending that placeholder back keeps the current value unchanged.
 
 ### Rendering Engine Management
 

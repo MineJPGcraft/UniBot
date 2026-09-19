@@ -21,7 +21,7 @@ It provides **visual configuration, real-time monitoring, server / player manage
 | **::fluent-color:puzzle-piece-24:: Adapters** | View / install / enable / configure communication adapters for each platform (Minecraft, OneBot V11, etc.) |
 | **::fluent-color:apps-list-24:: Plugin Management** | View the list of loaded NoneBot2 plugins and their enable/disable status |
 | **::fluent-color:toolbox-24:: Extension Management** | Manage UniBot extensions: enable/disable, configure, switch rendering engines and templates, and access the extension marketplace |
-| **::fluent-color:settings-24:: Config Center** | Visually edit `Config.toml` and `.env`, with Schema validation, grouped display, and source mode support |
+| **::fluent-color:settings-24:: Config Center** | Visually edit `Config.toml`, `.env`, `Messages.toml` and extension settings, with Schema validation, grouped display, and source mode support |
 | **::fluent-color:document-24:: Log Viewer** | Real-time scrolling view of runtime logs, with file switching and level filtering |
 | **::fluent-color:person-24:: User Management** | Manage WebUI login accounts, roles, and permissions |
 | **::fluent-color:person-key-24:: Personal Settings** | View the current account info, change your password |
@@ -163,6 +163,7 @@ See the "WebUI Management" section in [Extension System](/en/unibot/extension-sy
 - **`Config.toml`**: config items displayed in groups, with Schema validation; save after editing and (as needed) restart.
 - **`.env`**: environment variables displayed in groups (including **bot card** editing for bot list fields such as `QQ_BOTS`, `TELEGRAM_BOTS`, etc.); saving changes requires **restarting the bot to take effect**.
 - **`Messages.toml`**: edit message template text.
+- **Extension settings**: edit every extension that declares configuration options (including no-code template packs) in one place; changes take effect immediately, and disabled or blocked extensions are read-only.
 - **Source mode** is also available, for editing TOML / env sources directly.
 
 ::: warning
