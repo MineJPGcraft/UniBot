@@ -5,4 +5,5 @@ from .Config import config_manager as config_manager
 from .Plugin import plugin_manager as plugin_manager
 from .Statistics import statistics_manager as statistics_manager
 from .Task import task_manager as task_manager
+from .TaskCenter import task_center as task_center
 from .Version import version_manager as version_manager

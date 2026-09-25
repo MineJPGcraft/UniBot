@@ -104,7 +104,7 @@ UniBot/
 UniBot has two entry points:
 
 - **`Bot.py`**: runs the bot process directly.
-- **`Watchdog.py`**: a watchdog process that monitors abnormal bot exits and restarts automatically, while also handling WebUI restart requests and dependency sync.
+- **`Watchdog.py`**: a watchdog process that monitors abnormal bot exits and restarts automatically, and handles WebUI restart requests (dependency sync runs inside the bot process via the Task Center).
 
 ==We recommend launching with `Watchdog.py`==:
 

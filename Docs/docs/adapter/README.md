@@ -30,21 +30,21 @@ UniBot 基于 **NoneBot2** 框架，通过安装不同的 **NoneBot 适配器** 
 
 ::: steps
 
-1. **写入依赖**
+1. **登记适配器**
 
-   把适配器包（如 `nonebot-adapter-onebot`）写入 `pyproject.toml` 的 `dependencies`。
+   把适配器登记到 `pyproject.toml` 的 `tool.nonebot.adapters`。
 
 2. **追加驱动**
 
    在 `.env` 的 `DRIVER` 中追加适配器所需的驱动（如 `~httpx`、`~websockets`）。
 
-3. **同步底层依赖**
+3. **安装依赖**
 
-   **自动把驱动所需底层依赖包**（如 `websockets`）同步写入 `pyproject.toml` 的 `dependencies`，确保重启后驱动可正常工作。
+   由任务中心用 `uv add` 安装适配器包与驱动所需的底层依赖（如 `websockets`），确保重启后驱动可正常工作。
 
 :::
 
-以上依赖声明变化会在重启时由 Watchdog 通过 `uv sync` 自动落地安装。卸载适配器时，仅移除注册与 `DRIVER` 中多余的驱动，==不删除依赖声明==，避免误删被其他依赖引用的包。
+整个过程作为后台任务执行（安装进度可在右上角任务中心查看），==依赖写入只经 `uv add` / `uv remove`，无需手工编辑 `pyproject.toml`==；完成后会询问是否立即重启。卸载适配器时，仅移除注册与 `DRIVER` 中多余的驱动，==不删除依赖声明==，避免误删被其他依赖引用的包。
 
 ## 快速导航
 

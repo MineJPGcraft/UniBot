@@ -2,7 +2,10 @@
 NoneBot DRIVER 字段的解析与维护工具。
 
 负责在安装/卸载适配器时，自动维护 `.env` 中 DRIVER 的额外驱动项。
-所有写操作通过 `config_manager` 落盘。
+
+本模块**只计算**驱动对应的底层依赖包（`driver_packages`）并维护 `.env`，
+不直接改写 `pyproject.toml`：依赖的新增/移除由调用方提交任务中心，
+经 `uv add` / `uv remove` 完成（见 `Scripts/Api/Config/Router.py`）。
 """
 
 from Scripts.Managers import config_manager
@@ -29,12 +32,18 @@ def get_driver_package(driver: str) -> str | None:
     return DRIVER_PACKAGES.get(driver)
 
 
-def add_driver_dependencies(drivers: list[str]) -> None:
-    """把驱动对应的底层依赖包写入 project.dependencies（add_dependency 内部去重）。"""
+def driver_packages(drivers: list[str]) -> list[str]:
+    """
+    把驱动标记映射为底层依赖包名（跳过无需显式声明的，如 BASE_DRIVER）。
+
+    返回的包名交由任务中心用 `uv add` 写入 `project.dependencies`。
+    """
+    packages: list[str] = []
     for driver in drivers:
         package = get_driver_package(driver)
-        if package:
-            config_manager.add_dependency(package)
+        if package and package not in packages:
+            packages.append(package)
+    return packages
 
 
 def parse_driver(driver_value: str | list | None) -> list[str]:
@@ -57,6 +66,9 @@ def merge_driver(required_drivers: list[str]) -> tuple[str, list[str]]:
     """
     将所需驱动合并到当前 DRIVER 配置中。
         返回 (新 DRIVER 字符串, 新增的驱动列表)。
+
+    仅写 `.env`；新增驱动对应的底层依赖包由调用方取 `driver_packages(added)`
+    走 `uv add`，避免绕过 uv 直接改写 pyproject.toml。
     """
     current = config_manager.environment.get('DRIVER', BASE_DRIVER)
     current_drivers = parse_driver(current)
@@ -66,8 +78,6 @@ def merge_driver(required_drivers: list[str]) -> tuple[str, list[str]]:
     new_drivers = current_drivers + added
     new_value = format_driver(new_drivers)
     config_manager.update_env({'DRIVER': new_value})
-    # 同步底层依赖包，确保对应驱动可正常工作（add_dependency 内部去重）
-    add_driver_dependencies(added)
     return new_value, added
 
 
@@ -75,6 +85,9 @@ def shrink_driver(redundant_drivers: list[str]) -> tuple[str, list[str]]:
     """
     从当前 DRIVER 配置中移除多余驱动（前提：剩余已注册适配器都不再需要）。
         返回 (新 DRIVER 字符串, 实际移除的驱动列表)。
+
+    只动 `.env` 的 DRIVER，**不**移除底层依赖包：httpx / websockets 等常被
+    适配器包本身及其它依赖引用，误删会导致环境不可用。
     """
     current = config_manager.environment.get('DRIVER', BASE_DRIVER)
     current_drivers = parse_driver(current)

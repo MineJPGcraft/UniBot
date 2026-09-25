@@ -7,15 +7,81 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from Scripts.Api.Locale import text
 from Scripts.Api.Managers import studio_manager
 from Scripts.Config import config, reload_config
+from Scripts.Constants import (
+    TASK_EXTENSION_INSTALL,
+    TASK_EXTENSION_RELOAD,
+    TASK_EXTENSION_UNINSTALL,
+    TASK_STUDIO_LAUNCH,
+)
 from Scripts.Extensions import EXTENSIONS_DIR, ExtensionState, ExtensionType, extension_manager, market_manager
-from Scripts.Logging import exception_logger
-from Scripts.Managers import config_manager
+from Scripts.Extensions.Dependencies import sync_extension_dependencies
+from Scripts.Managers import config_manager, task_center
+from Scripts.Managers.TaskCenter import TaskContext
 
 from .Auth import get_current_user, require_role
 from .Body import parse_json_object
 from .Schemas import MarketInstallRequest, NameSwitchRequest
 
 router = APIRouter(prefix='/api/extensions', tags=['Extensions'])
+
+
+async def run_extension_install_task(context: TaskContext, extension_id: str, version: str, name: str) -> str:
+    """任务体：下载安装扩展 → 同步依赖 → 热重载使其立即生效。"""
+    context.set_message('task_center.msg_downloading_extension', name=name)
+    success, message = await market_manager.install(extension_id, version)
+    if not success:
+        raise RuntimeError(message)
+    context.log(message)
+
+    context.set_message('task_center.msg_syncing_dependencies')
+    await sync_extension_dependencies(context.log)
+
+    context.log('Reloading extensions...')
+    await extension_manager.reload()
+    return 'task_center.msg_extension_installed'
+
+
+async def run_extension_uninstall_task(context: TaskContext, extension_id: str, name: str) -> str:
+    """任务体：卸载扩展 → 移除不再需要的依赖 → 热重载使其从注册表移除。"""
+    context.set_message('task_center.msg_uninstalling_extension', name=name)
+    success, message = await market_manager.uninstall(extension_id)
+    if not success:
+        raise RuntimeError(message)
+    context.log(message)
+
+    context.set_message('task_center.msg_syncing_dependencies')
+    await sync_extension_dependencies(context.log)
+
+    context.log('Reloading extensions...')
+    await extension_manager.reload()
+    return 'task_center.msg_extension_uninstalled'
+
+
+async def run_extension_reload_task(context: TaskContext) -> str:
+    """任务体：热重载全部扩展。"""
+    context.log('Reloading all extensions...')
+    await extension_manager.reload()
+    return 'task_center.msg_extensions_reloaded'
+
+
+async def run_studio_launch_task(context: TaskContext) -> str:
+    """任务体：下载（如缺失）并启动 Extension Studio，产出访问地址。"""
+    context.set_message('task_center.msg_studio_preparing')
+    success, message = await studio_manager.ensure_downloaded()
+    if not success:
+        raise RuntimeError(message)
+    context.log(message)
+
+    context.set_message('task_center.msg_studio_launching')
+    success, message = await studio_manager.launch()
+    if not success:
+        raise RuntimeError(message)
+
+    url = message if message.startswith('http') else ''
+    if url:
+        context.set_result(url=url)
+    context.log(f'Extension Studio ready: {url or message}')
+    return 'task_center.msg_studio_launched'
 
 # 图片模式必需的扩展（渲染引擎 + 默认模板包）。这些扩展随官方市场分发而非内置，
 # 开启 image.mode 时若缺失，由 WebUI 引导用户自动下载。
@@ -81,11 +147,18 @@ async def get_market(force: bool = False, current_user: dict = Depends(get_curre
 
 @router.post('/market/install', summary='从市场安装扩展')
 async def install_market_extension(body: MarketInstallRequest, user: dict = Depends(require_role('admin'))):
-    """从市场下载并安装/升级扩展，重启后生效。"""
+    """提交扩展安装任务（后台下载 + 依赖同步），进度在任务中心查看。"""
     if not body.id:
         return {'code': 1, 'data': None, 'message': text('extensions.missing_id')}
-    success, message = await market_manager.install(body.id, body.version)
-    return {'code': 0 if success else 1, 'data': None, 'message': message}
+    name = body.id
+    if entry := market_manager.market_cache.get(body.id):
+        name = entry.name or body.id
+    task = task_center.submit(
+        TASK_EXTENSION_INSTALL,
+        lambda context: run_extension_install_task(context, body.id, body.version, name),
+        title_params={'name': name},
+    )
+    return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 
 @router.get('/image-requirements', summary='图片模式依赖扩展检查')
@@ -127,16 +200,9 @@ async def get_studio_status(current_user: dict = Depends(get_current_user)):
 
 @router.post('/studio/launch', summary='下载并启动 Extension Studio')
 async def launch_studio(user: dict = Depends(require_role('admin'))):
-    """确保 Studio 已下载到 .studio 目录，随后启动（数据目录 .studio，UniBot 目录为根）。"""
-    success, message = await studio_manager.ensure_downloaded()
-    if not success:
-        return {'code': 1, 'data': None, 'message': message}
-    success, message = await studio_manager.launch()
-    return {
-        'code': 0 if success else 1,
-        'data': {'url': message if success and message.startswith('http') else ''},
-        'message': message,
-    }
+    """提交 Studio 启动任务（后台下载与启动），进度在任务中心查看。"""
+    task = task_center.submit(TASK_STUDIO_LAUNCH, run_studio_launch_task, retryable=False)
+    return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 
 @router.post('/studio/stop', summary='停止 Extension Studio')
@@ -164,13 +230,9 @@ async def get_extension_detail(extension_id: str, current_user: dict = Depends(g
 
 @router.post('/reload', summary='热重载扩展')
 async def reload_extensions(user: dict = Depends(require_role('admin'))):
-    """热重载全部扩展：重新导入代码并重建命令，无需重启 Bot。"""
-    try:
-        await extension_manager.reload()
-    except Exception as error:
-        exception_logger.error(f'Extension reload failed: {error}')
-        return {'code': 1, 'data': None, 'message': text('extensions.reload_failed', error=error)}
-    return {'code': 0, 'data': None, 'message': 'ok'}
+    """提交扩展热重载任务（后台重载，进度在任务中心查看）。"""
+    task = task_center.submit(TASK_EXTENSION_RELOAD, run_extension_reload_task, retryable=False)
+    return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 
 @router.post('/{extension_id}/enable', summary='启用扩展')
@@ -227,11 +289,15 @@ async def patch_extension_config(extension_id: str, request: Request, user: dict
 
 @router.delete('/{extension_id}', summary='卸载扩展')
 async def uninstall_extension(extension_id: str, user: dict = Depends(require_role('admin'))):
-    """卸载市场扩展（删除目录并清理安装状态，重启后生效）。"""
-    success, message = await market_manager.uninstall(extension_id)
-    if not success:
-        return {'code': 1, 'data': None, 'message': message}
-    return {'code': 0, 'data': None, 'message': message}
+    """提交扩展卸载任务（后台删除目录并同步依赖），进度在任务中心查看。"""
+    _ensure_extension_exists(extension_id)
+    name = extension_manager.get_extension_info(extension_id).get('name') or extension_id
+    task = task_center.submit(
+        TASK_EXTENSION_UNINSTALL,
+        lambda context: run_extension_uninstall_task(context, extension_id, name),
+        title_params={'name': name},
+    )
+    return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 
 @router.get('/renderers', summary='可用渲染引擎列表')

@@ -21,7 +21,6 @@ from Scripts.Logging import exception_logger, logger
 from Scripts.Network import github_download, request
 
 from .Base import parse_manifest, validate_unibot_constraint
-from .Dependencies import sync_extension_dependencies
 from .Errors import ExtensionError, ManifestError
 from .Loader import EXTENSIONS_DIR, STATES_FILE, STATES_ROOT
 from .Manager import extension_manager
@@ -162,8 +161,7 @@ class ExtensionMarketManager:
                 return False, message
             # 记录安装状态（来源/版本/sha256/依赖归属）
             await asyncio.to_thread(self._record_install, extension_id, release, archive_data, extension_entry)
-            # 同步扩展依赖到 pyproject.toml 的 extensions 组
-            sync_extension_dependencies()
+            # 依赖声明与安装由任务中心在后台执行（uv add + uv sync），此处不阻塞安装请求
             return True, f'扩展 {extension_id} 安装成功，重启后生效'
         except ManifestError as error:
             return False, str(error)
@@ -256,6 +254,7 @@ class ExtensionMarketManager:
         target_dir = EXTENSIONS_DIR / extension_id
         if not target_dir.exists() and extension_id not in self.market_cache:
             return False, f'扩展 {extension_id} 不存在'
+        # 清理安装状态：依赖声明的移除与卸载由任务中心的依赖同步统一处理
         states = await asyncio.to_thread(self._read_states)
         state = states.get(extension_id)
         # 本地扩展（无安装状态记录或非市场来源）不允许卸载
@@ -266,13 +265,9 @@ class ExtensionMarketManager:
             return False, f'扩展 {extension_id} 是本地扩展，不允许卸载'
         if target_dir.exists():
             await asyncio.to_thread(shutil.rmtree, target_dir)
-        # 记录被卸载扩展声明的依赖，供卸载后从 extensions 组移除不再需要的条目
-        removed_dependencies = list(state.python_dependencies) if state else []
         if extension_id in states:
             del states[extension_id]
             await asyncio.to_thread(self._write_states, states)
-        # 卸载后重新聚合扩展依赖：移除不再被任何已启用扩展需要的依赖（共享依赖保留）
-        sync_extension_dependencies(remove=removed_dependencies)
         logger.success(f'Extension {extension_id} uninstalled, takes effect after restart.')
         return True, f'扩展 {extension_id} 卸载成功，重启后生效'
 

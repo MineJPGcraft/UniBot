@@ -30,21 +30,21 @@ When installing a platform adapter through **WebUI → Adapters**, UniBot automa
 
 ::: steps
 
-1. **Write dependencies**
+1. **Register the adapter**
 
-   Writes the adapter package (e.g. `nonebot-adapter-onebot`) into the `dependencies` of `pyproject.toml`.
+   Registers the adapter in `tool.nonebot.adapters` of `pyproject.toml`.
 
 2. **Append drivers**
 
    Appends the drivers required by the adapter (e.g. `~httpx`, `~websockets`) to `DRIVER` in `.env`.
 
-3. **Sync underlying dependencies**
+3. **Install dependencies**
 
-   **Automatically syncs the underlying dependency packages required by the driver** (e.g. `websockets`) into the `dependencies` of `pyproject.toml`, ensuring the driver works properly after a restart.
+   The Task Center installs the adapter package and the underlying drivers (e.g. `websockets`) via `uv add`, ensuring the driver works properly after a restart.
 
 :::
 
-The dependency changes above are applied automatically by the Watchdog via `uv sync` on restart. When uninstalling an adapter, only the registration and the redundant drivers in `DRIVER` are removed; ==dependency declarations are not deleted==, avoiding accidental removal of packages referenced by other dependencies.
+The whole process runs as a background task (watch the progress in the Task Center at the top right), ==dependency writes go only through `uv add` / `uv remove`, so there is no need to edit `pyproject.toml` by hand==, and you will be asked whether to restart once it finishes. When uninstalling an adapter, only the registration and the redundant drivers in `DRIVER` are removed; ==dependency declarations are not deleted==, avoiding accidental removal of packages referenced by other dependencies.
 
 ## Quick Navigation
 

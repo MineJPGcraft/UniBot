@@ -1,3 +1,4 @@
+import asyncio
 import time
 
 import nonebot
@@ -7,7 +8,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from Scripts import Globals
 from Scripts.Api.Locale import text
 from Scripts.Config import config
-from Scripts.Managers import version_manager
+from Scripts.Constants import TASK_BOT_UPDATE
+from Scripts.Managers import task_center, version_manager
+from Scripts.Managers.TaskCenter import TaskContext
 from Scripts.Process import is_watchdog_process, request_restart
 
 from .Auth import get_current_user, require_role
@@ -17,6 +20,18 @@ router = APIRouter(prefix='/api/status', tags=['Status'])
 
 process = psutil.Process()
 start_time = time.time()
+
+
+async def run_update_task(context: TaskContext) -> str:
+    """任务体：下载最新发布并替换核心代码，完成后请求重启。"""
+    context.set_message('task_center.msg_downloading_update')
+    error_message = await version_manager.update()
+    if error_message:
+        raise RuntimeError(error_message)
+    context.set_message('task_center.msg_restarting')
+    await asyncio.sleep(1)
+    request_restart()
+    return 'task_center.msg_update_success'
 
 
 def get_status_data() -> dict:
@@ -81,19 +96,16 @@ async def health_check():
 
 
 @router.post('/update', summary='更新机器人', dependencies=[Depends(require_role('admin'))])
-async def update_bot(background_tasks: BackgroundTasks):
-    """从 GitHub Release 下载最新代码替换 Scripts 目录，成功后重启机器人。"""
+async def update_bot():
+    """提交版本更新任务（后台下载替换代码并重启），进度在任务中心查看。"""
     if not is_watchdog_process():
         return {
             'code': 1,
             'data': None,
             'message': text('status.update_requires_watchdog'),
         }
-    error_message = await version_manager.update()
-    if error_message:
-        return {'code': 1, 'data': None, 'message': error_message}
-    background_tasks.add_task(request_restart)
-    return {'code': 0, 'data': None, 'message': text('status.update_success_restarting')}
+    task = task_center.submit(TASK_BOT_UPDATE, run_update_task, retryable=False)
+    return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 
 @router.post('/restart', summary='重启机器人', dependencies=[Depends(require_role('admin'))])

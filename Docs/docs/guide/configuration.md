@@ -260,4 +260,4 @@ uv sync --extra extensions --inexact
 
 图片渲染的 Python 依赖由**渲染引擎扩展自身声明**（`Extension.toml` 的 `[dependencies].python`），安装扩展后通过 `extensions` extra 统一同步，==无需单独的 image extra==。
 
-*Watchdog 会自动检测配置变化并同步对应的依赖。*
+依赖同步由机器人内部的**任务中心**负责（可在 WebUI 右上角「任务中心」手动触发，或在安装/卸载扩展、插件、适配器时自动触发）；写入一律通过 `uv add` / `uv remove`，无需手工编辑 `pyproject.toml`。

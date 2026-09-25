@@ -11,6 +11,7 @@ from .Plugins import router as plugins_router
 from .Servers import router as servers_router
 from .Statistics import router as statistics_router
 from .Status import router as status_router
+from .Tasks import router as tasks_router
 from .Users import router as users_router
 from .WebSocket import router as ws_router
 
@@ -26,6 +27,7 @@ api_router.include_router(logs_router)
 api_router.include_router(plugins_router)
 api_router.include_router(qqbot_router)
 api_router.include_router(extensions_router)
+api_router.include_router(tasks_router)
 api_router.include_router(ws_router)
 
 

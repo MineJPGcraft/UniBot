@@ -30,6 +30,22 @@ MARKET_CACHE_TTL = 600
 # 框架内置插件模块前缀：内置插件不允许经 WebUI 禁用或删除
 BUILTIN_PLUGIN_PREFIX = 'Scripts.'
 
+# ===== 后台任务类型（任务中心） =====
+# 任务「类型」是后端与 WebUI 之间的契约：`task_center.submit(kind, ...)` 的 kind
+# 必须与前端 `WebUi/src/utils/task.js` 的图标表、语言包 `task_center.kind_*` 一一对应，
+# 新增类型需同步这两处。任务体（做什么/返回什么）由提交方各自维护，不放此处。
+TASK_DEPENDENCY_SYNC = 'dependency_sync'
+TASK_EXTENSION_INSTALL = 'extension_install'
+TASK_EXTENSION_UNINSTALL = 'extension_uninstall'
+TASK_EXTENSION_RELOAD = 'extension_reload'
+TASK_ADAPTER_INSTALL = 'adapter_install'
+TASK_ADAPTER_UNINSTALL = 'adapter_uninstall'
+TASK_STUDIO_LAUNCH = 'studio_launch'
+TASK_PLUGIN_INSTALL = 'plugin_install'
+TASK_PLUGIN_UPGRADE = 'plugin_upgrade'
+TASK_PLUGIN_UNINSTALL = 'plugin_uninstall'
+TASK_BOT_UPDATE = 'bot_update'
+
 # ===== QQ 官方机器人事件订阅（Intent）字段 =====
 # WebUI 表单与扫码登录默认订阅共用此清单（单一来源，防止两处漂移）
 QQ_INTENT_FIELDS = [

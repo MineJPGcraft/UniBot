@@ -1,13 +1,75 @@
 from fastapi import APIRouter, Depends, Query
 
 from Scripts.Api.Locale import text
-from Scripts.Constants import BUILTIN_PLUGIN_PREFIX
-from Scripts.Managers import config_manager, plugin_manager
+from Scripts.Constants import (
+    BUILTIN_PLUGIN_PREFIX,
+    TASK_PLUGIN_INSTALL,
+    TASK_PLUGIN_UNINSTALL,
+    TASK_PLUGIN_UPGRADE,
+)
+from Scripts.Extensions.Dependencies import apply_main_dependency_changes
+from Scripts.Managers import config_manager, plugin_manager, task_center
+from Scripts.Managers.TaskCenter import TaskContext
 
 from .Auth import get_current_user, require_role
 from .Schemas import InstallPluginRequest, UpgradePluginRequest
 
 router = APIRouter(prefix='/api/plugins', tags=['Plugins'])
+
+# 市场动作 → (任务类型, 阶段消息键, 完成消息键)
+MARKET_ACTIONS = {
+    'install': (TASK_PLUGIN_INSTALL, 'task_center.msg_installing_plugin', 'task_center.msg_plugin_installed'),
+    'upgrade': (TASK_PLUGIN_UPGRADE, 'task_center.msg_upgrading_plugin', 'task_center.msg_plugin_upgraded'),
+    'uninstall': (TASK_PLUGIN_UNINSTALL, 'task_center.msg_uninstalling_plugin', 'task_center.msg_plugin_uninstalled'),
+}
+
+
+async def run_plugin_market_task(
+    context: TaskContext,
+    action: str,
+    project_link: str,
+    module_name: str,
+    version: str,
+) -> str:
+    """任务体：登记/移除插件登记，并用 uv 安装、更新或移除其依赖包。"""
+    _, running_key, finished_key = MARKET_ACTIONS[action]
+    context.set_message(running_key, name=module_name)
+
+    if action == 'uninstall':
+        config_manager.remove_plugin(module_name)
+    else:
+        config_manager.add_plugin(module_name)
+        if action == 'upgrade':
+            config_manager.set_plugin_enabled(module_name, True)
+
+    package = f'{project_link}=={version}' if version else project_link
+    context.set_message('task_center.msg_syncing_dependencies')
+    await apply_main_dependency_changes(
+        [] if action == 'uninstall' else [package],
+        [project_link] if action == 'uninstall' else [],
+        context.log,
+    )
+
+    # 同步插件管理器的市场缓存状态
+    await plugin_manager.fetch_market(force=True)
+    # 新装/升级/卸载的插件都要重启后才会被 NoneBot 加载或彻底卸载
+    context.set_result(restart_required=True)
+    return finished_key
+
+
+def submit_plugin_market(
+    action: str,
+    project_link: str,
+    module_name: str,
+    version: str = '',
+) -> dict:
+    """提交插件市场操作任务（install / upgrade / uninstall）。"""
+    kind = MARKET_ACTIONS.get(action, MARKET_ACTIONS['install'])[0]
+    return task_center.submit(
+        kind,
+        lambda context: run_plugin_market_task(context, action, project_link, module_name, version),
+        title_params={'name': module_name},
+    )
 
 
 @router.get('', summary='获取已安装插件列表')
@@ -96,33 +158,22 @@ async def get_market(
 
 @router.post('/market/install', summary='安装插件')
 async def install_plugin(body: InstallPluginRequest, current_user: dict = Depends(require_role('admin'))):
-    """从市场安装插件（登记依赖，重启后由 Watchdog 自动安装）。"""
+    """提交插件安装任务（登记依赖并用 uv 安装），进度在任务中心查看。"""
     plugin = await find_market_plugin(body.name)
     if not plugin:
         return {'code': 1, 'data': None, 'message': text('plugins.market_not_found')}
-    success, message = await plugin_manager.install(
-        plugin['project_link'],
-        plugin['module_name'],
-        body.version,
-    )
-    if not success:
-        return {'code': 1, 'data': None, 'message': message}
-    return {'code': 0, 'data': None, 'message': message}
+    task = submit_plugin_market('install', plugin['project_link'], plugin['module_name'], body.version)
+    return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 
 @router.post('/market/upgrade', summary='升级插件')
 async def upgrade_plugin(body: UpgradePluginRequest, current_user: dict = Depends(require_role('admin'))):
-    """升级已安装插件（更新登记，重启后由 Watchdog 自动更新）。"""
+    """提交插件升级任务（更新登记并用 uv 安装），进度在任务中心查看。"""
     plugin = await find_market_plugin(body.name)
     if not plugin:
         return {'code': 1, 'data': None, 'message': text('plugins.market_not_found')}
-    success, message = await plugin_manager.upgrade(
-        plugin['project_link'],
-        plugin['module_name'],
-    )
-    if not success:
-        return {'code': 1, 'data': None, 'message': message}
-    return {'code': 0, 'data': None, 'message': message}
+    task = submit_plugin_market('upgrade', plugin['project_link'], plugin['module_name'])
+    return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 
 @router.get('/{name}', summary='获取插件详情')
@@ -154,7 +205,7 @@ async def disable_plugin(name: str, current_user: dict = Depends(require_role('a
 
 @router.delete('/{name}', summary='卸载插件')
 async def uninstall_plugin(name: str, current_user: dict = Depends(require_role('admin'))):
-    """卸载外部插件：移除 pyproject 登记，重启后由 Watchdog 自动卸载。"""
+    """提交插件卸载任务（移除登记并用 uv 卸载依赖），进度在任务中心查看。"""
     plugin = plugin_manager.get_plugin_detail(name)
     if not plugin:
         return {'code': 1, 'data': None, 'message': text('plugins.not_found')}
@@ -164,12 +215,6 @@ async def uninstall_plugin(name: str, current_user: dict = Depends(require_role(
     # 在市场中查找对应的 PyPI 包名
     market_plugin = await find_market_plugin(module_name)
     project_link = market_plugin.get('project_link', '') if market_plugin else ''
-    if not project_link:
-        # 未收录于市场时仅移除 pyproject 登记
-        config_manager.remove_plugin(module_name)
-        config_manager.remove_dependency(module_name)
-        return {'code': 0, 'data': None, 'message': text('plugins.unregistered_restart_required')}
-    success, message = await plugin_manager.uninstall(project_link, module_name)
-    if not success:
-        return {'code': 1, 'data': None, 'message': message}
-    return {'code': 0, 'data': None, 'message': message}
+    # 未收录于市场时按模块名作为包名走 uv remove（依赖写入只经 uv，不手改 pyproject）
+    task = submit_plugin_market('uninstall', project_link or module_name, module_name)
+    return {'code': 0, 'data': task, 'message': text('task_center.submitted')}

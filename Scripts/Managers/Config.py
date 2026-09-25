@@ -158,31 +158,13 @@ class ConfigManager:
         return dependency.strip()
 
     def get_dependencies(self) -> list[str]:
-        """获取 pyproject.toml 中登记的依赖列表。"""
+        """获取 pyproject.toml 中登记的依赖列表（只读；写入一律经 uv 命令）。"""
         dependencies = self.read_pyproject().get('project', {}).get('dependencies', [])
         return list(dependencies)
 
     def get_dependency_packages(self) -> set[str]:
         """获取已登记依赖的包名集合（去除 extras 与版本约束）。"""
         return {self._package_base(dependency) for dependency in self.get_dependencies()}
-
-    def remove_dependency(self, package: str):
-        """从 pyproject.toml 的 dependencies 中移除指定包。"""
-        data = self.read_pyproject()
-        dependencies = data.get('project', {}).get('dependencies', [])
-        data['project']['dependencies'] = [
-            dependency for dependency in dependencies if self._package_base(dependency) != package
-        ]
-        self.write_pyproject(data)
-
-    def add_dependency(self, package: str):
-        """向 pyproject.toml 的 dependencies 中添加包（不重复）。"""
-        data = self.read_pyproject()
-        dependencies = data.setdefault('project', {}).setdefault('dependencies', [])
-        package_bases = {self._package_base(dependency) for dependency in dependencies}
-        if self._package_base(package) not in package_bases:
-            dependencies.append(package)
-            self.write_pyproject(data)
 
     def add_plugin(self, module_name: str) -> bool:
         """添加插件，返回是否成功（False 表示已存在）。"""

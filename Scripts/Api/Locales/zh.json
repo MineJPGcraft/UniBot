@@ -49,8 +49,7 @@
   "plugins": {
     "market_not_found": "市场中未找到该插件",
     "not_found": "插件不存在",
-    "builtin_cannot_uninstall": "内置插件不可卸载",
-    "unregistered_restart_required": "已移除登记，重启后生效"
+    "builtin_cannot_uninstall": "内置插件不可卸载"
   },
   "status": {
     "check_update_failed": "检测失败，请检查网络稍后再试",
@@ -338,18 +337,52 @@
     },
     "adapter": {
       "not_found": "适配器不在内置目录中",
-      "install_success": "依赖和注册信息已写入（重启时自动同步）",
-      "install_drivers_added": "；已自动追加驱动：{drivers}（当前 DRIVER={driver}）",
       "already_exists": "该适配器已存在",
       "disabled": "适配器已禁用（重启后生效）",
       "protected": "Minecraft 适配器是 UniBot 核心依赖，禁止卸载",
-      "uninstall_not_found": "该适配器不在内置目录中，无法安全卸载依赖",
-      "uninstall_success": "适配器及其依赖记录已删除（重启时自动同步）",
-      "uninstall_drivers_removed": "；已自动移除多余驱动：{drivers}（当前 DRIVER={driver}）"
+      "uninstall_not_found": "该适配器不在内置目录中，无法安全卸载依赖"
     },
     "plugin": {
       "already_exists": "该插件已存在",
       "builtin_protected": "内置插件不允许删除"
     }
+  },
+  "task_center": {
+    "not_found": "任务不存在",
+    "cancelled": "任务已取消",
+    "not_cancellable": "该任务已结束，无法取消",
+    "not_retryable": "该任务当前不可重试",
+    "retried": "任务已重新提交",
+    "submitted": "任务已提交",
+    "msg_queued": "已排队",
+    "msg_running": "执行中",
+    "msg_finished": "已完成",
+    "msg_failed": "执行失败",
+    "msg_cancelled": "已取消",
+    "msg_syncing_dependencies": "正在同步依赖…",
+    "msg_dependencies_synced": "依赖同步完成",
+    "msg_downloading_extension": "正在下载扩展 {name}…",
+    "msg_extension_installed": "扩展 {name} 安装完成",
+    "msg_extension_installed_no_sync": "扩展已安装，依赖同步已跳过",
+    "msg_uninstalling_extension": "正在卸载扩展 {name}…",
+    "msg_extension_uninstalled": "扩展 {name} 卸载完成",
+    "msg_extensions_reloaded": "扩展已热重载",
+    "msg_studio_preparing": "正在准备 Extension Studio…",
+    "msg_studio_launching": "正在启动 Extension Studio…",
+    "msg_studio_launched": "Extension Studio 已启动",
+    "msg_installing_plugin": "正在安装插件 {name}…",
+    "msg_upgrading_plugin": "正在升级插件 {name}…",
+    "msg_uninstalling_plugin": "正在卸载插件 {name}…",
+    "msg_plugin_installed": "插件 {name} 安装完成",
+    "msg_plugin_upgraded": "插件 {name} 升级完成",
+    "msg_plugin_uninstalled": "插件 {name} 卸载完成",
+    "msg_plugin_dependencies_synced": "插件依赖同步完成",
+    "msg_installing_adapter": "正在安装适配器 {name}…",
+    "msg_adapter_installed": "适配器 {name} 安装完成",
+    "msg_uninstalling_adapter": "正在卸载适配器 {name}…",
+    "msg_adapter_uninstalled": "适配器 {name} 卸载完成",
+    "msg_downloading_update": "正在下载新版本…",
+    "msg_restarting": "正在重启机器人…",
+    "msg_update_success": "更新完成，即将重启"
   }
 }

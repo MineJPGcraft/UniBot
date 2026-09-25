@@ -116,11 +116,12 @@ flowchart LR
 - `version_manager`：版本管理
 - `webui_manager`：WebUI 资源管理
 - `config_manager`：配置管理
+- `task_center`：后台任务中心（依赖同步、市场安装、热重载等统一登记与进度推送）
 
 ### 双入口启动
 
 - **`Bot.py`**：初始化 NoneBot、注册适配器、加载插件、加载扩展、构建指令、挂载 WebUI，然后运行。
-- **`Watchdog.py`**：守护进程，启动 `Bot.py` 子进程，监控异常退出并自动重启，同时处理 WebUI 重启请求与依赖同步。
+- **`Watchdog.py`**：守护进程，启动 `Bot.py` 子进程，监控异常退出并自动重启，并处理 WebUI 重启请求与版本更新后的重启（依赖同步由 Bot 进程内的任务中心执行）。
 
 ==日常使用推荐 `Watchdog.py`==：机器人异常退出会自动重启，还能处理 WebUI 的重启请求。
 

@@ -116,11 +116,12 @@ All managers use the **singleton pattern**, instantiated at the bottom of their 
 - `version_manager`: version management
 - `webui_manager`: WebUI resource management
 - `config_manager`: configuration management
+- `task_center`: background Task Center (unified registry and progress push for dependency sync, market installs, hot reloads, etc.)
 
 ### Dual-Entry Startup
 
 - **`Bot.py`**: initializes NoneBot, registers adapters, loads plugins, loads extensions, builds commands, mounts the WebUI, then runs.
-- **`Watchdog.py`**: a watchdog process that starts a `Bot.py` child process, monitors abnormal exits and restarts automatically, while also handling WebUI restart requests and dependency sync.
+- **`Watchdog.py`**: a watchdog process that starts a `Bot.py` child process, monitors abnormal exits and restarts automatically, and handles WebUI restart requests as well as restarts after version updates (dependency sync runs inside the bot process via the Task Center).
 
 ==`Watchdog.py` is recommended for daily use==: the bot restarts automatically after an abnormal exit, and it can also handle WebUI restart requests.
 

@@ -104,26 +104,26 @@ class PluginManager:
         return self.market_cache
 
     async def install(self, project_link: str, module_name: str, version: str = '') -> tuple[bool, str]:
-        """从市场安装插件：登记依赖并注册插件，重启后由 Watchdog 自动 uv sync 安装。"""
-        package = f'{project_link}=={version}' if version else project_link
-        config_manager.add_dependency(package)
+        """
+        从市场安装插件：仅登记插件模块。
+
+        依赖包由插件市场任务（`Scripts/Api/Plugins.py`）经 `uv add` 写入
+        `project.dependencies` 并同步环境，本方法不再改写 pyproject.toml 文本。
+        """
         config_manager.add_plugin(module_name)
         logger.success(f'Plugin <green>{project_link}</green> registered for install.')
         return True, '安装成功，重启后生效'
 
     async def upgrade(self, project_link: str, module_name: str, version: str = '') -> tuple[bool, str]:
-        """升级市场插件：更新依赖登记并确保注册，重启后由 Watchdog 自动 uv sync 更新。"""
-        package = f'{project_link}=={version}' if version else project_link
-        config_manager.remove_dependency(project_link)
-        config_manager.add_dependency(package)
+        """升级市场插件：仅确保插件已注册并启用，依赖更新由任务中心走 uv。"""
+        config_manager.add_plugin(module_name)
         config_manager.set_plugin_enabled(module_name, True)
         logger.success(f'Plugin <green>{project_link}</green> registered for upgrade.')
         return True, '升级成功，重启后生效'
 
     async def uninstall(self, project_link: str, module_name: str) -> tuple[bool, str]:
-        """卸载市场插件：移除登记，重启后由 Watchdog 自动 uv sync 卸载。"""
+        """卸载市场插件：仅移除插件登记，依赖移除由任务中心走 uv remove。"""
         config_manager.remove_plugin(module_name)
-        config_manager.remove_dependency(project_link)
         logger.success(f'Plugin <green>{project_link}</green> registered for uninstall.')
         return True, '卸载成功，重启后生效'
 

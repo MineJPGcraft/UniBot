@@ -49,8 +49,7 @@
   "plugins": {
     "market_not_found": "Plugin not found in market",
     "not_found": "Plugin not found",
-    "builtin_cannot_uninstall": "Built-in plugins cannot be uninstalled",
-    "unregistered_restart_required": "Registration removed, takes effect after restart"
+    "builtin_cannot_uninstall": "Built-in plugins cannot be uninstalled"
   },
   "status": {
     "check_update_failed": "Check failed, please check your network and try again later",
@@ -338,18 +337,52 @@
     },
     "adapter": {
       "not_found": "Adapter is not in the built-in catalog",
-      "install_success": "Dependency and registration records written (synced automatically on restart)",
-      "install_drivers_added": "; drivers appended automatically: {drivers} (current DRIVER={driver})",
       "already_exists": "This adapter already exists",
       "disabled": "Adapter disabled (restart required)",
       "protected": "The Minecraft adapter is a core UniBot dependency and cannot be uninstalled",
-      "uninstall_not_found": "Adapter is not in the built-in catalog; its dependencies cannot be safely uninstalled",
-      "uninstall_success": "Adapter and its dependency records removed (synced automatically on restart)",
-      "uninstall_drivers_removed": "; redundant drivers removed automatically: {drivers} (current DRIVER={driver})"
+      "uninstall_not_found": "Adapter is not in the built-in catalog; its dependencies cannot be safely uninstalled"
     },
     "plugin": {
       "already_exists": "This plugin already exists",
       "builtin_protected": "Built-in plugins cannot be deleted"
     }
+  },
+  "task_center": {
+    "not_found": "Task not found",
+    "cancelled": "Task cancelled",
+    "not_cancellable": "This task has already finished and cannot be cancelled",
+    "not_retryable": "This task cannot be retried right now",
+    "retried": "Task resubmitted",
+    "submitted": "Task submitted",
+    "msg_queued": "Queued",
+    "msg_running": "Running",
+    "msg_finished": "Finished",
+    "msg_failed": "Failed",
+    "msg_cancelled": "Cancelled",
+    "msg_syncing_dependencies": "Synchronizing dependencies…",
+    "msg_dependencies_synced": "Dependencies synchronized",
+    "msg_downloading_extension": "Downloading extension {name}…",
+    "msg_extension_installed": "Extension {name} installed",
+    "msg_extension_installed_no_sync": "Extension installed, dependency sync skipped",
+    "msg_uninstalling_extension": "Uninstalling extension {name}…",
+    "msg_extension_uninstalled": "Extension {name} uninstalled",
+    "msg_extensions_reloaded": "Extensions reloaded",
+    "msg_studio_preparing": "Preparing Extension Studio…",
+    "msg_studio_launching": "Launching Extension Studio…",
+    "msg_studio_launched": "Extension Studio started",
+    "msg_installing_plugin": "Installing plugin {name}…",
+    "msg_upgrading_plugin": "Upgrading plugin {name}…",
+    "msg_uninstalling_plugin": "Uninstalling plugin {name}…",
+    "msg_plugin_installed": "Plugin {name} installed",
+    "msg_plugin_upgraded": "Plugin {name} upgraded",
+    "msg_plugin_uninstalled": "Plugin {name} uninstalled",
+    "msg_plugin_dependencies_synced": "Plugin dependencies synchronized",
+    "msg_installing_adapter": "Installing adapter {name}…",
+    "msg_adapter_installed": "Adapter {name} installed",
+    "msg_uninstalling_adapter": "Uninstalling adapter {name}…",
+    "msg_adapter_uninstalled": "Adapter {name} uninstalled",
+    "msg_downloading_update": "Downloading the new version…",
+    "msg_restarting": "Restarting the bot…",
+    "msg_update_success": "Update finished, restarting soon"
   }
 }

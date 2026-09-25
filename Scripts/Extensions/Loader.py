@@ -34,7 +34,7 @@ from .Command import (
     BUILTIN_PREFIX,
     command_manager,
 )
-from .Dependencies import is_extension_enabled, load_enabled_config, sync_extension_dependencies
+from .Dependencies import is_extension_enabled, load_enabled_config
 from .Errors import (
     CompatibilityError,
     DependencyError,
@@ -143,8 +143,8 @@ class ExtensionLoader:
         self._validate_all()
         order = self._topological_sort()
         self._import_and_load(order)
-        # 聚合所有扩展的 Python 依赖到 pyproject.toml 的 extensions 组
-        sync_extension_dependencies()
+        # 扩展目录在加载期不写依赖声明：安装/卸载扩展时由任务中心统一走 uv 同步，
+        # 此处仅聚合当前声明（避免加载流程内触发耗时命令阻塞启动）
         return self.extensions
 
     # ===== 发现 =====

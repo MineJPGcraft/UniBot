@@ -205,9 +205,9 @@ Constraint rules:
 
 ### Automatic Python Dependency Sync
 
-The `[dependencies].python` declared by extensions is aggregated and deduplicated automatically at load time and written uniformly into the `extensions` group of `[project.optional-dependencies]` in `pyproject.toml`. The Watchdog automatically syncs and installs them at startup and whenever dependency changes are detected; after uninstalling an extension, dependencies are re-aggregated and leftover dependencies are removed only when no other extension uses them.
+The `[dependencies].python` declared by extensions is aggregated and deduplicated automatically at load time and written uniformly into the `extensions` group of `[project.optional-dependencies]` in `pyproject.toml`. Sync is handled by the in-process **Task Center**: trigger it manually from the Task Center in the top-right of the WebUI, or implicitly when installing/uninstalling an extension. After uninstalling an extension, dependencies are re-aggregated and leftover dependencies are removed only when no other extension uses them.
 
-> Note: the `extensions` group is exclusively maintained by the framework; please do not manually edit that group in `pyproject.toml`.
+> Note: the `extensions` group is exclusively maintained by the framework and is only written through `uv add` / `uv remove`; please do not manually edit that group in `pyproject.toml`.
 
 ## Config and Data Directories
 

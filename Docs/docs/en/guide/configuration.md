@@ -251,4 +251,4 @@ uv sync --extra extensions --inexact
 
 Image rendering's Python dependencies are declared by the **rendering engine extension itself** (`[dependencies].python` in `Extension.toml`) and synced via the `extensions` extra after installation — ==no separate image extra is needed==.
 
-*Watchdog automatically detects configuration changes and syncs the corresponding dependencies.*
+Dependency sync is handled by the in-process **Task Center**: trigger it manually from the Task Center in the top-right of the WebUI, or implicitly by installing/uninstalling an extension, plugin or adapter. All writes go through `uv add` / `uv remove` — never edit `pyproject.toml` by hand.

@@ -33,6 +33,7 @@ UniBot 的 WebUI 后端提供一组 REST API，供前端管理面板调用。所
 | 状态 | `/api/status` | 运行状态监控 |
 | 统计 | `/api/statistics` | 消息统计与活跃群聊 |
 | 用户 | `/api/users` | 用户管理 |
+| 任务 | `/api/tasks` | 后台任务中心（列表、详情、取消、重试、依赖同步） |
 | WebSocket | `/api/ws` | 实时推送 |
 :::
 
@@ -207,6 +208,28 @@ GET /api/extensions/resources
 ```
 GET /api/logs?level=INFO&limit=100  # 获取日志
 ```
+
+## 任务接口
+
+后台任务中心接口挂载于 `/api/tasks`，覆盖依赖同步、市场扩展安装/卸载、扩展热重载、Studio 启动、插件市场与版本更新。
+
+::: warning
+列表与详情接口要求已认证用户；**取消、重试、手动依赖同步**要求 <Badge type="danger" text="管理员权限" />。
+:::
+
+```
+GET  /api/tasks                     # 任务列表 + 状态摘要
+GET  /api/tasks/{id}                # 任务详情（含日志）
+POST /api/tasks/{id}/cancel         # 取消任务
+POST /api/tasks/{id}/retry          # 重试任务
+POST /api/tasks/dependency-sync     # 手动触发依赖同步
+```
+
+任务快照字段：`id`、`kind`、`title_params`、`status`（`pending` / `running` / `succeeded` / `failed` / `cancelled`）、
+`message_key` + `message_params`（阶段说明，由前端按界面语言翻译）、`progress`、`error`、`result`、
+`created_at` / `started_at` / `finished_at`、`retryable`、`log_count`（详情接口额外返回 `logs`）。
+
+任务状态变更会通过 WebSocket 的 `task` 事件实时推送。
 
 ## WebSocket 推送
 

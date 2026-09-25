@@ -10,8 +10,10 @@ from fastapi import APIRouter, Depends, Request
 
 from Scripts.Api.Locale import text
 from Scripts.Config import CONFIG_TOML_PATH, Config, config, reload_config, validate_config_content
-from Scripts.Constants import BUILTIN_PLUGIN_PREFIX
-from Scripts.Managers import config_manager
+from Scripts.Constants import BUILTIN_PLUGIN_PREFIX, TASK_ADAPTER_INSTALL, TASK_ADAPTER_UNINSTALL
+from Scripts.Extensions.Dependencies import apply_main_dependency_changes
+from Scripts.Managers import config_manager, task_center
+from Scripts.Managers.TaskCenter import TaskContext
 
 from ..Auth import get_current_user, require_role
 from ..Body import parse_json_object
@@ -23,11 +25,47 @@ from ..Schemas import (
     UninstallAdapterRequest,
 )
 from .Adapters import ADAPTER_CATALOG, PROTECTED_ADAPTER_MODULES
-from .Driver import compute_redundant_drivers, format_driver, merge_driver, shrink_driver
+from .Driver import compute_redundant_drivers, driver_packages, format_driver, merge_driver, shrink_driver
 from .Helpers import deep_merge, sanitize_none
 from .Schema import build_config_groups, build_config_schema, build_env_groups, build_env_schema
 
 router = APIRouter(prefix='/api/config', tags=['Config'])
+
+
+async def run_adapter_install_task(context: TaskContext, adapter: dict, name: str) -> str:
+    """任务体：登记适配器 + 合并 DRIVER 配置，并用 uv 安装适配器包与驱动底层包。"""
+    context.set_message('task_center.msg_installing_adapter', name=name)
+    config_manager.add_adapter(adapter['name'], adapter['module_name'])
+
+    packages = [adapter['package']]
+    if adapter.get('drivers'):
+        new_driver, added_drivers = merge_driver(adapter['drivers'])
+        if added_drivers:
+            packages.extend(driver_packages(added_drivers))
+            context.log(f'DRIVER updated to {new_driver} (added: {format_driver(added_drivers)})')
+
+    context.set_message('task_center.msg_syncing_dependencies')
+    await apply_main_dependency_changes(packages, [], context.log)
+    # 适配器加载需要重启：前端据此询问用户是否立即重启
+    context.set_result(restart_required=True)
+    return 'task_center.msg_adapter_installed'
+
+
+async def run_adapter_uninstall_task(context: TaskContext, adapter: dict, name: str) -> str:
+    """任务体：移除适配器登记与依赖包，并收缩 DRIVER 配置。"""
+    context.set_message('task_center.msg_uninstalling_adapter', name=name)
+    config_manager.remove_adapter(adapter['module_name'])
+
+    redundant = compute_redundant_drivers(adapter['module_name'])
+    if redundant:
+        new_driver, removed_drivers = shrink_driver(redundant)
+        if removed_drivers:
+            context.log(f'DRIVER updated to {new_driver} (removed: {format_driver(removed_drivers)})')
+
+    context.set_message('task_center.msg_syncing_dependencies')
+    await apply_main_dependency_changes([], [adapter['package']], context.log)
+    context.set_result(restart_required=True)
+    return 'task_center.msg_adapter_uninstalled'
 
 # tomlkit 不支持 None 值，写盘前替换为空字符串
 # NoneBot 内置配置字段（port/superusers/command_start）在 .env 中管理，不写入 Config.toml
@@ -238,17 +276,21 @@ async def get_nonebot_config(current_user: dict = Depends(get_current_user)):
 
 @router.post('/nonebot/adapters/install', summary='安装并注册适配器')
 async def install_adapter(body: InstallAdapterRequest, current_user: dict = Depends(require_role('admin'))):
-    """向 pyproject.toml 写入依赖记录和 NoneBot 适配器配置，并自动补全所需驱动。"""
+    """提交适配器安装任务（登记适配器 + uv add 适配器包与所需驱动依赖）。
+
+    依赖安装与 `.env` 的 DRIVER 维护都在任务中心执行，接口立即返回任务快照，
+    进度与日志在 WebUI 右上角「任务中心」查看。
+    """
     adapter = next((item for item in ADAPTER_CATALOG if item['id'] == body.adapter_id), None)
     if adapter is None:
         return {'code': 1, 'data': None, 'message': text('config.adapter.not_found')}
-    config_manager.add_dependency(adapter['package'])
-    config_manager.add_adapter(adapter['name'], adapter['module_name'])
-    new_driver, added_drivers = merge_driver(adapter.get('drivers', []))
-    message = text('config.adapter.install_success')
-    if added_drivers:
-        message += text('config.adapter.install_drivers_added', drivers=format_driver(added_drivers), driver=new_driver)
-    return {'code': 0, 'data': _localized_adapter(adapter), 'message': message}
+    localized = _localized_adapter(adapter)
+    task = task_center.submit(
+        TASK_ADAPTER_INSTALL,
+        lambda context: run_adapter_install_task(context, adapter, localized['name']),
+        title_params={'name': localized['name']},
+    )
+    return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 
 @router.post('/nonebot/adapters', summary='添加适配器')
@@ -270,7 +312,7 @@ async def remove_adapter(body: NoneBotItemRequest, current_user: dict = Depends(
 
 @router.delete('/nonebot/adapters/uninstall', summary='彻底卸载适配器')
 async def uninstall_adapter(body: UninstallAdapterRequest, current_user: dict = Depends(require_role('admin'))):
-    """从 pyproject.toml 移除适配器注册和依赖记录，并清理多余驱动。"""
+    """提交适配器卸载任务（移除登记 + uv remove 依赖包 + 收缩 DRIVER）。"""
     if body.module_name in PROTECTED_ADAPTER_MODULES:
         return {'code': 1, 'data': None, 'message': text('config.adapter.protected')}
     adapter = next(
@@ -279,16 +321,12 @@ async def uninstall_adapter(body: UninstallAdapterRequest, current_user: dict = 
     )
     if adapter is None:
         return {'code': 1, 'data': None, 'message': text('config.adapter.uninstall_not_found')}
-    config_manager.remove_adapter(body.module_name)
-    config_manager.remove_dependency(adapter['package'])
-    redundant = compute_redundant_drivers(body.module_name)
-    new_driver, removed_drivers = shrink_driver(redundant)
-    message = text('config.adapter.uninstall_success')
-    if removed_drivers:
-        message += text(
-            'config.adapter.uninstall_drivers_removed', drivers=format_driver(removed_drivers), driver=new_driver
-        )
-    return {'code': 0, 'data': None, 'message': message}
+    task = task_center.submit(
+        TASK_ADAPTER_UNINSTALL,
+        lambda context: run_adapter_uninstall_task(context, adapter, body.name or body.module_name),
+        title_params={'name': body.name or body.module_name},
+    )
+    return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 
 @router.post('/nonebot/plugins', summary='添加插件')

@@ -209,9 +209,9 @@ title = "字体"
 
 ### Python 依赖自动同步
 
-扩展声明的 `[dependencies].python` 会在加载时自动聚合去重，统一写入 `pyproject.toml` 的 `[project.optional-dependencies].extensions` 组。Watchdog 启动及检测到依赖变化时会自动执行同步安装，无需手动处理；卸载扩展后重新聚合，仅在无其它扩展使用时移除残留依赖。
+扩展声明的 `[dependencies].python` 会在加载时自动聚合去重，统一写入 `pyproject.toml` 的 `[project.optional-dependencies].extensions` 组。同步由机器人内部的**任务中心**负责：可在 WebUI 右上角「任务中心」手动触发，或在安装/卸载扩展时自动触发；卸载扩展后重新聚合，仅在无其它扩展使用时移除残留依赖。
 
-> 注意：`extensions` 组由框架独占维护，请勿在 `pyproject.toml` 中手动编辑该组。
+> 注意：`extensions` 组由框架独占维护，写入一律通过 `uv add` / `uv remove` 完成，请勿在 `pyproject.toml` 中手动编辑该组。
 
 ## 配置与数据目录
 

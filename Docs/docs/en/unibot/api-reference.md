@@ -32,6 +32,7 @@ Authentication uses **JWT + HttpOnly Cookie**:
 | Logs | `/api/logs` | Log viewing |
 | Status | `/api/status` | Runtime status monitoring |
 | Users | `/api/users` | User management |
+| Tasks | `/api/tasks` | Background Task Center (list, detail, cancel, retry, dependency sync) |
 | WebSocket | `/api/ws` | Real-time push |
 :::
 
@@ -186,6 +187,28 @@ Returns available resource extensions and their status. Resource extensions do n
 ```
 GET /api/logs?level=INFO&limit=100  # Fetch logs
 ```
+
+## Task APIs
+
+The background Task Center APIs are mounted at `/api/tasks`, covering dependency sync, market extension installs/uninstalls, extension hot reloads, Studio launches, plugin market operations and version updates.
+
+::: warning
+List and detail endpoints require an authenticated user; **cancel, retry and manual dependency sync** require <Badge type="danger" text="Admin" /> privileges.
+:::
+
+```
+GET  /api/tasks                     # Task list + status summary
+GET  /api/tasks/{id}                # Task detail (including logs)
+POST /api/tasks/{id}/cancel         # Cancel a task
+POST /api/tasks/{id}/retry          # Retry a task
+POST /api/tasks/dependency-sync     # Trigger dependency sync manually
+```
+
+Task snapshot fields: `id`, `kind`, `title_params`, `status` (`pending` / `running` / `succeeded` / `failed` / `cancelled`),
+`message_key` + `message_params` (stage description, translated by the frontend into the UI language), `progress`, `error`,
+`result`, `created_at` / `started_at` / `finished_at`, `retryable`, `log_count` (the detail endpoint additionally returns `logs`).
+
+Task status changes are pushed in real time through the WebSocket `task` event.
 
 ## WebSocket Push
 
