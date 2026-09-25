@@ -126,6 +126,8 @@ class TestTemplatePackage:
         assert info['types'] == ['template']
         assert info['state'] == 'enabled'
         assert info['config_schema'] == registration.config_model.model_json_schema()
+        # color 字段编译为 str 后按统一契约补 `format: 'color'`（前端据此渲染取色器）
+        assert info['config_schema']['properties']['primary_color']['format'] == 'color'
 
     def test_commit_template_package_missing_entry_raises(self, tmp_path):
         loader = ExtensionLoader(extension_manager)

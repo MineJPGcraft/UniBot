@@ -4,7 +4,30 @@
 定义两组构建函数（每次调用返回全新结构，供路由按当前请求语言动态生成）：
 - `build_config_schema()` / `build_config_groups()`：`Config.toml` 字段，供 `/api/config/schema` 渲染。
 - `build_env_schema()` / `build_env_groups()`：`.env` 字段，供 `/api/config/env` 渲染。
+
+输出为**标准 JSON Schema**（与扩展配置的 Pydantic `model_json_schema()` 同构），
+前端因此只需一套表单渲染器。字段名即 `properties` 的键，另有以下约定：
+
+| Schema 形态 | 前端控件 |
+|-------------|----------|
+| `boolean` | 开关 |
+| `number` / `integer` | 数字输入框 |
+| `string` | 文本框 |
+| `string` + `format: 'password'` | 密码框（留空表示不修改） |
+| `string` + `format: 'color'` | 颜色选择器 |
+| `string` + `format: 'textarea'` | 多行文本框 |
+| `string` + `enum` | 下拉选择 || `array` + `items.type: 'string'` | 字符串列表 |
+| `array` + `items.format: 'platform'` | 平台列表（平台下拉 + 目标输入） |
+| `array` + `items.$ref` | 对象数组（卡片列表，支持增删排序） |
+| `object` + `additionalProperties` | 键值对编辑器 |
+| `object` + `properties` | 布尔组（折叠面板内的一组开关） |
+
+数组卡片与键值映射的展示文案通过 `x-item-title` / `x-item-placeholder` /
+`x-key-label` / `x-value-placeholder` / `x-qr-connect` 携带（`x-` 前缀为
+JSON Schema 的自定义扩展位，Pydantic 侧则用 `json_schema_extra` 等价表达）。
 """
+
+from typing import Any
 
 from Scripts.Api.Locale import text
 from Scripts.Constants import QQ_INTENT_FIELDS
@@ -20,169 +43,161 @@ def _platform_options() -> list[dict]:
     ]
 
 
+def _platform_list_schema() -> dict[str, Any]:
+    """平台列表字段：字符串数组 + 平台选项（前端渲染为平台下拉 + 目标输入）。"""
+    return {
+        'type': 'array',
+        'items': {'type': 'string', 'format': 'platform'},
+        'x-options': _platform_options(),
+    }
+
+
 # ===== Config.toml 字段定义 =====
 
 
-def build_config_schema() -> list[dict]:
+def build_config_schema() -> dict:
     """构建 Config.toml 字段 Schema（每次调用返回全新结构）。"""
-    return [
-        {
-            'key': 'admin_superusers',
-            'label': text('schema.config.admin_superusers_label'),
-            'type': 'boolean',
-            'default': True,
-            'description': text('schema.config.admin_superusers_description'),
+    return {
+        'type': 'object',
+        'properties': {
+            'admin_superusers': {
+                'type': 'boolean',
+                'title': text('schema.config.admin_superusers_label'),
+                'description': text('schema.config.admin_superusers_description'),
+                'default': True,
+            },
+            'qq_bound_max_number': {
+                'type': 'integer',
+                'title': text('schema.config.qq_bound_max_number_label'),
+                'description': text('schema.config.qq_bound_max_number_description'),
+                'default': 1,
+                'minimum': 0,
+            },
+            'command_groups': {
+                **_platform_list_schema(),
+                'title': text('schema.config.command_groups_label'),
+                'description': text('schema.config.command_groups_description'),
+                'default': [],
+            },
+            'message_groups': {
+                **_platform_list_schema(),
+                'title': text('schema.config.message_groups_label'),
+                'description': text('schema.config.message_groups_description'),
+                'default': [],
+            },
+            'command_minecraft_whitelist': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'title': text('schema.config.command_minecraft_whitelist_label'),
+                'description': text('schema.config.command_minecraft_whitelist_description'),
+                'default': [],
+            },
+            'command_minecraft_blacklist': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'title': text('schema.config.command_minecraft_blacklist_label'),
+                'description': text('schema.config.command_minecraft_blacklist_description'),
+                'default': [],
+            },
+            'broadcast_server': {
+                'type': 'boolean',
+                'title': text('schema.config.broadcast_server_label'),
+                'description': text('schema.config.broadcast_server_description'),
+                'default': True,
+            },
+            'broadcast_player': {
+                'type': 'boolean',
+                'title': text('schema.config.broadcast_player_label'),
+                'description': text('schema.config.broadcast_player_description'),
+                'default': True,
+            },
+            'broadcast_update': {
+                'type': 'boolean',
+                'title': text('schema.config.broadcast_update_label'),
+                'description': text('schema.config.broadcast_update_description'),
+                'default': True,
+            },
+            'sync_command_panels': {
+                'type': 'boolean',
+                'title': text('schema.config.sync_command_panels_label'),
+                'description': text('schema.config.sync_command_panels_description'),
+                'default': True,
+            },
+            'sync_all_qq_message': {
+                'type': 'boolean',
+                'title': text('schema.config.sync_all_qq_message_label'),
+                'description': text('schema.config.sync_all_qq_message_description'),
+                'default': True,
+            },
+            'sync_all_game_message': {
+                'type': 'boolean',
+                'title': text('schema.config.sync_all_game_message_label'),
+                'description': text('schema.config.sync_all_game_message_description'),
+                'default': False,
+            },
+            'sync_message_between_servers': {
+                'type': 'boolean',
+                'title': text('schema.config.sync_message_between_servers_label'),
+                'description': text('schema.config.sync_message_between_servers_description'),
+                'default': False,
+            },
+            'sync_sensitive_words': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'title': text('schema.config.sync_sensitive_words_label'),
+                'description': text('schema.config.sync_sensitive_words_description'),
+                'default': [],
+            },
+            'sync_color_source': {
+                'type': 'string',
+                'title': text('schema.config.sync_color_source_label'),
+                'description': text('schema.config.sync_color_source_description'),
+                'default': 'gray',
+            },
+            'sync_color_player': {
+                'type': 'string',
+                'title': text('schema.config.sync_color_player_label'),
+                'description': text('schema.config.sync_color_player_description'),
+                'default': 'gray',
+            },
+            'sync_color_message': {
+                'type': 'string',
+                'title': text('schema.config.sync_color_message_label'),
+                'description': text('schema.config.sync_color_message_description'),
+                'default': 'gray',
+            },
+            'bot_prefix': {
+                'type': 'string',
+                'title': text('schema.config.bot_prefix_label'),
+                'description': text('schema.config.bot_prefix_description'),
+                'default': '',
+            },
+            'list_compatible_mode': {
+                'type': 'boolean',
+                'title': text('schema.config.list_compatible_mode_label'),
+                'description': text('schema.config.list_compatible_mode_description'),
+                'default': False,
+            },
+            'whitelist_command': {
+                'type': 'string',
+                'title': text('schema.config.whitelist_command_label'),
+                'description': text('schema.config.whitelist_command_description'),
+                'default': 'whitelist',
+            },
+            'image.mode': {
+                'type': 'boolean',
+                'title': text('schema.config.image__mode_label'),
+                'description': text('schema.config.image__mode_description'),
+                'default': False,
+            },
+            'webui.enabled': {
+                'type': 'boolean',
+                'title': text('schema.config.webui__enabled_label'),
+                'description': text('schema.config.webui__enabled_description'),
+                'default': False,
+            },
         },
-        {
-            'key': 'qq_bound_max_number',
-            'label': text('schema.config.qq_bound_max_number_label'),
-            'type': 'number',
-            'default': 1,
-            'description': text('schema.config.qq_bound_max_number_description'),
-        },
-        {
-            'key': 'command_groups',
-            'label': text('schema.config.command_groups_label'),
-            'type': 'platform_list',
-            'default': [],
-            'options': _platform_options(),
-            'description': text('schema.config.command_groups_description'),
-        },
-        {
-            'key': 'message_groups',
-            'label': text('schema.config.message_groups_label'),
-            'type': 'platform_list',
-            'default': [],
-            'options': _platform_options(),
-            'description': text('schema.config.message_groups_description'),
-        },
-        {
-            'key': 'command_minecraft_whitelist',
-            'label': text('schema.config.command_minecraft_whitelist_label'),
-            'type': 'list',
-            'default': [],
-            'description': text('schema.config.command_minecraft_whitelist_description'),
-        },
-        {
-            'key': 'command_minecraft_blacklist',
-            'label': text('schema.config.command_minecraft_blacklist_label'),
-            'type': 'list',
-            'default': [],
-            'description': text('schema.config.command_minecraft_blacklist_description'),
-        },
-        {
-            'key': 'broadcast_server',
-            'label': text('schema.config.broadcast_server_label'),
-            'type': 'boolean',
-            'default': True,
-            'description': text('schema.config.broadcast_server_description'),
-        },
-        {
-            'key': 'broadcast_player',
-            'label': text('schema.config.broadcast_player_label'),
-            'type': 'boolean',
-            'default': True,
-            'description': text('schema.config.broadcast_player_description'),
-        },
-        {
-            'key': 'broadcast_update',
-            'label': text('schema.config.broadcast_update_label'),
-            'type': 'boolean',
-            'default': True,
-            'description': text('schema.config.broadcast_update_description'),
-        },
-        {
-            'key': 'sync_command_panels',
-            'label': text('schema.config.sync_command_panels_label'),
-            'type': 'boolean',
-            'default': True,
-            'description': text('schema.config.sync_command_panels_description'),
-        },
-        {
-            'key': 'sync_all_qq_message',
-            'label': text('schema.config.sync_all_qq_message_label'),
-            'type': 'boolean',
-            'default': True,
-            'description': text('schema.config.sync_all_qq_message_description'),
-        },
-        {
-            'key': 'sync_all_game_message',
-            'label': text('schema.config.sync_all_game_message_label'),
-            'type': 'boolean',
-            'default': False,
-            'description': text('schema.config.sync_all_game_message_description'),
-        },
-        {
-            'key': 'sync_message_between_servers',
-            'label': text('schema.config.sync_message_between_servers_label'),
-            'type': 'boolean',
-            'default': False,
-            'description': text('schema.config.sync_message_between_servers_description'),
-        },
-        {
-            'key': 'sync_sensitive_words',
-            'label': text('schema.config.sync_sensitive_words_label'),
-            'type': 'list',
-            'default': [],
-            'description': text('schema.config.sync_sensitive_words_description'),
-        },
-        {
-            'key': 'sync_color_source',
-            'label': text('schema.config.sync_color_source_label'),
-            'type': 'string',
-            'default': 'gray',
-            'description': text('schema.config.sync_color_source_description'),
-        },
-        {
-            'key': 'sync_color_player',
-            'label': text('schema.config.sync_color_player_label'),
-            'type': 'string',
-            'default': 'gray',
-            'description': text('schema.config.sync_color_player_description'),
-        },
-        {
-            'key': 'sync_color_message',
-            'label': text('schema.config.sync_color_message_label'),
-            'type': 'string',
-            'default': 'gray',
-            'description': text('schema.config.sync_color_message_description'),
-        },
-        {
-            'key': 'bot_prefix',
-            'label': text('schema.config.bot_prefix_label'),
-            'type': 'string',
-            'default': '',
-            'description': text('schema.config.bot_prefix_description'),
-        },
-        {
-            'key': 'list_compatible_mode',
-            'label': text('schema.config.list_compatible_mode_label'),
-            'type': 'boolean',
-            'default': False,
-            'description': text('schema.config.list_compatible_mode_description'),
-        },
-        {
-            'key': 'whitelist_command',
-            'label': text('schema.config.whitelist_command_label'),
-            'type': 'string',
-            'default': 'whitelist',
-            'description': text('schema.config.whitelist_command_description'),
-        },
-        {
-            'key': 'image.mode',
-            'label': text('schema.config.image__mode_label'),
-            'type': 'boolean',
-            'default': False,
-            'description': text('schema.config.image__mode_description'),
-        },
-        {
-            'key': 'webui.enabled',
-            'label': text('schema.config.webui__enabled_label'),
-            'type': 'boolean',
-            'default': False,
-            'description': text('schema.config.webui__enabled_description'),
-        },
-    ]
+    }
 
 
 def build_config_groups() -> list[dict]:
@@ -246,411 +261,395 @@ def build_config_groups() -> list[dict]:
 # QQ 官方机器人 Intent 订阅清单：单一来源在 Scripts/Constants.py（扫码登录默认值共用）
 
 
-def build_env_schema() -> list[dict]:
+def _intent_schema() -> dict[str, Any]:
+    """布尔组：折叠面板内的一组开关。"""
+    return {
+        'type': 'object',
+        'properties': {
+            intent_field['key']: {
+                'type': 'boolean',
+                'title': text(f'schema.intent.{intent_field["key"]}'),
+                'default': intent_field['default'],
+            }
+            for intent_field in QQ_INTENT_FIELDS
+        },
+    }
+
+
+# 对象数组的元素定义（前端按 $ref 解析为卡片内字段）
+_ENV_DEFINITIONS: dict[str, Any] = {
+    'QQ_BOTSItem': {
+        'type': 'object',
+        'required': ['id', 'secret'],
+        'properties': {
+            'id': {
+                'type': 'string',
+                'title': text('schema.env.QQ_BOTS_field_id_label'),
+                'description': text('schema.env.QQ_BOTS_field_id_description'),
+            },
+            'secret': {
+                'type': 'string',
+                'format': 'password',
+                'title': text('schema.env.QQ_BOTS_field_secret_label'),
+                'description': text('schema.env.QQ_BOTS_field_secret_description'),
+            },
+            'token': {
+                'type': 'string',
+                'format': 'password',
+                'title': text('schema.env.QQ_BOTS_field_token_label'),
+                'description': text('schema.env.QQ_BOTS_field_token_description'),
+            },
+            'intent': {
+                **_intent_schema(),
+                'title': text('schema.env.QQ_BOTS_field_intent_label'),
+                'description': text('schema.env.QQ_BOTS_field_intent_description'),
+            },
+            'use_websocket': {
+                'type': 'boolean',
+                'title': text('schema.env.QQ_BOTS_field_use_websocket_label'),
+                'description': text('schema.env.QQ_BOTS_field_use_websocket_description'),
+                'default': True,
+            },
+        },
+    },
+    'TELEGRAM_BOTSItem': {
+        'type': 'object',
+        'required': ['token'],
+        'properties': {
+            'token': {
+                'type': 'string',
+                'format': 'password',
+                'title': text('schema.env.TELEGRAM_BOTS_field_token_label'),
+                'description': text('schema.env.TELEGRAM_BOTS_field_token_description'),
+            },
+            'is_webhook': {
+                'type': 'boolean',
+                'title': text('schema.env.TELEGRAM_BOTS_field_is_webhook_label'),
+                'description': text('schema.env.TELEGRAM_BOTS_field_is_webhook_description'),
+                'default': False,
+            },
+        },
+    },
+    'DISCORD_BOTSItem': {
+        'type': 'object',
+        'required': ['token'],
+        'properties': {
+            'token': {
+                'type': 'string',
+                'format': 'password',
+                'title': text('schema.env.DISCORD_BOTS_field_token_label'),
+                'description': text('schema.env.DISCORD_BOTS_field_token_description'),
+            },
+            'intent': {
+                'type': 'object',
+                'title': text('schema.env.DISCORD_BOTS_field_intent_label'),
+                'properties': {
+                    'guilds': {
+                        'type': 'boolean',
+                        'title': text('schema.env.DISCORD_BOTS_field_guilds_label'),
+                        'default': True,
+                    },
+                    'guild_messages': {
+                        'type': 'boolean',
+                        'title': text('schema.env.DISCORD_BOTS_field_guild_messages_label'),
+                        'default': True,
+                    },
+                    'direct_messages': {
+                        'type': 'boolean',
+                        'title': text('schema.env.DISCORD_BOTS_field_direct_messages_label'),
+                        'default': True,
+                    },
+                    'message_content': {
+                        'type': 'boolean',
+                        'title': text('schema.env.DISCORD_BOTS_field_message_content_label'),
+                        'description': text('schema.env.DISCORD_BOTS_field_message_content_description'),
+                        'default': False,
+                    },
+                    'guild_members': {
+                        'type': 'boolean',
+                        'title': text('schema.env.DISCORD_BOTS_field_guild_members_label'),
+                        'default': True,
+                    },
+                },
+            },
+            'application_commands': {
+                'type': 'object',
+                'additionalProperties': {'type': 'array', 'items': {'type': 'string'}},
+                'title': text('schema.env.DISCORD_BOTS_field_application_commands_label'),
+                'description': text('schema.env.DISCORD_BOTS_field_application_commands_description'),
+            },
+        },
+    },
+    'DODO_BOTSItem': {
+        'type': 'object',
+        'required': ['client_id', 'token'],
+        'properties': {
+            'client_id': {
+                'type': 'string',
+                'title': text('schema.env.DODO_BOTS_field_client_id_label'),
+                'description': text('schema.env.DODO_BOTS_field_client_id_description'),
+            },
+            'token': {
+                'type': 'string',
+                'format': 'password',
+                'title': text('schema.env.DODO_BOTS_field_token_label'),
+                'description': text('schema.env.DODO_BOTS_field_token_description'),
+            },
+        },
+    },
+    'KAIHEILA_BOTSItem': {
+        'type': 'object',
+        'required': ['token'],
+        'properties': {
+            'token': {
+                'type': 'string',
+                'format': 'password',
+                'title': text('schema.env.KAIHEILA_BOTS_field_token_label'),
+                'description': text('schema.env.KAIHEILA_BOTS_field_token_description'),
+            },
+        },
+    },
+    'SATORI_CLIENTSItem': {
+        'type': 'object',
+        'properties': {
+            'host': {
+                'type': 'string',
+                'title': text('schema.env.SATORI_CLIENTS_field_host_label'),
+                'description': text('schema.env.SATORI_CLIENTS_field_host_description'),
+                'default': 'localhost',
+            },
+            'port': {
+                'type': 'integer',
+                'title': text('schema.env.SATORI_CLIENTS_field_port_label'),
+                'description': text('schema.env.SATORI_CLIENTS_field_port_description'),
+                'default': 5500,
+                'minimum': 1,
+                'maximum': 65535,
+            },
+            'path': {
+                'type': 'string',
+                'title': text('schema.env.SATORI_CLIENTS_field_path_label'),
+                'description': text('schema.env.SATORI_CLIENTS_field_path_description'),
+                'default': '',
+            },
+            'token': {
+                'type': 'string',
+                'format': 'password',
+                'title': text('schema.env.SATORI_CLIENTS_field_token_label'),
+                'description': text('schema.env.SATORI_CLIENTS_field_token_description'),
+                'default': '',
+            },
+            'timeout': {
+                'type': 'integer',
+                'title': text('schema.env.SATORI_CLIENTS_field_timeout_label'),
+                'description': text('schema.env.SATORI_CLIENTS_field_timeout_description'),
+                'default': 30,
+                'minimum': 1,
+            },
+            'secure': {
+                'type': 'boolean',
+                'title': text('schema.env.SATORI_CLIENTS_field_secure_label'),
+                'description': text('schema.env.SATORI_CLIENTS_field_secure_description'),
+                'default': False,
+            },
+        },
+    },
+}
+
+
+def build_env_schema() -> dict:
     """构建 .env 字段 Schema（每次调用返回全新结构）。"""
-    return [
-        {
-            'key': 'PORT',
-            'label': text('schema.env.PORT_label'),
-            'type': 'number',
-            'default': 8000,
-            'description': text('schema.env.PORT_description'),
-        },
-        {
-            'key': 'HOST',
-            'label': text('schema.env.HOST_label'),
-            'type': 'string',
-            'default': '127.0.0.1',
-            'description': text('schema.env.HOST_description'),
-        },
-        {
-            'key': 'SUPERUSERS',
-            'label': text('schema.env.SUPERUSERS_label'),
-            'type': 'list',
-            'default': [],
-            'description': text('schema.env.SUPERUSERS_description'),
-        },
-        {
-            'key': 'COMMAND_SEP',
-            'label': text('schema.env.COMMAND_SEP_label'),
-            'type': 'list',
-            'default': [' '],
-            'description': text('schema.env.COMMAND_SEP_description'),
-        },
-        {
-            'key': 'COMMAND_START',
-            'label': text('schema.env.COMMAND_START_label'),
-            'type': 'list',
-            'default': ['.'],
-            'description': text('schema.env.COMMAND_START_description'),
-        },
-        {
-            'key': 'LOG_LEVEL',
-            'label': text('schema.env.LOG_LEVEL_label'),
-            'type': 'string',
-            'default': 'INFO',
-            'description': text('schema.env.LOG_LEVEL_description'),
-        },
-        {
-            'key': 'DRIVER',
-            'label': text('schema.env.DRIVER_label'),
-            'type': 'string',
-            'default': '~fastapi',
-            'description': text('schema.env.DRIVER_description'),
-        },
-        # ===== OneBot V11 =====
-        {
-            'key': 'ONEBOT_ACCESS_TOKEN',
-            'label': text('schema.env.ONEBOT_ACCESS_TOKEN_label'),
-            'type': 'secret',
-            'default': '',
-            'description': text('schema.env.ONEBOT_ACCESS_TOKEN_description'),
-        },
-        # ===== QQ =====
-        {
-            'key': 'QQ_BOTS',
-            'label': text('schema.env.QQ_BOTS_label'),
-            'type': 'json',
-            'default': [],
-            'description': text('schema.env.QQ_BOTS_description'),
-            'form': {
-                'kind': 'array',
-                'item_title': text('schema.env.QQ_BOTS_form_item_title'),
+    return {
+        'type': 'object',
+        'properties': {
+            'PORT': {
+                'type': 'integer',
+                'title': text('schema.env.PORT_label'),
+                'description': text('schema.env.PORT_description'),
+                'default': 8000,
+                'minimum': 1,
+                'maximum': 65535,
+            },
+            'HOST': {
+                'type': 'string',
+                'title': text('schema.env.HOST_label'),
+                'description': text('schema.env.HOST_description'),
+                'default': '127.0.0.1',
+            },
+            'SUPERUSERS': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'title': text('schema.env.SUPERUSERS_label'),
+                'description': text('schema.env.SUPERUSERS_description'),
+                'default': [],
+            },
+            'COMMAND_SEP': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'title': text('schema.env.COMMAND_SEP_label'),
+                'description': text('schema.env.COMMAND_SEP_description'),
+                'default': [' '],
+            },
+            'COMMAND_START': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'title': text('schema.env.COMMAND_START_label'),
+                'description': text('schema.env.COMMAND_START_description'),
+                'default': ['.'],
+            },
+            'LOG_LEVEL': {
+                'type': 'string',
+                'title': text('schema.env.LOG_LEVEL_label'),
+                'description': text('schema.env.LOG_LEVEL_description'),
+                'default': 'INFO',
+            },
+            'DRIVER': {
+                'type': 'string',
+                'title': text('schema.env.DRIVER_label'),
+                'description': text('schema.env.DRIVER_description'),
+                'default': '~fastapi',
+            },
+            # ===== OneBot V11 =====
+            'ONEBOT_ACCESS_TOKEN': {
+                'type': 'string',
+                'format': 'password',
+                'title': text('schema.env.ONEBOT_ACCESS_TOKEN_label'),
+                'description': text('schema.env.ONEBOT_ACCESS_TOKEN_description'),
+                'default': '',
+            },
+            # ===== QQ =====
+            'QQ_BOTS': {
+                'type': 'array',
+                'items': {'$ref': '#/$defs/QQ_BOTSItem'},
+                'title': text('schema.env.QQ_BOTS_label'),
+                'description': text('schema.env.QQ_BOTS_description'),
+                'default': [],
+                'x-item-title': text('schema.env.QQ_BOTS_form_item_title'),
                 # 扫码快速绑定：前端据此在机器人卡片上渲染「扫码」按钮，扫码成功回填 id / secret
-                'qr_connect': {
+                'x-qr-connect': {
                     'id_key': 'id',
                     'secret_key': 'secret',
                     'source': 'qq_official',
                     'hint': text('schema.env.QQ_BOTS_form_qr_hint'),
                 },
-                'fields': [
-                    {
-                        'key': 'id',
-                        'label': text('schema.env.QQ_BOTS_field_id_label'),
-                        'type': 'string',
-                        'required': True,
-                        'description': text('schema.env.QQ_BOTS_field_id_description'),
-                    },
-                    {
-                        'key': 'secret',
-                        'label': text('schema.env.QQ_BOTS_field_secret_label'),
-                        'type': 'secret',
-                        'required': True,
-                        'description': text('schema.env.QQ_BOTS_field_secret_description'),
-                    },
-                    {
-                        'key': 'token',
-                        'label': text('schema.env.QQ_BOTS_field_token_label'),
-                        'type': 'secret',
-                        'description': text('schema.env.QQ_BOTS_field_token_description'),
-                    },
-                    {
-                        'key': 'intent',
-                        'label': text('schema.env.QQ_BOTS_field_intent_label'),
-                        'type': 'object',
-                        'kind': 'booleans',
-                        'fields': [
-                            {
-                                'key': intent_field['key'],
-                                'label': text(f'schema.intent.{intent_field["key"]}'),
-                                'type': intent_field['type'],
-                                'default': intent_field['default'],
-                            }
-                            for intent_field in QQ_INTENT_FIELDS
-                        ],
-                        'description': text('schema.env.QQ_BOTS_field_intent_description'),
-                    },
-                    {
-                        'key': 'use_websocket',
-                        'label': text('schema.env.QQ_BOTS_field_use_websocket_label'),
-                        'type': 'boolean',
-                        'default': True,
-                        'description': text('schema.env.QQ_BOTS_field_use_websocket_description'),
-                    },
-                ],
+            },
+            'QQ_IS_SANDBOX': {
+                'type': 'boolean',
+                'title': text('schema.env.QQ_IS_SANDBOX_label'),
+                'description': text('schema.env.QQ_IS_SANDBOX_description'),
+                'default': False,
+            },
+            # ===== Telegram =====
+            'TELEGRAM_BOTS': {
+                'type': 'array',
+                'items': {'$ref': '#/$defs/TELEGRAM_BOTSItem'},
+                'title': text('schema.env.TELEGRAM_BOTS_label'),
+                'description': text('schema.env.TELEGRAM_BOTS_description'),
+                'default': [],
+                'x-item-title': text('schema.env.TELEGRAM_BOTS_form_item_title'),
+                'x-item-placeholder': text('schema.env.TELEGRAM_BOTS_form_item_placeholder'),
+            },
+            'TELEGRAM_WEBHOOK_URL': {
+                'type': 'string',
+                'title': text('schema.env.TELEGRAM_WEBHOOK_URL_label'),
+                'description': text('schema.env.TELEGRAM_WEBHOOK_URL_description'),
+                'default': '',
+            },
+            'TELEGRAM_PROXY': {
+                'type': 'string',
+                'title': text('schema.env.TELEGRAM_PROXY_label'),
+                'description': text('schema.env.TELEGRAM_PROXY_description'),
+                'default': '',
+            },
+            # ===== Discord =====
+            'DISCORD_BOTS': {
+                'type': 'array',
+                'items': {'$ref': '#/$defs/DISCORD_BOTSItem'},
+                'title': text('schema.env.DISCORD_BOTS_label'),
+                'description': text('schema.env.DISCORD_BOTS_description'),
+                'default': [],
+                'x-item-title': text('schema.env.DISCORD_BOTS_form_item_title'),
+            },
+            'DISCORD_API_VERSION': {
+                'type': 'integer',
+                'title': text('schema.env.DISCORD_API_VERSION_label'),
+                'description': text('schema.env.DISCORD_API_VERSION_description'),
+                'default': 10,
+                'minimum': 9,
+            },
+            'DISCORD_API_TIMEOUT': {
+                'type': 'integer',
+                'title': text('schema.env.DISCORD_API_TIMEOUT_label'),
+                'description': text('schema.env.DISCORD_API_TIMEOUT_description'),
+                'default': 30,
+                'minimum': 1,
+            },
+            'DISCORD_COMPRESS': {
+                'type': 'boolean',
+                'title': text('schema.env.DISCORD_COMPRESS_label'),
+                'description': text('schema.env.DISCORD_COMPRESS_description'),
+                'default': False,
+            },
+            'DISCORD_HANDLE_SELF_MESSAGE': {
+                'type': 'boolean',
+                'title': text('schema.env.DISCORD_HANDLE_SELF_MESSAGE_label'),
+                'description': text('schema.env.DISCORD_HANDLE_SELF_MESSAGE_description'),
+                'default': False,
+            },
+            'DISCORD_PROXY': {
+                'type': 'string',
+                'title': text('schema.env.DISCORD_PROXY_label'),
+                'description': text('schema.env.DISCORD_PROXY_description'),
+                'default': '',
+            },
+            # ===== DoDo =====
+            'DODO_BOTS': {
+                'type': 'array',
+                'items': {'$ref': '#/$defs/DODO_BOTSItem'},
+                'title': text('schema.env.DODO_BOTS_label'),
+                'description': text('schema.env.DODO_BOTS_description'),
+                'default': [],
+                'x-item-title': text('schema.env.DODO_BOTS_form_item_title'),
+            },
+            # ===== KOOK =====
+            'KAIHEILA_BOTS': {
+                'type': 'array',
+                'items': {'$ref': '#/$defs/KAIHEILA_BOTSItem'},
+                'title': text('schema.env.KAIHEILA_BOTS_label'),
+                'description': text('schema.env.KAIHEILA_BOTS_description'),
+                'default': [],
+                'x-item-title': text('schema.env.KAIHEILA_BOTS_form_item_title'),
+            },
+            # ===== Satori =====
+            'SATORI_CLIENTS': {
+                'type': 'array',
+                'items': {'$ref': '#/$defs/SATORI_CLIENTSItem'},
+                'title': text('schema.env.SATORI_CLIENTS_label'),
+                'description': text('schema.env.SATORI_CLIENTS_description'),
+                'default': [],
+                'x-item-title': text('schema.env.SATORI_CLIENTS_form_item_title'),
+                'x-item-placeholder': text('schema.env.SATORI_CLIENTS_form_item_placeholder'),
+            },
+            # ===== Minecraft =====
+            'MINECRAFT_WS_URLS': {
+                'type': 'object',
+                'additionalProperties': {'type': 'array', 'items': {'type': 'string'}},
+                'title': text('schema.env.MINECRAFT_WS_URLS_label'),
+                'description': text('schema.env.MINECRAFT_WS_URLS_description'),
+                'default': {},
+                'x-key-label': text('schema.env.MINECRAFT_WS_URLS_form_key_label'),
+                'x-value-placeholder': text('schema.env.MINECRAFT_WS_URLS_form_value_placeholder'),
+            },
+            'MINECRAFT_ACCESS_TOKEN': {
+                'type': 'string',
+                'format': 'password',
+                'title': text('schema.env.MINECRAFT_ACCESS_TOKEN_label'),
+                'description': text('schema.env.MINECRAFT_ACCESS_TOKEN_description'),
+                'default': '',
             },
         },
-        {
-            'key': 'QQ_IS_SANDBOX',
-            'label': text('schema.env.QQ_IS_SANDBOX_label'),
-            'type': 'boolean',
-            'default': False,
-            'description': text('schema.env.QQ_IS_SANDBOX_description'),
-        },
-        # ===== Telegram =====
-        {
-            'key': 'TELEGRAM_BOTS',
-            'label': text('schema.env.TELEGRAM_BOTS_label'),
-            'type': 'json',
-            'default': [],
-            'description': text('schema.env.TELEGRAM_BOTS_description'),
-            'form': {
-                'kind': 'array',
-                'item_title': text('schema.env.TELEGRAM_BOTS_form_item_title'),
-                'item_placeholder': text('schema.env.TELEGRAM_BOTS_form_item_placeholder'),
-                'fields': [
-                    {
-                        'key': 'token',
-                        'label': text('schema.env.TELEGRAM_BOTS_field_token_label'),
-                        'type': 'secret',
-                        'required': True,
-                        'description': text('schema.env.TELEGRAM_BOTS_field_token_description'),
-                    },
-                    {
-                        'key': 'is_webhook',
-                        'label': text('schema.env.TELEGRAM_BOTS_field_is_webhook_label'),
-                        'type': 'boolean',
-                        'default': False,
-                        'description': text('schema.env.TELEGRAM_BOTS_field_is_webhook_description'),
-                    },
-                ],
-            },
-        },
-        {
-            'key': 'TELEGRAM_WEBHOOK_URL',
-            'label': text('schema.env.TELEGRAM_WEBHOOK_URL_label'),
-            'type': 'string',
-            'default': '',
-            'description': text('schema.env.TELEGRAM_WEBHOOK_URL_description'),
-        },
-        {
-            'key': 'TELEGRAM_PROXY',
-            'label': text('schema.env.TELEGRAM_PROXY_label'),
-            'type': 'string',
-            'default': '',
-            'description': text('schema.env.TELEGRAM_PROXY_description'),
-        },
-        # ===== Discord =====
-        {
-            'key': 'DISCORD_BOTS',
-            'label': text('schema.env.DISCORD_BOTS_label'),
-            'type': 'json',
-            'default': [],
-            'description': text('schema.env.DISCORD_BOTS_description'),
-            'form': {
-                'kind': 'array',
-                'item_title': text('schema.env.DISCORD_BOTS_form_item_title'),
-                'fields': [
-                    {
-                        'key': 'token',
-                        'label': text('schema.env.DISCORD_BOTS_field_token_label'),
-                        'type': 'secret',
-                        'required': True,
-                        'description': text('schema.env.DISCORD_BOTS_field_token_description'),
-                    },
-                    {
-                        'key': 'intent',
-                        'label': text('schema.env.DISCORD_BOTS_field_intent_label'),
-                        'type': 'object',
-                        'kind': 'booleans',
-                        'fields': [
-                            {
-                                'key': 'guilds',
-                                'label': text('schema.env.DISCORD_BOTS_field_guilds_label'),
-                                'type': 'boolean',
-                                'default': True,
-                            },
-                            {
-                                'key': 'guild_messages',
-                                'label': text('schema.env.DISCORD_BOTS_field_guild_messages_label'),
-                                'type': 'boolean',
-                                'default': True,
-                            },
-                            {
-                                'key': 'direct_messages',
-                                'label': text('schema.env.DISCORD_BOTS_field_direct_messages_label'),
-                                'type': 'boolean',
-                                'default': True,
-                            },
-                            {
-                                'key': 'message_content',
-                                'label': text('schema.env.DISCORD_BOTS_field_message_content_label'),
-                                'type': 'boolean',
-                                'default': False,
-                                'description': text('schema.env.DISCORD_BOTS_field_message_content_description'),
-                            },
-                            {
-                                'key': 'guild_members',
-                                'label': text('schema.env.DISCORD_BOTS_field_guild_members_label'),
-                                'type': 'boolean',
-                                'default': True,
-                            },
-                        ],
-                    },
-                    {
-                        'key': 'application_commands',
-                        'label': text('schema.env.DISCORD_BOTS_field_application_commands_label'),
-                        'type': 'object',
-                        'kind': 'map',
-                        'value_type': 'list',
-                        'description': text('schema.env.DISCORD_BOTS_field_application_commands_description'),
-                    },
-                ],
-            },
-        },
-        {
-            'key': 'DISCORD_API_VERSION',
-            'label': text('schema.env.DISCORD_API_VERSION_label'),
-            'type': 'number',
-            'default': 10,
-            'description': text('schema.env.DISCORD_API_VERSION_description'),
-        },
-        {
-            'key': 'DISCORD_API_TIMEOUT',
-            'label': text('schema.env.DISCORD_API_TIMEOUT_label'),
-            'type': 'number',
-            'default': 30,
-            'description': text('schema.env.DISCORD_API_TIMEOUT_description'),
-        },
-        {
-            'key': 'DISCORD_COMPRESS',
-            'label': text('schema.env.DISCORD_COMPRESS_label'),
-            'type': 'boolean',
-            'default': False,
-            'description': text('schema.env.DISCORD_COMPRESS_description'),
-        },
-        {
-            'key': 'DISCORD_HANDLE_SELF_MESSAGE',
-            'label': text('schema.env.DISCORD_HANDLE_SELF_MESSAGE_label'),
-            'type': 'boolean',
-            'default': False,
-            'description': text('schema.env.DISCORD_HANDLE_SELF_MESSAGE_description'),
-        },
-        {
-            'key': 'DISCORD_PROXY',
-            'label': text('schema.env.DISCORD_PROXY_label'),
-            'type': 'string',
-            'default': '',
-            'description': text('schema.env.DISCORD_PROXY_description'),
-        },
-        # ===== DoDo =====
-        {
-            'key': 'DODO_BOTS',
-            'label': text('schema.env.DODO_BOTS_label'),
-            'type': 'json',
-            'default': [],
-            'description': text('schema.env.DODO_BOTS_description'),
-            'form': {
-                'kind': 'array',
-                'item_title': text('schema.env.DODO_BOTS_form_item_title'),
-                'fields': [
-                    {
-                        'key': 'client_id',
-                        'label': text('schema.env.DODO_BOTS_field_client_id_label'),
-                        'type': 'string',
-                        'required': True,
-                        'description': text('schema.env.DODO_BOTS_field_client_id_description'),
-                    },
-                    {
-                        'key': 'token',
-                        'label': text('schema.env.DODO_BOTS_field_token_label'),
-                        'type': 'secret',
-                        'required': True,
-                        'description': text('schema.env.DODO_BOTS_field_token_description'),
-                    },
-                ],
-            },
-        },
-        # ===== KOOK =====
-        {
-            'key': 'KAIHEILA_BOTS',
-            'label': text('schema.env.KAIHEILA_BOTS_label'),
-            'type': 'json',
-            'default': [],
-            'description': text('schema.env.KAIHEILA_BOTS_description'),
-            'form': {
-                'kind': 'array',
-                'item_title': text('schema.env.KAIHEILA_BOTS_form_item_title'),
-                'fields': [
-                    {
-                        'key': 'token',
-                        'label': text('schema.env.KAIHEILA_BOTS_field_token_label'),
-                        'type': 'secret',
-                        'required': True,
-                        'description': text('schema.env.KAIHEILA_BOTS_field_token_description'),
-                    },
-                ],
-            },
-        },
-        # ===== Satori =====
-        {
-            'key': 'SATORI_CLIENTS',
-            'label': text('schema.env.SATORI_CLIENTS_label'),
-            'type': 'json',
-            'default': [],
-            'description': text('schema.env.SATORI_CLIENTS_description'),
-            'form': {
-                'kind': 'array',
-                'item_title': text('schema.env.SATORI_CLIENTS_form_item_title'),
-                'item_placeholder': text('schema.env.SATORI_CLIENTS_form_item_placeholder'),
-                'fields': [
-                    {
-                        'key': 'host',
-                        'label': text('schema.env.SATORI_CLIENTS_field_host_label'),
-                        'type': 'string',
-                        'default': 'localhost',
-                        'description': text('schema.env.SATORI_CLIENTS_field_host_description'),
-                    },
-                    {
-                        'key': 'port',
-                        'label': text('schema.env.SATORI_CLIENTS_field_port_label'),
-                        'type': 'number',
-                        'default': 5500,
-                        'description': text('schema.env.SATORI_CLIENTS_field_port_description'),
-                    },
-                    {
-                        'key': 'path',
-                        'label': text('schema.env.SATORI_CLIENTS_field_path_label'),
-                        'type': 'string',
-                        'default': '',
-                        'description': text('schema.env.SATORI_CLIENTS_field_path_description'),
-                    },
-                    {
-                        'key': 'token',
-                        'label': text('schema.env.SATORI_CLIENTS_field_token_label'),
-                        'type': 'secret',
-                        'default': '',
-                        'description': text('schema.env.SATORI_CLIENTS_field_token_description'),
-                    },
-                    {
-                        'key': 'timeout',
-                        'label': text('schema.env.SATORI_CLIENTS_field_timeout_label'),
-                        'type': 'number',
-                        'default': 30,
-                        'description': text('schema.env.SATORI_CLIENTS_field_timeout_description'),
-                    },
-                    {
-                        'key': 'secure',
-                        'label': text('schema.env.SATORI_CLIENTS_field_secure_label'),
-                        'type': 'boolean',
-                        'default': False,
-                        'description': text('schema.env.SATORI_CLIENTS_field_secure_description'),
-                    },
-                ],
-            },
-        },
-        # ===== Minecraft =====
-        {
-            'key': 'MINECRAFT_WS_URLS',
-            'label': text('schema.env.MINECRAFT_WS_URLS_label'),
-            'type': 'json',
-            'default': {},
-            'description': text('schema.env.MINECRAFT_WS_URLS_description'),
-            'form': {
-                'kind': 'map',
-                'key_label': text('schema.env.MINECRAFT_WS_URLS_form_key_label'),
-                'value_type': 'list',
-                'value_placeholder': text('schema.env.MINECRAFT_WS_URLS_form_value_placeholder'),
-            },
-        },
-        {
-            'key': 'MINECRAFT_ACCESS_TOKEN',
-            'label': text('schema.env.MINECRAFT_ACCESS_TOKEN_label'),
-            'type': 'secret',
-            'default': '',
-            'description': text('schema.env.MINECRAFT_ACCESS_TOKEN_description'),
-        },
-    ]
+        '$defs': _ENV_DEFINITIONS,
+    }
 
 
 def build_env_groups() -> list[dict]:

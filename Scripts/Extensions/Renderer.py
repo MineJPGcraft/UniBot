@@ -126,8 +126,12 @@ def _map_template_field(
     def reject(reason: str) -> ExtensionError:
         return ExtensionError(f'template {extension_id} config field {field_name} {reason}')
 
-    # 保留 title/description 与原始类型标记（color/select 编译后类型会丢失）
-    field_kwargs: dict[str, Any] = {'json_schema_extra': {'template_type': field_type}}
+    # 保留 title/description；color 编译为 str 后原始类型会丢失，
+    # 因此按统一契约补 `format: 'color'`（与 Config.toml / .env 的 Schema 一致）。
+    # select 编译为 Literal 自带 enum，无需额外标记。
+    field_kwargs: dict[str, Any] = {}
+    if field_type == 'color':
+        field_kwargs['json_schema_extra'] = {'format': 'color'}
     if cfg.title:
         field_kwargs['title'] = cfg.title
     if cfg.description:

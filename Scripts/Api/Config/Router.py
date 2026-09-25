@@ -79,7 +79,7 @@ async def get_config_schema(current_user: dict = Depends(get_current_user)):
     return {
         'code': 0,
         'data': {
-            'fields': build_config_schema(),
+            'schema': build_config_schema(),
             'groups': build_config_groups(),
         },
         'message': 'ok',
