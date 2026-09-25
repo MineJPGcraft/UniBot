@@ -448,7 +448,7 @@ def generate_qr_png(url: str, box_size: int = 8, border: int = 2) -> bytes:
 
     qr = qrcode.QRCode(
         version=None,
-        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        error_correction=qrcode.ERROR_CORRECT_M,
         box_size=box_size,
         border=border,
     )
@@ -456,7 +456,8 @@ def generate_qr_png(url: str, box_size: int = 8, border: int = 2) -> bytes:
     qr.make(fit=True)
     image = qr.make_image(fill_color='black', back_color='white')
     buffer = io.BytesIO()
-    image.save(buffer, format='PNG')
+    # qrcode 各图片后端统一用 kind 参数（Pillow 后端内部再转成 format）
+    image.save(buffer, kind='PNG')
     return buffer.getvalue()
 
 

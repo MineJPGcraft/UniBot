@@ -37,8 +37,9 @@ class PluginManager:
     def _plugin_info(plugin, configured: dict | None = None) -> dict:
         if not plugin and configured is None:
             raise ValueError('plugin and configured cannot both be empty')
+        fallback = configured or {}
         metadata = plugin.metadata if plugin else None
-        module_name = plugin.module_name if plugin else configured['module_name']
+        module_name = plugin.module_name if plugin else fallback['module_name']
         extra = metadata.extra if metadata else {}
         return {
             'name': plugin.name if plugin else module_name.rsplit('.', 1)[-1],

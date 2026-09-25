@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, Request
 
 from Scripts.Api.Locale import text
 from Scripts.Config import CONFIG_TOML_PATH, Config, config, reload_config, validate_config_content
-from Scripts.Constants import BUILTIN_PLUGIN_PREFIX, TASK_ADAPTER_INSTALL, TASK_ADAPTER_UNINSTALL
+from Scripts.Constants import BUILTIN_PLUGIN_PREFIX, TaskKind, UserRole
 from Scripts.Extensions.Dependencies import apply_main_dependency_changes
 from Scripts.Managers import config_manager, task_center
 from Scripts.Managers.TaskCenter import TaskContext
@@ -125,7 +125,7 @@ async def get_config_schema(current_user: dict = Depends(get_current_user)):
 
 
 @router.patch('', summary='更新配置')
-async def patch_config(request: Request, current_user: dict = Depends(require_role('admin'))):
+async def patch_config(request: Request, current_user: dict = Depends(require_role(UserRole.admin))):
     """部分更新配置，深合并后写回 Config.toml 并热更新。"""
     patch_data = await parse_json_object(request)
     previous_language = config.language
@@ -166,7 +166,7 @@ async def get_messages(current_user: dict = Depends(get_current_user)):
 
 
 @router.patch('/messages', summary='保存消息文本配置')
-async def patch_messages(body: MessagesPatchRequest, current_user: dict = Depends(require_role('admin'))):
+async def patch_messages(body: MessagesPatchRequest, current_user: dict = Depends(require_role(UserRole.admin))):
     """以原始文本方式保存 Messages.toml 并热更新。"""
     try:
         config_manager.write_messages_raw(body.messages_toml)
@@ -193,7 +193,7 @@ async def get_env_config(current_user: dict = Depends(get_current_user)):
 
 
 @router.patch('/env', summary='更新环境变量配置')
-async def patch_env_config(request: Request, current_user: dict = Depends(require_role('admin'))):
+async def patch_env_config(request: Request, current_user: dict = Depends(require_role(UserRole.admin))):
     """部分更新 .env 配置，写回文件（需重启生效）。"""
     patch_data = await parse_json_object(request)
     config_manager.update_env(patch_data)
@@ -217,7 +217,7 @@ async def get_raw_config(current_user: dict = Depends(get_current_user)):
 
 
 @router.patch('/raw', summary='保存原始配置文件内容')
-async def patch_raw_config(body: RawConfigPatchRequest, current_user: dict = Depends(require_role('admin'))):
+async def patch_raw_config(body: RawConfigPatchRequest, current_user: dict = Depends(require_role(UserRole.admin))):
     """以原始文本方式保存 Config.toml / .env（.env 改动需重启生效）。"""
     hints = []
     previous_language = config.language
@@ -275,7 +275,7 @@ async def get_nonebot_config(current_user: dict = Depends(get_current_user)):
 
 
 @router.post('/nonebot/adapters/install', summary='安装并注册适配器')
-async def install_adapter(body: InstallAdapterRequest, current_user: dict = Depends(require_role('admin'))):
+async def install_adapter(body: InstallAdapterRequest, current_user: dict = Depends(require_role(UserRole.admin))):
     """提交适配器安装任务（登记适配器 + uv add 适配器包与所需驱动依赖）。
 
     依赖安装与 `.env` 的 DRIVER 维护都在任务中心执行，接口立即返回任务快照，
@@ -286,7 +286,7 @@ async def install_adapter(body: InstallAdapterRequest, current_user: dict = Depe
         return {'code': 1, 'data': None, 'message': text('config.adapter.not_found')}
     localized = _localized_adapter(adapter)
     task = task_center.submit(
-        TASK_ADAPTER_INSTALL,
+        TaskKind.adapter_install,
         lambda context: run_adapter_install_task(context, adapter, localized['name']),
         title_params={'name': localized['name']},
     )
@@ -294,7 +294,7 @@ async def install_adapter(body: InstallAdapterRequest, current_user: dict = Depe
 
 
 @router.post('/nonebot/adapters', summary='添加适配器')
-async def add_adapter(body: NoneBotItemRequest, current_user: dict = Depends(require_role('admin'))):
+async def add_adapter(body: NoneBotItemRequest, current_user: dict = Depends(require_role(UserRole.admin))):
     """向 pyproject.toml 添加适配器。"""
     if config_manager.add_adapter(body.name, body.module_name):
         return {'code': 0, 'data': None, 'message': text('config.ok.restart_required')}
@@ -302,7 +302,7 @@ async def add_adapter(body: NoneBotItemRequest, current_user: dict = Depends(req
 
 
 @router.delete('/nonebot/adapters', summary='移除适配器注册')
-async def remove_adapter(body: NoneBotItemRequest, current_user: dict = Depends(require_role('admin'))):
+async def remove_adapter(body: NoneBotItemRequest, current_user: dict = Depends(require_role(UserRole.admin))):
     """从 pyproject.toml 移除适配器注册（不删除依赖包）。"""
     if body.module_name in PROTECTED_ADAPTER_MODULES:
         return {'code': 1, 'data': None, 'message': text('config.adapter.protected')}
@@ -311,7 +311,7 @@ async def remove_adapter(body: NoneBotItemRequest, current_user: dict = Depends(
 
 
 @router.delete('/nonebot/adapters/uninstall', summary='彻底卸载适配器')
-async def uninstall_adapter(body: UninstallAdapterRequest, current_user: dict = Depends(require_role('admin'))):
+async def uninstall_adapter(body: UninstallAdapterRequest, current_user: dict = Depends(require_role(UserRole.admin))):
     """提交适配器卸载任务（移除登记 + uv remove 依赖包 + 收缩 DRIVER）。"""
     if body.module_name in PROTECTED_ADAPTER_MODULES:
         return {'code': 1, 'data': None, 'message': text('config.adapter.protected')}
@@ -322,7 +322,7 @@ async def uninstall_adapter(body: UninstallAdapterRequest, current_user: dict = 
     if adapter is None:
         return {'code': 1, 'data': None, 'message': text('config.adapter.uninstall_not_found')}
     task = task_center.submit(
-        TASK_ADAPTER_UNINSTALL,
+        TaskKind.adapter_uninstall,
         lambda context: run_adapter_uninstall_task(context, adapter, body.name or body.module_name),
         title_params={'name': body.name or body.module_name},
     )
@@ -330,7 +330,7 @@ async def uninstall_adapter(body: UninstallAdapterRequest, current_user: dict = 
 
 
 @router.post('/nonebot/plugins', summary='添加插件')
-async def add_plugin(body: NoneBotItemRequest, current_user: dict = Depends(require_role('admin'))):
+async def add_plugin(body: NoneBotItemRequest, current_user: dict = Depends(require_role(UserRole.admin))):
     """向 pyproject.toml 添加插件。"""
     if config_manager.add_plugin(body.module_name):
         return {'code': 0, 'data': None, 'message': text('config.ok.restart_required')}
@@ -338,7 +338,7 @@ async def add_plugin(body: NoneBotItemRequest, current_user: dict = Depends(requ
 
 
 @router.delete('/nonebot/plugins', summary='移除插件')
-async def remove_plugin(body: NoneBotItemRequest, current_user: dict = Depends(require_role('admin'))):
+async def remove_plugin(body: NoneBotItemRequest, current_user: dict = Depends(require_role(UserRole.admin))):
     """从 pyproject.toml 移除插件。"""
     if body.module_name.startswith(BUILTIN_PLUGIN_PREFIX):
         return {'code': 1, 'data': None, 'message': text('config.plugin.builtin_protected')}

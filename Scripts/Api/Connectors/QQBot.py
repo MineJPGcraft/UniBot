@@ -16,6 +16,7 @@ from fastapi.sse import EventSourceResponse, ServerSentEvent
 from pydantic import BaseModel
 
 from Scripts.Api.Locale import text
+from Scripts.Constants import UserRole
 from Scripts.Platforms.Connectors.QQOfficial import (
     cancel_qr_login,
     get_qr_login,
@@ -38,7 +39,7 @@ class StartQrLoginRequest(BaseModel):
 @router.post('/qr/login', summary='启动 QQ 扫码登录')
 async def start_login(
     body: StartQrLoginRequest,
-    user: dict = Depends(require_role('admin')),
+    user: dict = Depends(require_role(UserRole.admin)),
 ):
     """启动扫码登录并返回二维码图片（data URL），前端展示后轮询状态。"""
     try:
@@ -57,7 +58,7 @@ async def stream_login(
     request: Request,
     source: str = '',
     env: str = 'production',
-    user: dict = Depends(require_role('admin')),
+    user: dict = Depends(require_role(UserRole.admin)),
 ) -> AsyncIterator[ServerSentEvent]:
     """
     启动扫码登录并通过 SSE 推送状态变化。
@@ -83,7 +84,7 @@ async def stream_login(
 
 
 @router.get('/qr/login', summary='查询当前扫码登录状态')
-async def get_login(user: dict = Depends(require_role('admin'))):
+async def get_login(user: dict = Depends(require_role(UserRole.admin))):
     """轮询当前扫码登录状态；完成时返回 app_id / app_secret 凭据。"""
     state = get_qr_login()
     if state is None:
@@ -92,7 +93,7 @@ async def get_login(user: dict = Depends(require_role('admin'))):
 
 
 @router.delete('/qr/login', summary='取消当前扫码登录')
-async def cancel_login(user: dict = Depends(require_role('admin'))):
+async def cancel_login(user: dict = Depends(require_role(UserRole.admin))):
     """取消当前扫码登录并停止后台轮询。"""
     cancelled = cancel_qr_login()
     if not cancelled:

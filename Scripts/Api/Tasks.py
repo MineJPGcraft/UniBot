@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from Scripts.Api.Locale import text
-from Scripts.Constants import TASK_DEPENDENCY_SYNC
+from Scripts.Constants import TaskKind, UserRole
 from Scripts.Extensions.Dependencies import sync_extension_dependencies
 from Scripts.Managers import task_center
 from Scripts.Managers.TaskCenter import TaskContext
@@ -41,7 +41,7 @@ async def get_task(task_id: str, current_user: dict = Depends(get_current_user))
 
 
 @router.post('/{task_id}/cancel', summary='取消任务')
-async def cancel_task(task_id: str, user: dict = Depends(require_role('admin'))):
+async def cancel_task(task_id: str, user: dict = Depends(require_role(UserRole.admin))):
     """请求取消指定任务（任务体在长流程中主动检查取消标志）。"""
     if task_center.get(task_id) is None:
         raise HTTPException(status_code=404, detail=text('task_center.not_found'))
@@ -52,7 +52,7 @@ async def cancel_task(task_id: str, user: dict = Depends(require_role('admin')))
 
 
 @router.post('/{task_id}/retry', summary='重试任务')
-async def retry_task(task_id: str, user: dict = Depends(require_role('admin'))):
+async def retry_task(task_id: str, user: dict = Depends(require_role(UserRole.admin))):
     """以同一任务体重新提交任务。"""
     if task_center.get(task_id) is None:
         raise HTTPException(status_code=404, detail=text('task_center.not_found'))
@@ -63,10 +63,10 @@ async def retry_task(task_id: str, user: dict = Depends(require_role('admin'))):
 
 
 @router.post('/dependency-sync', summary='手动同步依赖')
-async def sync_dependencies(user: dict = Depends(require_role('admin'))):
+async def sync_dependencies(user: dict = Depends(require_role(UserRole.admin))):
     """提交依赖同步任务：按扩展声明 uv add / uv remove 并 uv sync。"""
     snapshot = task_center.submit(
-        TASK_DEPENDENCY_SYNC,
+        TaskKind.dependency_sync,
         run_sync_task,
         message_key='task_center.msg_syncing_dependencies',
     )

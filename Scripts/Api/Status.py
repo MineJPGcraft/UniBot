@@ -8,7 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from Scripts import Globals
 from Scripts.Api.Locale import text
 from Scripts.Config import config
-from Scripts.Constants import TASK_BOT_UPDATE
+from Scripts.Constants import TaskKind, UserRole
 from Scripts.Managers import task_center, version_manager
 from Scripts.Managers.TaskCenter import TaskContext
 from Scripts.Process import is_watchdog_process, request_restart
@@ -95,7 +95,7 @@ async def health_check():
     }
 
 
-@router.post('/update', summary='更新机器人', dependencies=[Depends(require_role('admin'))])
+@router.post('/update', summary='更新机器人', dependencies=[Depends(require_role(UserRole.admin))])
 async def update_bot():
     """提交版本更新任务（后台下载替换代码并重启），进度在任务中心查看。"""
     if not is_watchdog_process():
@@ -104,11 +104,11 @@ async def update_bot():
             'data': None,
             'message': text('status.update_requires_watchdog'),
         }
-    task = task_center.submit(TASK_BOT_UPDATE, run_update_task, retryable=False)
+    task = task_center.submit(TaskKind.bot_update, run_update_task, retryable=False)
     return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 
-@router.post('/restart', summary='重启机器人', dependencies=[Depends(require_role('admin'))])
+@router.post('/restart', summary='重启机器人', dependencies=[Depends(require_role(UserRole.admin))])
 async def restart_bot(background_tasks: BackgroundTasks):
     """通知守护进程优雅重启机器人。"""
     if not is_watchdog_process():

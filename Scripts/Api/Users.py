@@ -2,11 +2,12 @@ from fastapi import APIRouter, Depends, Query
 
 from Scripts.Api.Locale import text
 from Scripts.Api.Managers import data_manager
+from Scripts.Constants import UserRole
 
 from .Auth import require_role
 from .Schemas import CreateUserRequest, ResetPasswordRequest, UpdateUserRequest
 
-router = APIRouter(prefix='/api/users', tags=['Users'], dependencies=[Depends(require_role('admin'))])
+router = APIRouter(prefix='/api/users', tags=['Users'], dependencies=[Depends(require_role(UserRole.admin))])
 
 
 @router.get('', summary='获取用户列表')
@@ -14,7 +15,7 @@ async def get_users(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     keyword: str = Query(''),
-    current_user: dict = Depends(require_role('admin')),
+    current_user: dict = Depends(require_role(UserRole.admin)),
 ):
     """分页获取用户列表。"""
     all_users = [data_manager.public_user_info(user_info) for user_info in data_manager.users.values()]
@@ -36,10 +37,8 @@ async def get_users(
 
 
 @router.post('', summary='创建用户')
-async def create_user(body: CreateUserRequest, current_user: dict = Depends(require_role('admin'))):
+async def create_user(body: CreateUserRequest, current_user: dict = Depends(require_role(UserRole.admin))):
     """创建新用户。"""
-    if body.role not in ('admin', 'operator', 'viewer'):
-        return {'code': 1, 'data': None, 'message': text('users.role_invalid')}
     user_info = await data_manager.create_user(body.username, body.password, body.nickname, body.role)
     if not user_info:
         return {'code': 1, 'data': None, 'message': text('users.name_taken')}
@@ -47,7 +46,7 @@ async def create_user(body: CreateUserRequest, current_user: dict = Depends(requ
 
 
 @router.get('/{user_id}', summary='获取用户详情')
-async def get_user(user_id: str, current_user: dict = Depends(require_role('admin'))):
+async def get_user(user_id: str, current_user: dict = Depends(require_role(UserRole.admin))):
     """获取指定用户详情。"""
     user_data = data_manager.get_user_by_id(user_id)
     if not user_data:
@@ -56,12 +55,10 @@ async def get_user(user_id: str, current_user: dict = Depends(require_role('admi
 
 
 @router.put('/{user_id}', summary='修改用户信息')
-async def update_user(user_id: str, body: UpdateUserRequest, current_user: dict = Depends(require_role('admin'))):
+async def update_user(user_id: str, body: UpdateUserRequest, current_user: dict = Depends(require_role(UserRole.admin))):
     """修改用户昵称或角色，不可修改自己的角色。"""
     if user_id == current_user['user_id'] and body.role is not None:
         return {'code': 1, 'data': None, 'message': text('users.cannot_change_own_role')}
-    if body.role is not None and body.role not in ('admin', 'operator', 'viewer'):
-        return {'code': 1, 'data': None, 'message': text('users.role_invalid')}
     success = await data_manager.update_user(user_id, nickname=body.nickname, role=body.role)
     if not success:
         return {'code': 1, 'data': None, 'message': text('users.user_not_found')}
@@ -70,7 +67,7 @@ async def update_user(user_id: str, body: UpdateUserRequest, current_user: dict 
 
 @router.put('/{user_id}/password', summary='重置用户密码')
 async def reset_user_password(
-    user_id: str, body: ResetPasswordRequest, current_user: dict = Depends(require_role('admin'))
+    user_id: str, body: ResetPasswordRequest, current_user: dict = Depends(require_role(UserRole.admin))
 ):
     """重置指定用户密码。"""
     success = await data_manager.reset_password(user_id, body.password)
@@ -80,7 +77,7 @@ async def reset_user_password(
 
 
 @router.delete('/{user_id}', summary='删除用户')
-async def delete_user(user_id: str, current_user: dict = Depends(require_role('admin'))):
+async def delete_user(user_id: str, current_user: dict = Depends(require_role(UserRole.admin))):
     """删除用户，不可删除自己。"""
     if user_id == current_user['user_id']:
         return {'code': 1, 'data': None, 'message': text('users.cannot_delete_self')}

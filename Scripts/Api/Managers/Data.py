@@ -6,7 +6,7 @@ from json import dumps, loads
 
 import bcrypt
 
-from Scripts.Constants import DATA_DIR
+from Scripts.Constants import DATA_DIR, UserRole
 from Scripts.Logging import logger
 
 
@@ -95,7 +95,7 @@ class DataManager:
         """验证密码（CPU 密集，放入线程避免阻塞事件循环）。"""
         return await asyncio.to_thread(bcrypt.checkpw, password.encode('Utf-8'), hashed.encode('Utf-8'))
 
-    async def create_user(self, username: str, password: str, nickname: str, role: str = 'viewer') -> dict | None:
+    async def create_user(self, username: str, password: str, nickname: str, role: UserRole = UserRole.viewer) -> dict | None:
         """创建用户，返回用户信息（不含密码哈希）。"""
         if self.get_user_by_username(username):
             return None
@@ -142,7 +142,7 @@ class DataManager:
             user_data['last_login_at'] = datetime.now(UTC).isoformat()
             await self.save()
 
-    async def update_user(self, user_id: str, nickname: str | None = None, role: str | None = None) -> bool:
+    async def update_user(self, user_id: str, nickname: str | None = None, role: UserRole | None = None) -> bool:
         """更新用户昵称或角色。"""
         user_data = self.users.get(user_id)
         if not user_data:

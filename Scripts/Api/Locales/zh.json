@@ -16,7 +16,6 @@
     "old_password_incorrect": "原密码错误"
   },
   "users": {
-    "role_invalid": "无效的角色",
     "name_taken": "用户名已存在",
     "user_not_found": "用户不存在",
     "cannot_change_own_role": "不可修改自己的角色",

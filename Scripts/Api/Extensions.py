@@ -7,12 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from Scripts.Api.Locale import text
 from Scripts.Api.Managers import studio_manager
 from Scripts.Config import config, reload_config
-from Scripts.Constants import (
-    TASK_EXTENSION_INSTALL,
-    TASK_EXTENSION_RELOAD,
-    TASK_EXTENSION_UNINSTALL,
-    TASK_STUDIO_LAUNCH,
-)
+from Scripts.Constants import TaskKind, UserRole
 from Scripts.Extensions import EXTENSIONS_DIR, ExtensionState, ExtensionType, extension_manager, market_manager
 from Scripts.Extensions.Dependencies import sync_extension_dependencies
 from Scripts.Managers import config_manager, task_center
@@ -146,7 +141,7 @@ async def get_market(force: bool = False, current_user: dict = Depends(get_curre
 
 
 @router.post('/market/install', summary='从市场安装扩展')
-async def install_market_extension(body: MarketInstallRequest, user: dict = Depends(require_role('admin'))):
+async def install_market_extension(body: MarketInstallRequest, user: dict = Depends(require_role(UserRole.admin))):
     """提交扩展安装任务（后台下载 + 依赖同步），进度在任务中心查看。"""
     if not body.id:
         return {'code': 1, 'data': None, 'message': text('extensions.missing_id')}
@@ -154,7 +149,7 @@ async def install_market_extension(body: MarketInstallRequest, user: dict = Depe
     if entry := market_manager.market_cache.get(body.id):
         name = entry.name or body.id
     task = task_center.submit(
-        TASK_EXTENSION_INSTALL,
+        TaskKind.extension_install,
         lambda context: run_extension_install_task(context, body.id, body.version, name),
         title_params={'name': name},
     )
@@ -199,14 +194,14 @@ async def get_studio_status(current_user: dict = Depends(get_current_user)):
 
 
 @router.post('/studio/launch', summary='下载并启动 Extension Studio')
-async def launch_studio(user: dict = Depends(require_role('admin'))):
+async def launch_studio(user: dict = Depends(require_role(UserRole.admin))):
     """提交 Studio 启动任务（后台下载与启动），进度在任务中心查看。"""
-    task = task_center.submit(TASK_STUDIO_LAUNCH, run_studio_launch_task, retryable=False)
+    task = task_center.submit(TaskKind.studio_launch, run_studio_launch_task, retryable=False)
     return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 
 @router.post('/studio/stop', summary='停止 Extension Studio')
-async def stop_studio(user: dict = Depends(require_role('admin'))):
+async def stop_studio(user: dict = Depends(require_role(UserRole.admin))):
     """停止 Studio 进程并清理状态文件。"""
     success, message = await studio_manager.stop()
     return {'code': 0 if success else 1, 'data': None, 'message': message}
@@ -229,14 +224,14 @@ async def get_extension_detail(extension_id: str, current_user: dict = Depends(g
 
 
 @router.post('/reload', summary='热重载扩展')
-async def reload_extensions(user: dict = Depends(require_role('admin'))):
+async def reload_extensions(user: dict = Depends(require_role(UserRole.admin))):
     """提交扩展热重载任务（后台重载，进度在任务中心查看）。"""
-    task = task_center.submit(TASK_EXTENSION_RELOAD, run_extension_reload_task, retryable=False)
+    task = task_center.submit(TaskKind.extension_reload, run_extension_reload_task, retryable=False)
     return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 
 @router.post('/{extension_id}/enable', summary='启用扩展')
-async def enable_extension(extension_id: str, user: dict = Depends(require_role('admin'))):
+async def enable_extension(extension_id: str, user: dict = Depends(require_role(UserRole.admin))):
     """启用扩展（写 Config/Extensions.toml，重启生效）。"""
     _ensure_extension_exists(extension_id)
     await asyncio.to_thread(extension_manager.set_enabled, extension_id, True)
@@ -244,7 +239,7 @@ async def enable_extension(extension_id: str, user: dict = Depends(require_role(
 
 
 @router.post('/{extension_id}/disable', summary='禁用扩展')
-async def disable_extension(extension_id: str, user: dict = Depends(require_role('admin'))):
+async def disable_extension(extension_id: str, user: dict = Depends(require_role(UserRole.admin))):
     """禁用扩展（写 Config/Extensions.toml，重启生效）。"""
     _ensure_extension_exists(extension_id)
     await asyncio.to_thread(extension_manager.set_enabled, extension_id, False)
@@ -264,7 +259,7 @@ async def get_extension_config(extension_id: str, current_user: dict = Depends(g
 
 
 @router.patch('/{extension_id}/config', summary='更新扩展配置')
-async def patch_extension_config(extension_id: str, request: Request, user: dict = Depends(require_role('admin'))):
+async def patch_extension_config(extension_id: str, request: Request, user: dict = Depends(require_role(UserRole.admin))):
     """更新扩展配置，校验失败返回字段级错误且不修改原配置。"""
     patch_data = await parse_json_object(request)
     extension = extension_manager.registry.get(extension_id)
@@ -288,12 +283,12 @@ async def patch_extension_config(extension_id: str, request: Request, user: dict
 
 
 @router.delete('/{extension_id}', summary='卸载扩展')
-async def uninstall_extension(extension_id: str, user: dict = Depends(require_role('admin'))):
+async def uninstall_extension(extension_id: str, user: dict = Depends(require_role(UserRole.admin))):
     """提交扩展卸载任务（后台删除目录并同步依赖），进度在任务中心查看。"""
     _ensure_extension_exists(extension_id)
     name = extension_manager.get_extension_info(extension_id).get('name') or extension_id
     task = task_center.submit(
-        TASK_EXTENSION_UNINSTALL,
+        TaskKind.extension_uninstall,
         lambda context: run_extension_uninstall_task(context, extension_id, name),
         title_params={'name': name},
     )
@@ -420,7 +415,7 @@ async def get_render_configs(current_user: dict = Depends(get_current_user)):
 
 
 @router.post('/renderers/switch', summary='切换渲染引擎')
-async def switch_renderer(body: NameSwitchRequest, user: dict = Depends(require_role('admin'))):
+async def switch_renderer(body: NameSwitchRequest, user: dict = Depends(require_role(UserRole.admin))):
     """切换渲染引擎并写回 Config.toml。"""
     name = body.name
     # 校验目标是「已安装的渲染器扩展」，而非「已启用/已 setup 的引擎实例」
@@ -447,7 +442,7 @@ async def get_templates(current_user: dict = Depends(get_current_user)):
 
 
 @router.post('/templates/switch', summary='切换模板')
-async def switch_template(body: NameSwitchRequest, user: dict = Depends(require_role('admin'))):
+async def switch_template(body: NameSwitchRequest, user: dict = Depends(require_role(UserRole.admin))):
     """切换模板包并立即使模板缓存失效。"""
     template_name = body.name
     if template_name not in extension_manager.templates:

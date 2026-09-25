@@ -111,13 +111,14 @@ def compute_redundant_drivers(uninstalling_module: str) -> list[str]:
     if not target_drivers:
         return []
     project_data = config_manager.read_pyproject()
-    registered_modules = {
-        adapter.get('module_name')
-        for adapter in project_data.get('tool', {}).get('nonebot', {}).get('adapters', [])
-        if isinstance(adapter, dict)
-        and adapter.get('module_name')
-        and adapter.get('module_name') != uninstalling_module
-    }
+    registered_modules: set[str] = set()
+    for adapter in project_data.get('tool', {}).get('nonebot', {}).get('adapters', []):
+        if not isinstance(adapter, dict):
+            continue
+        module_name = adapter.get('module_name')
+        if not isinstance(module_name, str) or not module_name or module_name == uninstalling_module:
+            continue
+        registered_modules.add(module_name)
     still_needed: set[str] = set()
     for module_name in registered_modules:
         still_needed.update(get_required_drivers(module_name))

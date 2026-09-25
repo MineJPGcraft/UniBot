@@ -16,7 +16,7 @@
     "old_password_incorrect": "Old password is incorrect"
   },
   "users": {
-    "role_invalid": "Invalid role",
+
     "name_taken": "Username already exists",
     "user_not_found": "User not found",
     "cannot_change_own_role": "You cannot change your own role",

@@ -1,11 +1,12 @@
+from enum import StrEnum
+
 from fastapi import APIRouter, Depends, Query
 
 from Scripts.Api.Locale import text
 from Scripts.Constants import (
     BUILTIN_PLUGIN_PREFIX,
-    TASK_PLUGIN_INSTALL,
-    TASK_PLUGIN_UNINSTALL,
-    TASK_PLUGIN_UPGRADE,
+    TaskKind,
+    UserRole,
 )
 from Scripts.Extensions.Dependencies import apply_main_dependency_changes
 from Scripts.Managers import config_manager, plugin_manager, task_center
@@ -16,17 +17,38 @@ from .Schemas import InstallPluginRequest, UpgradePluginRequest
 
 router = APIRouter(prefix='/api/plugins', tags=['Plugins'])
 
+
+class PluginMarketAction(StrEnum):
+    """插件市场操作类型。"""
+
+    install = 'install'
+    upgrade = 'upgrade'
+    uninstall = 'uninstall'
+
+
 # 市场动作 → (任务类型, 阶段消息键, 完成消息键)
 MARKET_ACTIONS = {
-    'install': (TASK_PLUGIN_INSTALL, 'task_center.msg_installing_plugin', 'task_center.msg_plugin_installed'),
-    'upgrade': (TASK_PLUGIN_UPGRADE, 'task_center.msg_upgrading_plugin', 'task_center.msg_plugin_upgraded'),
-    'uninstall': (TASK_PLUGIN_UNINSTALL, 'task_center.msg_uninstalling_plugin', 'task_center.msg_plugin_uninstalled'),
+    PluginMarketAction.install: (
+        TaskKind.plugin_install,
+        'task_center.msg_installing_plugin',
+        'task_center.msg_plugin_installed',
+    ),
+    PluginMarketAction.upgrade: (
+        TaskKind.plugin_upgrade,
+        'task_center.msg_upgrading_plugin',
+        'task_center.msg_plugin_upgraded',
+    ),
+    PluginMarketAction.uninstall: (
+        TaskKind.plugin_uninstall,
+        'task_center.msg_uninstalling_plugin',
+        'task_center.msg_plugin_uninstalled',
+    ),
 }
 
 
 async def run_plugin_market_task(
     context: TaskContext,
-    action: str,
+    action: PluginMarketAction,
     project_link: str,
     module_name: str,
     version: str,
@@ -35,18 +57,19 @@ async def run_plugin_market_task(
     _, running_key, finished_key = MARKET_ACTIONS[action]
     context.set_message(running_key, name=module_name)
 
-    if action == 'uninstall':
+    if action == PluginMarketAction.uninstall:
         config_manager.remove_plugin(module_name)
     else:
         config_manager.add_plugin(module_name)
-        if action == 'upgrade':
+        if action == PluginMarketAction.upgrade:
             config_manager.set_plugin_enabled(module_name, True)
 
+    removing = action == PluginMarketAction.uninstall
     package = f'{project_link}=={version}' if version else project_link
     context.set_message('task_center.msg_syncing_dependencies')
     await apply_main_dependency_changes(
-        [] if action == 'uninstall' else [package],
-        [project_link] if action == 'uninstall' else [],
+        [] if removing else [package],
+        [project_link] if removing else [],
         context.log,
     )
 
@@ -58,13 +81,13 @@ async def run_plugin_market_task(
 
 
 def submit_plugin_market(
-    action: str,
+    action: PluginMarketAction,
     project_link: str,
     module_name: str,
     version: str = '',
 ) -> dict:
     """提交插件市场操作任务（install / upgrade / uninstall）。"""
-    kind = MARKET_ACTIONS.get(action, MARKET_ACTIONS['install'])[0]
+    kind = MARKET_ACTIONS.get(action, MARKET_ACTIONS[PluginMarketAction.install])[0]
     return task_center.submit(
         kind,
         lambda context: run_plugin_market_task(context, action, project_link, module_name, version),
@@ -157,22 +180,24 @@ async def get_market(
 
 
 @router.post('/market/install', summary='安装插件')
-async def install_plugin(body: InstallPluginRequest, current_user: dict = Depends(require_role('admin'))):
+async def install_plugin(body: InstallPluginRequest, current_user: dict = Depends(require_role(UserRole.admin))):
     """提交插件安装任务（登记依赖并用 uv 安装），进度在任务中心查看。"""
     plugin = await find_market_plugin(body.name)
     if not plugin:
         return {'code': 1, 'data': None, 'message': text('plugins.market_not_found')}
-    task = submit_plugin_market('install', plugin['project_link'], plugin['module_name'], body.version)
+    task = submit_plugin_market(
+        PluginMarketAction.install, plugin['project_link'], plugin['module_name'], body.version
+    )
     return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 
 @router.post('/market/upgrade', summary='升级插件')
-async def upgrade_plugin(body: UpgradePluginRequest, current_user: dict = Depends(require_role('admin'))):
+async def upgrade_plugin(body: UpgradePluginRequest, current_user: dict = Depends(require_role(UserRole.admin))):
     """提交插件升级任务（更新登记并用 uv 安装），进度在任务中心查看。"""
     plugin = await find_market_plugin(body.name)
     if not plugin:
         return {'code': 1, 'data': None, 'message': text('plugins.market_not_found')}
-    task = submit_plugin_market('upgrade', plugin['project_link'], plugin['module_name'])
+    task = submit_plugin_market(PluginMarketAction.upgrade, plugin['project_link'], plugin['module_name'])
     return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 
@@ -186,7 +211,7 @@ async def get_plugin_detail(name: str, current_user: dict = Depends(get_current_
 
 
 @router.post('/{name}/enable', summary='启用插件')
-async def enable_plugin(name: str, current_user: dict = Depends(require_role('admin'))):
+async def enable_plugin(name: str, current_user: dict = Depends(require_role(UserRole.admin))):
     """启用插件。"""
     success = await plugin_manager.set_enabled(name, True)
     if not success:
@@ -195,7 +220,7 @@ async def enable_plugin(name: str, current_user: dict = Depends(require_role('ad
 
 
 @router.post('/{name}/disable', summary='禁用插件')
-async def disable_plugin(name: str, current_user: dict = Depends(require_role('admin'))):
+async def disable_plugin(name: str, current_user: dict = Depends(require_role(UserRole.admin))):
     """禁用插件。"""
     success = await plugin_manager.set_enabled(name, False)
     if not success:
@@ -204,7 +229,7 @@ async def disable_plugin(name: str, current_user: dict = Depends(require_role('a
 
 
 @router.delete('/{name}', summary='卸载插件')
-async def uninstall_plugin(name: str, current_user: dict = Depends(require_role('admin'))):
+async def uninstall_plugin(name: str, current_user: dict = Depends(require_role(UserRole.admin))):
     """提交插件卸载任务（移除登记并用 uv 卸载依赖），进度在任务中心查看。"""
     plugin = plugin_manager.get_plugin_detail(name)
     if not plugin:
@@ -216,5 +241,5 @@ async def uninstall_plugin(name: str, current_user: dict = Depends(require_role(
     market_plugin = await find_market_plugin(module_name)
     project_link = market_plugin.get('project_link', '') if market_plugin else ''
     # 未收录于市场时按模块名作为包名走 uv remove（依赖写入只经 uv，不手改 pyproject）
-    task = submit_plugin_market('uninstall', project_link or module_name, module_name)
+    task = submit_plugin_market(PluginMarketAction.uninstall, project_link or module_name, module_name)
     return {'code': 0, 'data': task, 'message': text('task_center.submitted')}

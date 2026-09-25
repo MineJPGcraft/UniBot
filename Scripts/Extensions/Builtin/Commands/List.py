@@ -103,6 +103,8 @@ class ListCommand(Command):
             cached = player_list_cache.get(server_name, [])
             return self.split_players(list(cached))
         server_service = Globals.server_service
+        if server_service is None:
+            return self.split_players([])
         player_list, _ = await server_service.get_player_list(server)
         return self.split_players(player_list)
 

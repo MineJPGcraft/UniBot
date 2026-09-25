@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from Scripts.Api.Locale import text
 from Scripts.Api.Managers import data_manager
+from Scripts.Constants import UserRole
 from Scripts.Logging import logger
 
 from .Limiter import rate_limiter
@@ -134,7 +135,7 @@ async def get_current_user(request: Request, authorization: str | None = Header(
     return user_data
 
 
-def require_role(*roles: str):
+def require_role(*roles: UserRole):
     """角色校验依赖工厂。"""
 
     async def checker(user: dict = Depends(get_current_user)):
@@ -168,7 +169,7 @@ async def setup(body: SetupRequest):
     async with setup_lock:
         if data_manager.is_initialized:
             return {'code': 1, 'data': None, 'message': text('auth.already_initialized')}
-        user_info = await data_manager.create_user(body.username, body.password, body.nickname, role='admin')
+        user_info = await data_manager.create_user(body.username, body.password, body.nickname, role=UserRole.admin)
         if user_info is None:
             return {'code': 1, 'data': None, 'message': text('auth.setup_failed')}
     logger.success(f'WebUI admin account [{body.username}] created.')

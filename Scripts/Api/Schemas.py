@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from Scripts.Constants import UserRole
+
 # ===== Auth =====
 
 
@@ -40,12 +42,12 @@ class CreateUserRequest(BaseModel):
     username: str
     password: str
     nickname: str
-    role: str = 'viewer'
+    role: UserRole = UserRole.viewer
 
 
 class UpdateUserRequest(BaseModel):
     nickname: str | None = None
-    role: str | None = None
+    role: UserRole | None = None
 
 
 class ResetPasswordRequest(BaseModel):

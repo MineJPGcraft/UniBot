@@ -8,14 +8,16 @@
 
 import asyncio
 
+from Scripts.Constants import TaskKind
 from Scripts.Managers.TaskCenter import (
     MAX_HISTORY,
-    STATUS_CANCELLED,
-    STATUS_FAILED,
-    STATUS_SUCCEEDED,
     TaskCancelledError,
     TaskCenter,
+    TaskStatus,
 )
+
+# 测试用任务类型（真实枚举成员，保证与前端图标表契约一致）
+DEMO_KIND = TaskKind.dependency_sync
 
 
 def _runner_success(context) -> str:
@@ -53,10 +55,10 @@ class TestSubmitAndExecute:
 
         async def run():
             center = TaskCenter()
-            snapshot = center.submit('demo', _runner_async_success, title_params={'name': 'ExtA'})
-            assert snapshot['status'] in ('pending', 'running')
+            snapshot = center.submit(DEMO_KIND, _runner_async_success, title_params={'name': 'ExtA'})
+            assert snapshot['status'] in (TaskStatus.pending, TaskStatus.running)
             assert snapshot['title_params'] == {'name': 'ExtA'}
-            assert snapshot['kind'] == 'demo'
+            assert snapshot['kind'] == DEMO_KIND
             await asyncio.sleep(0.05)
 
         asyncio.run(run())
@@ -66,12 +68,12 @@ class TestSubmitAndExecute:
 
         async def run():
             center = TaskCenter()
-            snapshot = center.submit('demo', _runner_async_success)
+            snapshot = center.submit(DEMO_KIND, _runner_async_success)
             await asyncio.sleep(0.05)
 
             record = center.get(snapshot['id'])
             assert record is not None
-            assert record.status == STATUS_SUCCEEDED
+            assert record.status == TaskStatus.succeeded
             assert record.message_key == 'task_center.msg_finished'
             assert record.error == ''
             assert record.progress == 100.0
@@ -83,12 +85,12 @@ class TestSubmitAndExecute:
 
         async def run():
             center = TaskCenter()
-            snapshot = center.submit('demo', _runner_success)
+            snapshot = center.submit(DEMO_KIND, _runner_success)
             await asyncio.sleep(0.05)
 
             record = center.get(snapshot['id'])
             assert record is not None
-            assert record.status == STATUS_SUCCEEDED
+            assert record.status == TaskStatus.succeeded
 
         asyncio.run(run())
 
@@ -97,12 +99,12 @@ class TestSubmitAndExecute:
 
         async def run():
             center = TaskCenter()
-            snapshot = center.submit('demo', _runner_failure)
+            snapshot = center.submit(DEMO_KIND, _runner_failure)
             await asyncio.sleep(0.05)
 
             record = center.get(snapshot['id'])
             assert record is not None
-            assert record.status == STATUS_FAILED
+            assert record.status == TaskStatus.failed
             assert 'boom' in record.error
             assert record.message_key == 'task_center.msg_failed'
 
@@ -118,7 +120,7 @@ class TestCancelAndRetry:
 
         async def run():
             center = TaskCenter()
-            snapshot = center.submit('demo', _runner_cancellable)
+            snapshot = center.submit(DEMO_KIND, _runner_cancellable)
             await asyncio.sleep(0.05)
 
             success, message = center.cancel(snapshot['id'])
@@ -128,7 +130,7 @@ class TestCancelAndRetry:
 
             record = center.get(snapshot['id'])
             assert record is not None
-            assert record.status == STATUS_CANCELLED
+            assert record.status == TaskStatus.cancelled
 
         asyncio.run(run())
 
@@ -137,7 +139,7 @@ class TestCancelAndRetry:
 
         async def run():
             center = TaskCenter()
-            snapshot = center.submit('demo', _runner_async_success)
+            snapshot = center.submit(DEMO_KIND, _runner_async_success)
             await asyncio.sleep(0.05)
 
             success, message = center.cancel(snapshot['id'])
@@ -165,9 +167,11 @@ class TestCancelAndRetry:
 
         async def run():
             center = TaskCenter()
-            snapshot = center.submit('demo', flaky)
+            snapshot = center.submit(DEMO_KIND, flaky)
             await asyncio.sleep(0.05)
-            assert center.get(snapshot['id']).status == STATUS_FAILED
+            failed_record = center.get(snapshot['id'])
+            assert failed_record is not None
+            assert failed_record.status == TaskStatus.failed
 
             success, message = center.retry(snapshot['id'])
             assert success is True
@@ -176,7 +180,7 @@ class TestCancelAndRetry:
 
             record = center.get(snapshot['id'])
             assert record is not None
-            assert record.status == STATUS_SUCCEEDED
+            assert record.status == TaskStatus.succeeded
             assert calls['count'] == 2
 
         asyncio.run(run())
@@ -186,7 +190,7 @@ class TestCancelAndRetry:
 
         async def run():
             center = TaskCenter()
-            snapshot = center.submit('demo', _runner_failure, retryable=False)
+            snapshot = center.submit(DEMO_KIND, _runner_failure, retryable=False)
             await asyncio.sleep(0.05)
 
             success, message = center.retry(snapshot['id'])
@@ -205,7 +209,7 @@ class TestSummaryAndHistory:
 
         async def run():
             center = TaskCenter()
-            center.submit('demo', _runner_cancellable)
+            center.submit(DEMO_KIND, _runner_cancellable)
             await asyncio.sleep(0.02)
 
             summary = center.summary()
@@ -221,7 +225,7 @@ class TestSummaryAndHistory:
 
         async def run():
             center = TaskCenter()
-            created = [center.submit('demo', _runner_success)['id'] for _ in range(MAX_HISTORY + 5)]
+            created = [center.submit(DEMO_KIND, _runner_success)['id'] for _ in range(MAX_HISTORY + 5)]
             await asyncio.sleep(0.3)
 
             items = center.list_tasks()
@@ -235,8 +239,8 @@ class TestSummaryAndHistory:
 
         async def run():
             center = TaskCenter()
-            first = center.submit('demo', _runner_success)['id']
-            second = center.submit('demo', _runner_success)['id']
+            first = center.submit(DEMO_KIND, _runner_success)['id']
+            second = center.submit(DEMO_KIND, _runner_success)['id']
             await asyncio.sleep(0.05)
 
             ids = [item['id'] for item in center.list_tasks()]
@@ -249,7 +253,7 @@ class TestSummaryAndHistory:
 
         async def run():
             center = TaskCenter()
-            snapshot = center.submit('demo', _runner_success)
+            snapshot = center.submit(DEMO_KIND, _runner_success)
             await asyncio.sleep(0.05)
 
             record = center.get(snapshot['id'])
@@ -279,7 +283,7 @@ class TestTaskContext:
                 context.log('hello')
                 return 'task_center.msg_finished'
 
-            snapshot = center.submit('demo', runner)
+            snapshot = center.submit(DEMO_KIND, runner)
             await asyncio.sleep(0.05)
 
             record = center.get(snapshot['id'])
@@ -297,14 +301,14 @@ class TestTaskContext:
 
         async def run():
             center = TaskCenter()
-            snapshot = center.submit('demo', _runner_cancellable)
+            snapshot = center.submit(DEMO_KIND, _runner_cancellable)
             await asyncio.sleep(0.05)
             center.cancel(snapshot['id'])
             await asyncio.sleep(0.05)
 
             record = center.get(snapshot['id'])
             assert record is not None
-            assert record.status == STATUS_CANCELLED
+            assert record.status == TaskStatus.cancelled
 
         asyncio.run(run())
 

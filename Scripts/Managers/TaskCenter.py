@@ -16,10 +16,12 @@ import asyncio
 import inspect
 import time
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import Any
 
+from Scripts.Constants import TaskKind
 from Scripts.Logging import exception_logger, logger
 
 # 保留的历史任务上限（超出后丢弃最旧的非运行中任务）
@@ -27,14 +29,19 @@ MAX_HISTORY = 50
 # 单个任务保留的日志行数上限
 MAX_LOG_LINES = 300
 
-STATUS_PENDING = 'pending'
-STATUS_RUNNING = 'running'
-STATUS_SUCCEEDED = 'succeeded'
-STATUS_FAILED = 'failed'
-STATUS_CANCELLED = 'cancelled'
+
+class TaskStatus(StrEnum):
+    """后台任务生命周期状态。成员值即下发给 WebUI 的状态码。"""
+
+    pending = 'pending'
+    running = 'running'
+    succeeded = 'succeeded'
+    failed = 'failed'
+    cancelled = 'cancelled'
+
 
 # 未结束的状态（不允许被历史淘汰）
-ACTIVE_STATUSES = (STATUS_PENDING, STATUS_RUNNING)
+ACTIVE_STATUSES = (TaskStatus.pending, TaskStatus.running)
 
 
 class TaskCancelledError(Exception):
@@ -46,9 +53,9 @@ class TaskRecord:
     """单个后台任务的配置与运行状态。"""
 
     id: str
-    kind: str
+    kind: TaskKind
     title_params: dict[str, Any] = field(default_factory=dict)
-    status: str = STATUS_PENDING
+    status: TaskStatus = TaskStatus.pending
     message_key: str = ''
     message_params: dict[str, Any] = field(default_factory=dict)
     progress: float = 0.0
@@ -62,7 +69,8 @@ class TaskRecord:
     retryable: bool = False
     # 运行句柄与重试工厂仅内存持有，不对外序列化
     handle: asyncio.Task | None = field(default=None, repr=False)
-    factory: Callable[[], Awaitable[str | None]] | None = field(default=None, repr=False)
+    # create_task 需要协程对象，故工厂声明为协程而非更宽的 Awaitable
+    factory: Callable[[], Coroutine[Any, Any, str | None]] | None = field(default=None, repr=False)
 
     @property
     def active(self) -> bool:
@@ -102,7 +110,7 @@ class TaskContext:
     @property
     def cancelled(self) -> bool:
         """判断任务是否已被请求取消，任务体应在长流程中主动检查。"""
-        return self._record.status == STATUS_CANCELLED
+        return self._record.status == TaskStatus.cancelled
 
     def log(self, message: str) -> None:
         """追加一行任务日志并广播（超出上限时丢弃最旧行）。"""
@@ -161,8 +169,8 @@ class TaskCenter:
         return self._records.get(task_id)
 
     def summary(self) -> dict[str, int]:
-        """统计各状态任务数量，供任务中心角标展示。"""
-        counts = {status: 0 for status in ACTIVE_STATUSES}
+        """统计各状态任务数量，供任务中心角标展示。键为状态字符串（JSON 契约）。"""
+        counts: dict[str, int] = {status.value: 0 for status in ACTIVE_STATUSES}
         for record in self._records.values():
             if record.status in ACTIVE_STATUSES:
                 counts[record.status] += 1
@@ -172,7 +180,7 @@ class TaskCenter:
 
     def submit(
         self,
-        kind: str,
+        kind: TaskKind,
         runner: TaskRunner,
         *,
         title_params: dict[str, Any] | None = None,
@@ -197,31 +205,31 @@ class TaskCenter:
 
     async def _execute(self, record: TaskRecord, runner: TaskRunner) -> str | None:
         """执行任务体并维护状态机（成功消息键 / 失败原因 / 取消）。"""
-        record.status = STATUS_RUNNING
+        record.status = TaskStatus.running
         record.started_at = time.time()
         record.message_key = 'task_center.msg_running'
         self.notify(record)
         try:
             message_key = await resolve_runner_result(runner(TaskContext(self, record)))
         except asyncio.CancelledError:
-            self._finish(record, STATUS_CANCELLED, 'task_center.msg_cancelled')
+            self._finish(record, TaskStatus.cancelled, 'task_center.msg_cancelled')
             logger.info(f'Task {record.id} ({record.kind}) cancelled.')
             return None
         except TaskCancelledError:
-            self._finish(record, STATUS_CANCELLED, 'task_center.msg_cancelled')
+            self._finish(record, TaskStatus.cancelled, 'task_center.msg_cancelled')
             return None
         except Exception as error:
-            self._finish(record, STATUS_FAILED, 'task_center.msg_failed', error=str(error))
+            self._finish(record, TaskStatus.failed, 'task_center.msg_failed', error=str(error))
             exception_logger.error(f'Task {record.id} ({record.kind}) failed: {error}')
             return None
-        self._finish(record, STATUS_SUCCEEDED, message_key or 'task_center.msg_finished', progress=100.0)
+        self._finish(record, TaskStatus.succeeded, message_key or 'task_center.msg_finished', progress=100.0)
         logger.success(f'Task {record.id} ({record.kind}) finished.')
         return None
 
     def _finish(
         self,
         record: TaskRecord,
-        status: str,
+        status: TaskStatus,
         message_key: str,
         *,
         error: str = '',
@@ -248,7 +256,7 @@ class TaskCenter:
             return False, 'task_center.not_cancellable'
         if record.handle is not None:
             record.handle.cancel()
-        self._finish(record, STATUS_CANCELLED, 'task_center.msg_cancelled')
+        self._finish(record, TaskStatus.cancelled, 'task_center.msg_cancelled')
         return True, 'task_center.cancelled'
 
     def retry(self, task_id: str) -> tuple[bool, str]:
@@ -260,7 +268,7 @@ class TaskCenter:
             return False, 'task_center.not_retryable'
         if not record.retryable or record.factory is None:
             return False, 'task_center.not_retryable'
-        record.status = STATUS_PENDING
+        record.status = TaskStatus.pending
         record.progress = 0.0
         record.error = ''
         record.result = {}

@@ -4,6 +4,7 @@ from fastapi.responses import FileResponse
 from Scripts import Globals
 from Scripts.Api.Locale import text
 from Scripts.Config import config
+from Scripts.Constants import UserRole
 from Scripts.Managers import cache_manager
 from Scripts.Network import AVATAR_SIZE, fetch_player_avatar
 
@@ -77,7 +78,7 @@ async def get_user_bindings(user: str, current_user: dict = Depends(get_current_
 
 
 @router.post('', summary='绑定玩家')
-async def bind_player(body: BindPlayerRequest, current_user: dict = Depends(require_role('admin', 'operator'))):
+async def bind_player(body: BindPlayerRequest, current_user: dict = Depends(require_role(UserRole.admin, UserRole.operator))):
     """绑定用户与游戏 ID。"""
     if not body.user or not body.player:
         return {'code': 1, 'data': None, 'message': text('players.bind_fields_required')}
@@ -113,10 +114,12 @@ async def bind_player(body: BindPlayerRequest, current_user: dict = Depends(requ
 
 
 @router.delete('/{user}/{player}', summary='解除绑定')
-async def unbind_player(user: str, player: str, current_user: dict = Depends(require_role('admin', 'operator'))):
+async def unbind_player(user: str, player: str, current_user: dict = Depends(require_role(UserRole.admin, UserRole.operator))):
     """解除用户与游戏 ID 的绑定。"""
     player_service = Globals.player_service
-    bindings = player_service.players if player_service else {}
+    if player_service is None:
+        return {'code': 1, 'data': None, 'message': text('players.service_unavailable')}
+    bindings = player_service.players
     if user not in bindings or player not in bindings.get(user, []):
         return {'code': 1, 'data': None, 'message': text('players.binding_not_found')}
     await player_service.remove_player(user, player)

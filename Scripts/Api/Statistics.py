@@ -2,6 +2,7 @@ import nonebot
 from fastapi import APIRouter, Depends, Query
 
 from Scripts.Api.Locale import text
+from Scripts.Constants import UserRole
 from Scripts.Managers import statistics_manager
 
 from .Auth import get_current_user, require_role
@@ -37,7 +38,7 @@ async def get_statistics(
     }
 
 
-@router.post('/reset', summary='清空统计数据', dependencies=[Depends(require_role('admin'))])
+@router.post('/reset', summary='清空统计数据', dependencies=[Depends(require_role(UserRole.admin))])
 async def reset_statistics():
     """清空全部统计数据并立即落盘。"""
     statistics_manager.reset()

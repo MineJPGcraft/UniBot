@@ -3,6 +3,7 @@
 仅依赖标准库，任何模块都可安全导入（避免循环导入）。
 """
 
+from enum import StrEnum
 from pathlib import Path
 
 # ===== 配置文件 =====
@@ -30,21 +31,38 @@ MARKET_CACHE_TTL = 600
 # 框架内置插件模块前缀：内置插件不允许经 WebUI 禁用或删除
 BUILTIN_PLUGIN_PREFIX = 'Scripts.'
 
+
+# ===== WebUI 用户角色 =====
+class UserRole(StrEnum):
+    """WebUI 账户角色。成员值即用户记录与 JWT 中 `role` 字段使用的角色码。"""
+
+    admin = 'admin'  # 管理员：全部读写权限
+    operator = 'operator'  # 操作员：可执行服务器指令与广播
+    viewer = 'viewer'  # 观察者：只读
+
+
 # ===== 后台任务类型（任务中心） =====
-# 任务「类型」是后端与 WebUI 之间的契约：`task_center.submit(kind, ...)` 的 kind
-# 必须与前端 `WebUi/src/utils/task.js` 的图标表、语言包 `task_center.kind_*` 一一对应，
-# 新增类型需同步这两处。任务体（做什么/返回什么）由提交方各自维护，不放此处。
-TASK_DEPENDENCY_SYNC = 'dependency_sync'
-TASK_EXTENSION_INSTALL = 'extension_install'
-TASK_EXTENSION_UNINSTALL = 'extension_uninstall'
-TASK_EXTENSION_RELOAD = 'extension_reload'
-TASK_ADAPTER_INSTALL = 'adapter_install'
-TASK_ADAPTER_UNINSTALL = 'adapter_uninstall'
-TASK_STUDIO_LAUNCH = 'studio_launch'
-TASK_PLUGIN_INSTALL = 'plugin_install'
-TASK_PLUGIN_UPGRADE = 'plugin_upgrade'
-TASK_PLUGIN_UNINSTALL = 'plugin_uninstall'
-TASK_BOT_UPDATE = 'bot_update'
+
+
+class TaskKind(StrEnum):
+    """后台任务类型（`task_center.submit(kind, ...)` 的 kind）。
+
+    成员值是后端与 WebUI 之间的契约：必须与前端 `WebUi/src/utils/task.js` 的
+    图标表、语言包 `task_center.kind_*` 一一对应，新增成员需同步这两处。
+    任务体（做什么 / 返回什么）由提交方各自维护，不放在这里。
+    """
+
+    dependency_sync = 'dependency_sync'
+    extension_install = 'extension_install'
+    extension_uninstall = 'extension_uninstall'
+    extension_reload = 'extension_reload'
+    adapter_install = 'adapter_install'
+    adapter_uninstall = 'adapter_uninstall'
+    studio_launch = 'studio_launch'
+    plugin_install = 'plugin_install'
+    plugin_upgrade = 'plugin_upgrade'
+    plugin_uninstall = 'plugin_uninstall'
+    bot_update = 'bot_update'
 
 # ===== QQ 官方机器人事件订阅（Intent）字段 =====
 # WebUI 表单与扫码登录默认订阅共用此清单（单一来源，防止两处漂移）

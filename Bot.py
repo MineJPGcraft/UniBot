@@ -110,6 +110,7 @@ def register_adapters(driver, adapters: list[dict]) -> None:
     """注册已配置的 NoneBot 适配器，单个适配器加载失败不影响其他适配器。"""
     for adapter in adapters:
         module_name = adapter['module_name']
+        adapter_class = None
         try:
             module = importlib.import_module(module_name)
             adapter_class = getattr(module, 'Adapter', None)
@@ -120,7 +121,7 @@ def register_adapters(driver, adapters: list[dict]) -> None:
             driver.register_adapter(adapter_class)
         except ValidationError as error:
             # 纯数字/布尔配置被 NoneBot 解析为非字符串时，自动转为字符串并重试一次
-            if fixed_fields := fix_config_type(driver, error):
+            if adapter_class is not None and (fixed_fields := fix_config_type(driver, error)):
                 logger.warning(
                     f'Adapter {module_name} config {fixed_fields} was parsed as non-string, '
                     'converted to string automatically.'

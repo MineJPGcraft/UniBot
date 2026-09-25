@@ -34,7 +34,9 @@ class ServerCommand(Command):
     async def collect_server_overview(self) -> list[dict]:
         """并发查询所有服务器状态，组装为带编号与占用信息的展示数据。"""
         server_service = Globals.server_service
-        bots = list(server_service.servers.items()) if server_service else []
+        if server_service is None:
+            return []
+        bots = list(server_service.servers.items())
         statuses = await asyncio.gather(*(server_service.get_status(bot) for _, bot in bots))
         return [
             {'name': name, 'index': index, **status} for index, ((name, _), status) in enumerate(zip(bots, statuses))
