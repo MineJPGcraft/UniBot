@@ -54,7 +54,7 @@ index-url = "https://mirrors.huaweicloud.com/repository/pypi/simple"
 
 [tool.unibot]
 # 此版本对应的 WebUi 版本
-webui_version = 'v1.0.4'
+webui_version = 'v1.0.6'
 
 [tool.nonebot]
 plugins = [
