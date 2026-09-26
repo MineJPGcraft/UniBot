@@ -129,9 +129,11 @@ class VersionManager:
                 if scripts_dir.exists():
                     scripts_dir.rename(backup_dir)
                 try:
-                    source.replace(scripts_dir)
+                    # 必须用复制而非移动：临时目录与工作目录可能不同盘，Windows 下 os.replace 无法跨盘移动
+                    shutil.copytree(source, scripts_dir)
                 except Exception:
-                    if backup_dir.exists() and not scripts_dir.exists():
+                    shutil.rmtree(scripts_dir, ignore_errors=True)
+                    if backup_dir.exists():
                         backup_dir.rename(scripts_dir)
                     raise
                 shutil.rmtree(backup_dir, ignore_errors=True)
