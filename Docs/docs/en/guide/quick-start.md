@@ -151,7 +151,8 @@ If everything is normal, the bot will return the available command list, and you
 
 ## FAQ
 
-- **Bot not responding to commands?** Check the `COMMAND_START` prefix, whether `command_groups` contains the current group, and whether `SUPERUSERS` includes your account.
+- **Bot not responding to commands?** Check the `COMMAND_START` prefix, whether `command_groups` contains the current group, and whether `SUPERUSERS` includes your account. If you use a QQ Official Bot, also go to **QQ group → Group Settings → Group Bots** and confirm ==**Allow the bot to receive messages**== is enabled, otherwise @-mention messages will not reach the bot.
+- **Bot doesn't send messages proactively?** For QQ Official Bots, go to **QQ group → Group Settings → Group Bots** and confirm ==**Allow the bot to proactively send messages**== is enabled; broadcasts, welcome messages, and online/offline notifications cannot be delivered without it. Also check that the broadcast switches in `Config.toml` (`broadcast_server` / `broadcast_player`) are `true`.
 - **Can't connect to the server?** Confirm that the `access_token` on both ends matches, that the WebSocket address and port are reachable, and check the MCDR and bot logs.
 
 For more configuration items, see *[Configuration Guide](/en/guide/configuration.html)*.

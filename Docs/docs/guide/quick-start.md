@@ -162,7 +162,7 @@ docker compose up -d
 - **机器人不响应指令？** 请检查 `COMMAND_START` 前缀、`command_groups` 中是否包含当前群，以及 `SUPERUSERS` 中是否包含你的账号。
 - **连不上服务器？** 请确认两端的 `access_token` 一致、WebSocket 地址与端口可达，并查看 MCDR 与机器人的日志。
 - **`/list` 指令不准，始终显示没有玩家在线？** 若服务器内 `list` 指令被插件或权限修改导致获取玩家列表异常，请在 `Config.toml` 中开启兼容模式（`list_compatible_mode = true`），机器人将改用监听玩家进出事件来维护在线列表，但可能略有延迟且不完全准确。
-- **机器人不会主动发消息？** 若使用官方 QQ 机器人，请在群设置中确认已允许机器人主动发送群消息；部分平台还需检查机器人权限范围，如 Telegram 需在 BotFather 中启用 Group Privacy 关闭或授权群管理权限。此外检查 `Config.toml` 中的播报开关（`broadcast_server` / `broadcast_player`）是否为 `true`。
+- **机器人不会主动发消息？** 若使用官方 QQ 机器人，请进入 **QQ 群 → 群设置 → 群机器人**，确认已同时开启 ==**允许机器人主动发送消息**== 与 ==**允许机器人接收消息**==；缺少前者会导致播报、进群欢迎、上下线通知等主动推送无法发出，缺少后者会导致群内 @ 机器人的消息收不到，表现为「指令不响应」。部分平台还需检查机器人权限范围，如 Telegram 需在 BotFather 中启用 Group Privacy 关闭或授权群管理权限。此外检查 `Config.toml` 中的播报开关（`broadcast_server` / `broadcast_player`）是否为 `true`。
 - **不会写代码，怎么给机器人加功能？** 使用内置 **AiStudio（创意工坊）**：在 WebUI 扩展管理页右上角点击「创意工坊」，即可自动下载并启动，用自然语言描述需求就能自动生成、校验并安装扩展。详见 [使用 AiStudio 零代码开发扩展](/unibot/developing-extensions.html#使用-aistudio-零代码开发扩展)。
 
 更多配置项，详见 *[配置指南](/guide/configuration.html)*。

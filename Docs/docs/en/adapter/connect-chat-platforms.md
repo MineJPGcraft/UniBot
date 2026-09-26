@@ -47,6 +47,15 @@ Connect via the QQ Open Platform. The bot list requires AppID / Token / Secret o
 If the version is ==higher than `v1.0.3`==, you can find a "scan to log in" button above the `Add Bot` card on the `WebUi` configuration page.
 :::
 
+::: warning Enable message permissions in the group settings (important)
+QQ Official Bots **cannot proactively send messages in a group** by default, and may also fail to receive group messages. Go to **QQ group → Group Settings → Group Bots**, find your bot, and make sure the following are enabled:
+
+- **Allow the bot to proactively send messages** (otherwise broadcasts, welcome messages, and online/offline notifications will not be delivered)
+- **Allow the bot to receive messages** (otherwise messages @-mentioning the bot in the group will not reach the bot)
+
+If these permissions are not enabled, the bot may appear to "not respond to commands" or "not send messages proactively". This is a platform-side permission restriction and is unrelated to UniBot's configuration.
+:::
+
 ```ini
 QQ_BOTS=[]
 QQ_IS_SANDBOX=false
