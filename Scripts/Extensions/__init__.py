@@ -10,6 +10,8 @@ from .Base import (
     ExtensionMetadata,
     ExtensionState,
     ExtensionType,
+    get_unibot_version,
+    is_unibot_compatible,
     manifest_from_attributes,
     parse_manifest,
 )
@@ -49,7 +51,7 @@ from .Market import (
     MarketRelease,
     extract_market_package,
 )
-from .MarketManager import ExtensionMarketManager, market_manager
+from .MarketManager import ExtensionMarketManager, InstallResult, MarketReleaseOption, market_manager
 from .Renderer import (
     FONT_PATH,
     RESOURCES_DIR,
@@ -85,6 +87,8 @@ __all__ = [
     'LoadError',
     'ManifestError',
     'StorageError',
+    'get_unibot_version',
+    'is_unibot_compatible',
     'manifest_from_attributes',
     'parse_manifest',
     # Command
@@ -119,6 +123,8 @@ __all__ = [
     'extract_market_package',
     # MarketManager
     'ExtensionMarketManager',
+    'InstallResult',
+    'MarketReleaseOption',
     'market_manager',
     # Service
     'Service',

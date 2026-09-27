@@ -89,8 +89,10 @@ class UpgradePluginRequest(BaseModel):
 
 
 class MarketInstallRequest(BaseModel):
+    """扩展市场安装请求；version 为 null 表示自动选择兼容当前核心版本的最新发布。"""
+
     id: str
-    version: str = ''
+    version: str | None = None
 
 
 class NameSwitchRequest(BaseModel):

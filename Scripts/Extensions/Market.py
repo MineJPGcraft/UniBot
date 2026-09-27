@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from Scripts.Utils import ArchiveError, safe_extract_zip
 
-from .Base import ExtensionManifest, parse_manifest
+from .Base import ExtensionManifest, is_unibot_compatible, parse_manifest
 from .Errors import ManifestError
 
 
@@ -39,6 +39,17 @@ class MarketExtension(BaseModel):
     def latest_release(self) -> MarketRelease | None:
         """返回最新版本发布条目（按 releases 顺序取最后一个）。"""
         return self.releases[-1] if self.releases else None
+
+    def compatible_release(self) -> MarketRelease | None:
+        """返回兼容当前 UniBot 版本的最新发布条目，无兼容版本时返回 None。"""
+        for release in reversed(self.releases):
+            if is_unibot_compatible(release.unibot_version):
+                return release
+        return None
+
+    def find_release(self, version: str) -> MarketRelease | None:
+        """按版本号查找发布条目，不存在返回 None。"""
+        return next((release for release in self.releases if release.version == version), None)
 
 
 class ExtensionInstallState(BaseModel):

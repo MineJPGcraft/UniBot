@@ -182,6 +182,31 @@ GET /api/extensions/resources
 
 Returns available resource extensions and their status. Resource extensions do not support configuration.
 
+### Marketplace Install and Version Switching
+
+```
+POST /api/extensions/market/install
+GET  /api/extensions/market/{id}/releases
+```
+
+`market/install` submits a background installation task. Request body:
+
+| Field | Description |
+|-------|-------------|
+| `id` | Extension id |
+| `version` | Optional; **leave it out** to auto-select the newest release compatible with the current UniBot version, or pass an explicit version to install it (useful for rolling back) |
+
+When auto-selecting: the latest release is used if compatible; if the latest is incompatible but a compatible older release exists, it falls back and logs the reason; if no release is compatible at all, the request fails with "this extension does not support the current core version".
+
+`market/{id}/releases` returns every available release of that extension:
+
+```json
+{
+  "unibot_version": "1.0.3",
+  "releases": [{ "version": "1.0.2", "unibot_version": ">= 1.0.2", "compatible": true, "installed": false }]
+}
+```
+
 ## Log API
 
 ```

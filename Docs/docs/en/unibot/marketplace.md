@@ -157,6 +157,30 @@ Installation is a **rollback-able transaction**: download, verification, extract
 happen in a temporary directory, and a failure at any step must not change the current version. Upgrading downloads the
 new version and atomically replaces the directory; uninstalling deletes the directory (both done in the WebUI).
 
+## Version Compatibility and Switching
+
+Every marketplace Release carries a `unibot_version` constraint (taken from the extension package's
+`[compatibility].unibot` and recorded by the registry builder). Installation picks a version accordingly:
+
+::: table title="Version selection rules" copy="all"
+| Scenario | Behavior |
+|----------|----------|
+| The latest version supports the current core version | ==Installs the latest version directly== |
+| The latest version is incompatible, but a compatible older release exists | Falls back to the **latest compatible release** and explains the fallback in the task log |
+| No release supports the current core version | Installation is rejected with "this extension does not support the current UniBot version" |
+| The admin explicitly picks a version | Installs that exact version (useful for rolling back; compatibility is not re-checked) |
+:::
+
+The WebUI extension market offers a **version switcher** menu:
+
+- Click the version icon on a card to list every available release (newest first); each is marked as compatible or not.
+- Choosing a compatible release installs it; incompatible releases cannot be selected.
+- A "latest → version to install" hint on the card means the latest release does not support the current core version.
+- Extensions with no compatible release at all are marked "unsupported" and their install button is disabled.
+
+> Upgrades only ever move to "the latest release that supports the current core version", so an older core will never
+> be upgraded to an incompatible extension release.
+
 ## Local Build (Optional)
 
 You can build against an existing Release without a GitHub Token (the public API is rate-limited); requires Python 3.11+:

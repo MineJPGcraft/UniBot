@@ -524,22 +524,47 @@ def get_unibot_version() -> str:
     return config_manager.version.lstrip('v')
 
 
+def unibot_specifier(constraint: str) -> SpecifierSet | None:
+    """解析 UniBot 版本约束；空串与 `'*'` 返回 None（表示任意版本）。"""
+    if not constraint or constraint == '*':
+        return None
+    return SpecifierSet(constraint)
+
+
+def is_unibot_compatible(constraint: str) -> bool:
+    """
+    判断版本约束是否落在当前 UniBot 版本内（不抛错的判定版）。
+
+    空串 / `'*'` / 非法约束分别处理：空与通配视为兼容，非法约束视为不兼容。
+    市场安装用它挑选历史版本，`validate_unibot_constraint` 仍是校验的唯一入口。
+    """
+    try:
+        specifier = unibot_specifier(constraint)
+    except Exception:
+        return False
+    if specifier is None:
+        return True
+    current_version = get_unibot_version()
+    return not current_version or current_version in specifier
+
+
 def validate_unibot_constraint(extension_id: str, constraint: str) -> None:
     """
     校验扩展声明的 UniBot 版本约束与当前版本兼容，不满足时抛 CompatibilityError。
 
     Loader 与市场安装共用此实现；`'*'` / 空串表示任意版本。
     """
-    if not constraint or constraint == '*':
-        return
     try:
-        specifier = SpecifierSet(constraint)
+        specifier = unibot_specifier(constraint)
     except Exception as error:
         raise CompatibilityError(
             f'Extension {extension_id} has invalid version constraint: {constraint} ({error})'
         ) from error
+    if specifier is None:
+        return
     current_version = get_unibot_version()
     if current_version and current_version not in specifier:
         raise CompatibilityError(
-            f'Extension {extension_id} requires UniBot {constraint}, current is {current_version}!'
+            f'Extension {extension_id} does not support the current UniBot version: '
+            f'requires {constraint}, current is {current_version}!'
         )

@@ -5,6 +5,10 @@
 下载 → SHA-256 校验 → 安全解压 → 清单校验 → 临时目录原子替换。
 任一步失败都不得改变当前扩展版本（可回滚事务）。
 安装状态统一写入 `Data/Extension/States.toml`。
+
+不指定版本时自动挑选**兼容当前 UniBot 版本**的最新发布：
+兼容版本存在则直接安装；若该扩展仅有不兼容的新版本，则回退到最新的历史兼容版本；
+一个兼容版本都没有时拒绝安装并提示此扩展不支持当前核心版本。
 """
 
 import asyncio
@@ -12,6 +16,7 @@ import hashlib
 import shutil
 import tempfile
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import tomlkit
@@ -20,7 +25,7 @@ from Scripts.Constants import MARKET_CACHE_TTL
 from Scripts.Logging import exception_logger, logger
 from Scripts.Network import github_download, request
 
-from .Base import parse_manifest, validate_unibot_constraint
+from .Base import get_unibot_version, is_unibot_compatible, parse_manifest, validate_unibot_constraint
 from .Errors import ExtensionError, ManifestError
 from .Loader import EXTENSIONS_DIR, STATES_FILE, STATES_ROOT
 from .Manager import extension_manager
@@ -33,6 +38,29 @@ from .Market import (
 
 # 扩展市场注册表地址（GitHub 托管的 JSON 索引）
 MARKET_REGISTRY_URL = 'https://raw.githubusercontent.com/MineJPGcraft/UniBot.Market/main/extensions.json'
+
+
+@dataclass(slots=True)
+class MarketReleaseOption:
+    """单个可选发布版本（供 WebUI 版本切换下拉）。"""
+
+    version: str
+    unibot_version: str
+    compatible: bool
+    installed: bool = False
+
+
+@dataclass(slots=True)
+class InstallResult:
+    """安装结果（msg_key / msg_params 供 WebUI 按界面语言翻译）。"""
+
+    success: bool
+    msg_key: str
+    msg_params: dict = field(default_factory=dict)
+    version: str = ''
+    warning_key: str = ''
+    warning_params: dict = field(default_factory=dict)
+    error: str = ''
 
 
 class ExtensionMarketManager:
@@ -69,13 +97,15 @@ class ExtensionMarketManager:
         return self._market_dicts()
 
     def _market_dicts(self) -> list[dict]:
-        """将市场缓存转换为 WebUI 展示用的字典列表。"""
+        """将市场缓存转换为 WebUI 展示用的字典列表（含兼容版本标记）。"""
         items = []
         for extension in self.market_cache.values():
+            compatible = extension.compatible_release()
             latest = extension.latest_release()
             # 代码型扩展在 registry，无代码扩展包（template/resources）在 no_code_info
             installed = extension.id in extension_manager.registry or extension.id in extension_manager.no_code_info
             info = extension_manager.get_extension_info(extension.id) if installed else {}
+            target = compatible or latest
             items.append(
                 {
                     'id': extension.id,
@@ -83,12 +113,38 @@ class ExtensionMarketManager:
                     'repo': extension.repo,
                     'description': extension.description,
                     'official': extension.official,
+                    # 最新版本（可能不兼容当前核心版本）
                     'latest_version': latest.version if latest else '',
+                    'latest_unibot': latest.unibot_version if latest else '*',
+                    'latest_compatible': bool(latest) and is_unibot_compatible(latest.unibot_version),
+                    # 默认安装目标：兼容当前 UniBot 版本的最新发布
+                    'target_version': target.version if target else '',
+                    'target_unibot': target.unibot_version if target else '*',
+                    'compatible': compatible is not None,
+                    'has_compatible_fallback': bool(compatible and latest and compatible.version != latest.version),
                     'installed': installed,
                     'installed_version': info.get('version', ''),
+                    'unibot_version': get_unibot_version(),
                 }
             )
         return items
+
+    def get_releases(self, extension_id: str) -> list[MarketReleaseOption]:
+        """列出某扩展的全部可选版本（标记兼容当前核心版本与是否已安装）。"""
+        extension = self.market_cache.get(extension_id)
+        if extension is None:
+            return []
+        state = self.get_install_state(extension_id)
+        installed_version = state.version if state is not None else ''
+        return [
+            MarketReleaseOption(
+                version=release.version,
+                unibot_version=release.unibot_version,
+                compatible=is_unibot_compatible(release.unibot_version),
+                installed=release.version == installed_version,
+            )
+            for release in reversed(extension.releases)
+        ]
 
     # ===== 安装状态持久化 =====
 
@@ -145,39 +201,58 @@ class ExtensionMarketManager:
 
     # ===== 安装事务 =====
 
-    async def install(self, extension_id: str, version: str = '') -> tuple[bool, str]:
+    async def install(self, extension_id: str, version: str = '') -> InstallResult:
         """从市场安装/升级扩展（可回滚事务），重启后由 Loader 加载生效。"""
         extension_entry = self.market_cache.get(extension_id)
         if extension_entry is None:
-            return False, f'市场不存在扩展 {extension_id}'
-        release = self._select_release(extension_entry, version)
+            return InstallResult(False, 'extensions.market_not_found_in_cache', {'id': extension_id})
+        release, error_key = self._select_release(extension_entry, version)
         if release is None:
-            return False, f'扩展 {extension_id} 没有可用版本'
+            return InstallResult(False, error_key, {'id': extension_id, 'version': version})
+        # 语义化提示：最新版不兼容当前核心版本时，说明回退到了哪个历史版本
+        latest = extension_entry.latest_release()
+        warning_key = ''
+        if not version and latest is not None and release.version != latest.version:
+            warning_key = 'extensions.install_compatible_fallback'
         try:
             archive_data = await self._download_release(release.asset_url, release.sha256)
             # 安装事务：解压到临时目录，校验清单后原子替换（重 IO 放入线程，避免阻塞事件循环）
             success, message = await asyncio.to_thread(self._install_transaction, extension_id, archive_data, release)
             if not success:
-                return False, message
+                return InstallResult(False, 'extensions.install_failed_reason', {'error': message}, error=message)
             # 记录安装状态（来源/版本/sha256/依赖归属）
             await asyncio.to_thread(self._record_install, extension_id, release, archive_data, extension_entry)
             # 依赖声明与安装由任务中心在后台执行（uv add + uv sync），此处不阻塞安装请求
-            return True, f'扩展 {extension_id} 安装成功，重启后生效'
+            return InstallResult(
+                True,
+                'extensions.install_success',
+                {'id': extension_id, 'version': release.version},
+                version=release.version,
+                warning_key=warning_key,
+                warning_params={'id': extension_id, 'version': release.version, 'latest': latest.version if latest else ''},
+            )
         except ManifestError as error:
-            return False, str(error)
+            return InstallResult(False, 'extensions.install_failed_reason', {'error': str(error)}, error=str(error))
         except Exception as error:
             exception_logger.error('Extension installation failed!')
-            return False, f'扩展安装失败：{error}'
+            return InstallResult(False, 'extensions.install_failed_reason', {'error': str(error)}, error=str(error))
 
     @staticmethod
-    def _select_release(extension_entry: MarketExtension, version: str) -> MarketRelease | None:
-        """按指定版本或最新版本选择 Release 条目。"""
+    def _select_release(extension_entry: MarketExtension, version: str) -> tuple[MarketRelease | None, str]:
+        """
+        选择要安装的发布版本，返回 (发布条目, 失败消息键)。
+
+        显式指定版本时按版本号精确查找（允许安装历史版本以回退）；未指定时自动挑选
+        兼容当前 UniBot 版本的最新发布，无任何兼容版本则拒绝安装。
+        """
         if version:
-            for release in extension_entry.releases:
-                if release.version == version:
-                    return release
-            return None
-        return extension_entry.latest_release()
+            release = extension_entry.find_release(version)
+            if release is None:
+                return None, 'extensions.market_version_not_found'
+            return release, ''
+        if (compatible := extension_entry.compatible_release()) is not None:
+            return compatible, ''
+        return None, 'extensions.unsupported_version'
 
     def _install_transaction(self, extension_id: str, archive_data: bytes, release: MarketRelease) -> tuple[bool, str]:
         """在临时目录解压校验，成功后原子替换目标目录（同步阻塞，调用方需放入线程）。"""
@@ -269,7 +344,7 @@ class ExtensionMarketManager:
             del states[extension_id]
             await asyncio.to_thread(self._write_states, states)
         logger.success(f'Extension {extension_id} uninstalled, takes effect after restart.')
-        return True, f'扩展 {extension_id} 卸载成功，重启后生效'
+        return True, f'Extension {extension_id} uninstalled, takes effect after restart.'
 
 
 market_manager = ExtensionMarketManager()

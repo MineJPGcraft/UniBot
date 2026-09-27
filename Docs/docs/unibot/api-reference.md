@@ -203,6 +203,31 @@ GET /api/extensions/resources
 
 返回可用资源扩展及资源状态。资源扩展不支持配置。
 
+### 扩展市场安装与版本切换
+
+```
+POST /api/extensions/market/install
+GET  /api/extensions/market/{id}/releases
+```
+
+`market/install` 提交后台安装任务，请求体：
+
+| 字段 | 说明 |
+|------|------|
+| `id` | 扩展 id |
+| `version` | 可选；**留空**表示自动选择兼容当前 UniBot 版本的最新历史版本，传具体版本号则安装该版本（可用于回退） |
+
+自动选择时：最新版本兼容则装最新；最新版不兼容但有兼容历史版本则回退并记录日志；一个兼容版本都没有时返回错误，提示此扩展不支持当前核心版本。
+
+`market/{id}/releases` 返回该扩展的全部可选版本：
+
+```json
+{
+  "unibot_version": "1.0.3",
+  "releases": [{ "version": "1.0.2", "unibot_version": ">= 1.0.2", "compatible": true, "installed": false }]
+}
+```
+
 ## 日志接口
 
 ```

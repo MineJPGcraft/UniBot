@@ -71,7 +71,13 @@
     "config_invalid": "配置校验失败：{error}",
     "renderer_not_found": "渲染引擎 {name} 不存在",
     "template_not_found": "模板 {template_name} 不存在",
-    "reload_failed": "热重载失败：{error}"
+    "reload_failed": "热重载失败：{error}",
+    "market_not_found_in_cache": "市场中不存在扩展 {id}",
+    "market_version_not_found": "扩展 {id} 不存在版本 {version}",
+    "unsupported_version": "扩展 {id} 不支持当前 UniBot 版本 {version}，没有可供安装的兼容版本",
+    "install_success": "扩展 {id} 已安装版本 {version}，重启后生效",
+    "install_failed_reason": "扩展安装失败：{error}",
+    "install_compatible_fallback": "扩展 {id} 的最新版本 {latest} 与当前 UniBot 版本不兼容，已自动安装兼容的历史版本 {version}"
   },
   "studio": {
     "downloaded": "Studio 已下载",

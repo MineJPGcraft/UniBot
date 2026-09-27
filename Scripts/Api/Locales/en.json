@@ -72,7 +72,13 @@
     "config_invalid": "Configuration validation failed: {error}",
     "renderer_not_found": "Renderer {name} does not exist",
     "template_not_found": "Template {template_name} does not exist",
-    "reload_failed": "Extension reload failed: {error}"
+    "reload_failed": "Extension reload failed: {error}",
+    "market_not_found_in_cache": "Extension {id} is not present in the market",
+    "market_version_not_found": "Extension {id} has no version {version}",
+    "unsupported_version": "Extension {id} does not support the current UniBot version {version}; no compatible release is available",
+    "install_success": "Extension {id} installed at version {version}, effective after restart",
+    "install_failed_reason": "Extension installation failed: {error}",
+    "install_compatible_fallback": "The latest version {latest} of extension {id} is incompatible with the current UniBot version; compatible version {version} was installed instead"
   },
   "studio": {
     "downloaded": "Studio is already downloaded",

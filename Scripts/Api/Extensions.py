@@ -8,7 +8,14 @@ from Scripts.Api.Locale import text
 from Scripts.Api.Managers import studio_manager
 from Scripts.Config import config, reload_config
 from Scripts.Constants import TaskKind, UserRole
-from Scripts.Extensions import EXTENSIONS_DIR, ExtensionState, ExtensionType, extension_manager, market_manager
+from Scripts.Extensions import (
+    EXTENSIONS_DIR,
+    ExtensionState,
+    ExtensionType,
+    extension_manager,
+    get_unibot_version,
+    market_manager,
+)
 from Scripts.Extensions.Dependencies import sync_extension_dependencies
 from Scripts.Managers import config_manager, task_center
 from Scripts.Managers.TaskCenter import TaskContext
@@ -23,10 +30,12 @@ router = APIRouter(prefix='/api/extensions', tags=['Extensions'])
 async def run_extension_install_task(context: TaskContext, extension_id: str, version: str, name: str) -> str:
     """任务体：下载安装扩展 → 同步依赖 → 热重载使其立即生效。"""
     context.set_message('task_center.msg_downloading_extension', name=name)
-    success, message = await market_manager.install(extension_id, version)
-    if not success:
-        raise RuntimeError(message)
-    context.log(message)
+    result = await market_manager.install(extension_id, version)
+    if not result.success:
+        raise RuntimeError(text(result.msg_key, **result.msg_params))
+    context.log(text(result.msg_key, **result.msg_params))
+    if result.warning_key:
+        context.log(text(result.warning_key, **result.warning_params))
 
     context.set_message('task_center.msg_syncing_dependencies')
     await sync_extension_dependencies(context.log)
@@ -142,36 +151,78 @@ async def get_market(force: bool = False, current_user: dict = Depends(get_curre
 
 @router.post('/market/install', summary='从市场安装扩展')
 async def install_market_extension(body: MarketInstallRequest, user: dict = Depends(require_role(UserRole.admin))):
-    """提交扩展安装任务（后台下载 + 依赖同步），进度在任务中心查看。"""
+    """提交扩展安装任务（后台下载 + 依赖同步），进度在任务中心查看。
+
+    `version` 留空时后端自动选择兼容当前 UniBot 版本的最新历史版本；
+    显式指定版本则按版本号安装（可用于回退到历史版本）。
+    """
     if not body.id:
         return {'code': 1, 'data': None, 'message': text('extensions.missing_id')}
+    # 确保市场缓存已加载，才能校验版本与兼容性
+    await market_manager.fetch_market()
     name = body.id
-    if entry := market_manager.market_cache.get(body.id):
+    entry = market_manager.market_cache.get(body.id)
+    if entry is not None:
         name = entry.name or body.id
+        # 提前拦截：无任何兼容当前核心版本的发布时直接拒绝安装
+        if entry.compatible_release() is None:
+            return {
+                'code': 1,
+                'data': None,
+                'message': text('extensions.unsupported_version', id=body.id, version=get_unibot_version()),
+            }
     task = task_center.submit(
         TaskKind.extension_install,
-        lambda context: run_extension_install_task(context, body.id, body.version, name),
+        lambda context: run_extension_install_task(context, body.id, body.version or '', name),
         title_params={'name': name},
     )
     return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 
+@router.get('/market/{extension_id}/releases', summary='扩展可用版本列表')
+async def get_market_releases(extension_id: str, current_user: dict = Depends(get_current_user)):
+    """返回扩展的全部可选版本（标记兼容当前核心版本与是否已安装），供 WebUI 版本切换。"""
+    await market_manager.fetch_market()
+    releases = market_manager.get_releases(extension_id)
+    return {
+        'code': 0,
+        'data': {
+            'id': extension_id,
+            'unibot_version': get_unibot_version(),
+            'releases': [
+                {
+                    'version': item.version,
+                    'unibot_version': item.unibot_version,
+                    'compatible': item.compatible,
+                    'installed': item.installed,
+                }
+                for item in releases
+            ],
+        },
+        'message': 'ok',
+    }
+
+
 @router.get('/image-requirements', summary='图片模式依赖扩展检查')
 async def get_image_requirements(current_user: dict = Depends(get_current_user)):
-    """返回图片模式所需扩展的下载情况，供开启图片模式时引导自动下载。"""
+    """返回图片模式所需扩展的下载情况，供开启图片模式时引导自动下载（含版本兼容性）。"""
     # 确保市场缓存已加载，便于判断缺失扩展是否可从市场自动安装
     await market_manager.fetch_market()
     required = []
     missing = []
     for extension_id, display_name in IMAGE_MODE_REQUIRED_EXTENSIONS:
         installed = _extension_downloaded(extension_id)
-        in_market = extension_id in market_manager.market_cache
+        entry = market_manager.market_cache.get(extension_id)
+        in_market = entry is not None
+        # 市场收录了该扩展，但没有任何兼容当前核心版本的发布
+        unsupported = in_market and entry is not None and entry.compatible_release() is None
         required.append(
             {
                 'id': extension_id,
                 'name': display_name,
                 'installed': installed,
                 'in_market': in_market,
+                'unsupported': unsupported,
             }
         )
         if not installed:
@@ -182,6 +233,7 @@ async def get_image_requirements(current_user: dict = Depends(get_current_user))
             'mode': config.image.mode,
             'required': required,
             'missing': missing,
+            'unibot_version': get_unibot_version(),
         },
         'message': 'ok',
     }
