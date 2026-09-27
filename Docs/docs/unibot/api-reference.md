@@ -1,12 +1,12 @@
 ---
 title: REST API 参考
 date: 2026-08-04
-description: UniBot WebUI 后端 REST API 参考：JWT 认证、登录鉴权、服务器与玩家管理、配置读写等接口的路径、参数与响应说明，路径前缀 /api。
+description: UniBot WebUI 后端 REST API 参考：JWT 认证、登录鉴权、服务器与玩家管理、配置读写等接口的路径、参数与响应说明（挂载在 /webui 下，路由前缀 /api）。
 ---
 
 # REST API 参考
 
-UniBot 的 WebUI 后端提供一组 REST API，供前端管理面板调用。所有 API 均挂载在机器人的端口下，路径前缀为 `/api`。
+UniBot 的 WebUI 后端提供一组 REST API，供前端管理面板调用。整个 API 路由挂载在 **`/webui`** 前缀下，各模块再加 `/api/<模块>` 作为路由前缀，因此**实际请求路径为 `/webui/api/<模块>/...`**。下文为行文简洁，各端点统一以 `/api/...` 表示，实际访问时需带上 `/webui` 挂载前缀。
 
 ## 认证方式
 

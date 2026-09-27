@@ -916,6 +916,6 @@ enabled = true
 
 ### 打包发布
 
-- 模板仓库提供打包脚本：把扩展目录压缩为 zip（zip 根即扩展目录，内含 `Extension.toml`）。
-- 将 zip 上传到 GitHub Release，并向扩展注册表提交收录申请。
+- 基于 [`Extension.Example`](https://github.com/Minecraft-UniBot/Extension.Example) 模板：其内置打包工作流（`.github/workflows/release.yml`）会在发布 GitHub Release 时自动把扩展目录压缩为 zip（zip 根即扩展目录，内含 `Extension.toml`）并上传为 Release 资产。
+- 也可手动把 zip 上传到 GitHub Release，并向扩展注册表提交收录申请。
 - 完整发布流程见 [上传市场](/unibot/marketplace.html)。

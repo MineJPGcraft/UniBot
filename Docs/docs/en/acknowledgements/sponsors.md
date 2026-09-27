@@ -29,28 +29,16 @@ Copy the block below and replace `Nickname`, `Avatar URL`, `Amount`, `Date` and 
 
 ## Sponsor List
 
-> The entries below are examples — replace them with real sponsor information when in use.
-
-### Sponsors
+Listed in chronological order only.
 
 <CardGrid cols="1">
-  <LinkCard title="Example Sponsor" icon="fluent-color:heart-24" href="https://mcjpg.org/">
+  <LinkCard title="糊" icon="fluent-color:heart-24" href="https://mcjpg.org/">
     <div style="display:flex;align-items:center;gap:16px;">
-      <img src="https://mcjpg.org/logo.png" alt="Example sponsor avatar" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;" />
+      <img src="https://avatars.githubusercontent.com/u/98395726" alt="糊's avatar" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;" />
       <div>
-        <strong>Example Sponsor</strong> · Donated ¥100 (2026-09-01)
+        <strong>糊</strong> · Donated ¥70 (2026-09-05)
         <br/>
-        <span style="color:var(--vp-c-text-2);">Thank you for the support — may UniBot go further!</span>
-      </div>
-    </div>
-  </LinkCard>
-  <LinkCard title="Example Sponsor 2" icon="fluent-color:heart-24" href="https://mcjpg.org/">
-    <div style="display:flex;align-items:center;gap:16px;">
-      <img src="https://mcjpg.org/logo.png" alt="Example sponsor 2 avatar" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;" />
-      <div>
-        <strong>Example Sponsor 2</strong> · Donated ¥50 (2026-08-20)
-        <br/>
-        <span style="color:var(--vp-c-text-2);">Supporting open source, supporting UniBot!</span>
+        <span style="color:var(--vp-c-text-2);">Thank you for the support — may we go further!</span>
       </div>
     </div>
   </LinkCard>

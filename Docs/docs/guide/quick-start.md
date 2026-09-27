@@ -72,11 +72,11 @@ description: Minecraft UniBot 快速开始教程：约 10 分钟完成部署—�
 ::: table title="一键安装脚本" copy="all"
 | 平台 | 脚本 |
 |------|------|
-| **Windows** | `Install.bat`，双击运行即可，自动完成安装 uv、克隆仓库、配置 WebUI 并同步依赖 |
+| **Windows** | `Install.bat`，双击运行即可，自动完成安装 uv、下载对应版本安装包、配置 WebUI 并同步依赖 |
 | **Linux / macOS** | `Install.sh`，先执行 `chmod +x Install.sh`，再运行 `./Install.sh` |
 :::
 
-脚本将自动完成：检测并安装 UV、拉取对应版本仓库、询问是否启用 WebUI、执行 `uv sync` 同步依赖。
+脚本将自动完成：检测并安装 UV、从 GitHub Release 下载并解压对应版本的安装包、询问是否启用 WebUI、执行 `uv sync` 同步依赖。
 
 ::: note
 完成安装后，脚本会在 `UniBot` 目录下生成一个 `Start.sh` 或 `Start.bat` 仅需执行即可启动核心。

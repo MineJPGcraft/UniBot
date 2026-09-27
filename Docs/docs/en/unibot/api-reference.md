@@ -1,12 +1,12 @@
 ---
 title: "REST API Reference"
 date: 2026-08-21
-description: "REST API reference for UniBot's WebUI backend: JWT authentication, login, server and player management, config read/write — all endpoints under the /api prefix with parameters and responses."
+description: "REST API reference for UniBot's WebUI backend: JWT authentication, login, server and player management, config read/write — mounted under /webui with the /api route prefix, with parameters and responses."
 ---
 
 # REST API Reference
 
-UniBot's WebUI backend provides a set of REST APIs for the frontend admin panel. All APIs are mounted under the bot's port with the `/api` path prefix.
+UniBot's WebUI backend provides a set of REST APIs for the frontend admin panel. The entire API router is mounted under the **`/webui`** prefix, and each module adds `/api/<module>` as its route prefix, so the **actual request path is `/webui/api/<module>/...`**. Below, each endpoint is written as `/api/...` for brevity; append the `/webui` mount prefix when calling it for real.
 
 ## Authentication
 

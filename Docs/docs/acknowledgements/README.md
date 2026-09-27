@@ -42,7 +42,7 @@ description: Minecraft UniBot 的鸣谢与赞助记录：感谢每一位贡献�
 | [NoneBot2](https://nonebot.dev/) | 机器人核心框架 |
 | [Alconna](https://github.com/ArcletProject/Alconna) | 命令解析 |
 | [QueQiao](https://github.com/17TheWord/QueQiao) | MC 服务器桥接协议 |
-| [html2pic](https://github.com/...) | 图片渲染引擎 |
+| [html2pic](https://github.com/francozanardi/html2pic) | 图片渲染引擎 |
 | [Playwright](https://playwright.dev/) | 图片渲染引擎 |
 | [VuePress](https://vuepress.vuejs.org/) | 文档站框架 |
 | [vuepress-theme-plume](https://github.com/pengzhanbo/vuepress-theme-plume) | 文档站主题 |

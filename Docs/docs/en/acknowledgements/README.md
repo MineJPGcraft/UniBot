@@ -42,7 +42,7 @@ This project is built on the following excellent open-source projects — our re
 | [NoneBot2](https://nonebot.dev/) | Core bot framework |
 | [Alconna](https://github.com/ArcletProject/Alconna) | Command parsing |
 | [QueQiao](https://github.com/17TheWord/QueQiao) | MC server bridge protocol |
-| [html2pic](https://github.com/...) | Image rendering engine |
+| [html2pic](https://github.com/francozanardi/html2pic) | Image rendering engine |
 | [Playwright](https://playwright.dev/) | Image rendering engine |
 | [VuePress](https://vuepress.vuejs.org/) | Documentation site framework |
 | [vuepress-theme-plume](https://github.com/pengzhanbo/vuepress-theme-plume) | Documentation site theme |

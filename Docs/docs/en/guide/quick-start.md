@@ -64,11 +64,11 @@ Download the one-click installation script for your platform from the [Releases 
 ::: table title="One-Click Installation Script" copy="all"
 | Platform | Script |
 |------|------|
-| **Windows** | `Install.bat`, just double-click to run; it automatically installs uv, clones the repository, configures WebUI, and syncs dependencies |
+| **Windows** | `Install.bat`, just double-click to run; it automatically installs uv, downloads the matching release package, configures WebUI, and syncs dependencies |
 | **Linux / macOS** | `Install.sh`, first run `chmod +x Install.sh`, then run `./Install.sh` |
 :::
 
-The script will automatically: detect and install UV, pull the repository for the corresponding version, ask whether to enable WebUI, and run `uv sync` to sync dependencies.
+The script will automatically: detect and install UV, download and extract the matching version's package from the GitHub Release, ask whether to enable WebUI, and run `uv sync` to sync dependencies.
 
 ::: note
 After installation, the script will generate a `Start.sh` or `Start.bat` in the `UniBot` directory; you only need to run it to start the core.

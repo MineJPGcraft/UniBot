@@ -46,12 +46,12 @@ flowchart TD
 ## 1. 打包扩展
 
 > [!TIP]
-> **推荐直接使用 [`Extensions/Example`](https://github.com/MineJPGcraft/Minecraft_UniBot/tree/main/Extensions/Example)
-> 模板**：它已内置完整的打包工作流（`.github/workflows/release.yml`），Tag 推送后自动
-> 打包为 zip 并发布到 GitHub Release，无需手动配置。在模板基础上开发自己的扩展即可。
+> **推荐直接使用 [`Extension.Example`](https://github.com/Minecraft-UniBot/Extension.Example)
+> 模板仓库**：它已内置完整的打包工作流（`.github/workflows/release.yml`），发布 GitHub
+> Release 时自动打包为 zip 并上传为 Release 资产，无需手动配置。在模板基础上开发自己的扩展即可。
 
 扩展以源码 zip 形式分发（不走 PyPI），zip 根目录必须包含 `Extension.toml`。参考
-[`Extensions/Example`](https://github.com/MineJPGcraft/Minecraft_UniBot/blob/main/Extensions/Example/.github/workflows/release.yml)
+[`Extension.Example`](https://github.com/Minecraft-UniBot/Extension.Example/blob/main/.github/workflows/release.yml)
 的打包工作流，zip 结构应为：
 
 ```file-tree
@@ -80,7 +80,7 @@ xxx-1.0.0.zip
 {
   "id": "Example",
   "name": "示例扩展",
-  "repo": "MineJPGcraft/Example",
+  "repo": "Minecraft-UniBot/Extension.Example",
   "description": "一个演示 UniBot 扩展开发流程的示例扩展。",
   "official": false
 }

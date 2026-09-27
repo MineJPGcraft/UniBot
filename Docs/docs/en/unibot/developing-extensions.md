@@ -868,6 +868,6 @@ Extension developers can treat UniBot as an importable package in their editor t
 
 ### Packaging and Publishing
 
-- The template repository provides a packaging script: compress the extension directory into a zip (the zip root is the extension directory, containing `Extension.toml`).
-- Upload the zip to GitHub Release and submit an inclusion request to the extension registry.
+- Built on the [`Extension.Example`](https://github.com/Minecraft-UniBot/Extension.Example) template: its bundled packaging workflow (`.github/workflows/release.yml`) automatically compresses the extension directory into a zip (the zip root is the extension directory, containing `Extension.toml`) and uploads it as a Release asset when a GitHub Release is published.
+- You can also manually upload the zip to a GitHub Release and submit an inclusion request to the extension registry.
 - For the full publishing flow, see [Publishing to the Marketplace](/en/unibot/marketplace.html).

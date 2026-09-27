@@ -109,7 +109,7 @@ The bot management entry, integrating about info, version check, update, restart
 ```
 /bot about                    # View about info (version / update status / project links)
 /bot check                    # Actively check for new versions
-/bot update                   # Pull the latest code and auto-restart (requires admin)
+/bot update                   # Download the latest code and auto-restart (requires admin)
 /bot restart                  # Restart the bot (requires admin)
 /bot superusers add <@user/ID>     # Add a superuser (requires admin)
 /bot superusers remove <@user/ID>  # Remove a superuser (requires admin)
@@ -120,7 +120,7 @@ The bot management entry, integrating about info, version check, update, restart
 |--------|------|------|
 | `about` | About info (version / update status / project links) | All users |
 | `check` | Actively check whether a new version is available | All users |
-| `update` | Pull the latest code and auto-restart (based on git pull) | <Badge type="danger" text="Admin" /> |
+| `update` | Download the latest code and auto-restart (from the GitHub Release) | <Badge type="danger" text="Admin" /> |
 | `restart` | Restart the bot through the watchdog | <Badge type="danger" text="Admin" /> |
 | `superusers add/remove` | Add / remove superusers, written back to `.env` | <Badge type="danger" text="Admin" /> |
 :::
@@ -135,7 +135,7 @@ Common examples:
 ```
 
 - `superusers` supports `@user` or a bare user ID.
-- `update` depends on a git deployment (pulls the latest code with `git pull --ff-only`) and restarts only when new commits were actually pulled; when not started by Watchdog, it reports that automatic updates are unavailable.
+- `update` downloads the latest code package (`UniBot.zip`) from the GitHub Release and replaces the core code, syncing only `Scripts/` and the entry files while keeping user configuration intact; when not started by Watchdog, it reports that automatic updates are unavailable.
 - `restart` / `update` require the bot to be started by the Watchdog daemon (`Watchdog.py`); otherwise, it reports that it cannot be executed automatically.
 - `superusers` changes take effect immediately, but framework-level permissions fully take effect only after a restart (consistent with the old `/config` behavior).
 

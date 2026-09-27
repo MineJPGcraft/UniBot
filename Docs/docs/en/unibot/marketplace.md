@@ -46,14 +46,14 @@ flowchart TD
 ## 1. Package the Extension
 
 > [!TIP]
-> **It is recommended to use the [`Extensions/Example`](https://github.com/MineJPGcraft/Minecraft_UniBot/tree/main/Extensions/Example)
-> template directly**: it already ships with a complete packaging workflow (`.github/workflows/release.yml`) that
-> automatically packages the extension into a zip and publishes it to GitHub Release when a tag is pushed, so no
-> manual configuration is needed. Just develop your own extension on top of the template.
+> **It is recommended to use the [`Extension.Example`](https://github.com/Minecraft-UniBot/Extension.Example)
+> template repository directly**: it already ships with a complete packaging workflow (`.github/workflows/release.yml`)
+> that automatically packages the extension into a zip and uploads it as a Release asset when a GitHub Release is
+> published, so no manual configuration is needed. Just develop your own extension on top of the template.
 
 Extensions are distributed as source zips (not via PyPI), and the zip root **must** contain `Extension.toml`. Refer to
 the packaging workflow of
-[`Extensions/Example`](https://github.com/MineJPGcraft/Minecraft_UniBot/blob/main/Extensions/Example/.github/workflows/release.yml);
+[`Extension.Example`](https://github.com/Minecraft-UniBot/Extension.Example/blob/main/.github/workflows/release.yml);
 the zip structure should be:
 
 ```file-tree
@@ -82,7 +82,7 @@ Create `<extension-id>.json` (for example `Example.json`) under the marketplace'
 {
   "id": "Example",
   "name": "Example Extension",
-  "repo": "MineJPGcraft/Example",
+  "repo": "Minecraft-UniBot/Extension.Example",
   "description": "An example extension that demonstrates the UniBot extension development workflow.",
   "official": false
 }

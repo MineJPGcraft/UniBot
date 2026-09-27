@@ -109,7 +109,7 @@ UniBot 的指令基于 [Alconna](https://github.com/ArcletProject/Alconna) 解�
 ```
 /bot about                    # 查看关于信息（版本 / 更新状态 / 项目链接）
 /bot check                    # 主动检测新版本
-/bot update                   # 拉取最新代码并自动重启（需管理员）
+/bot update                   # 下载最新代码并自动重启（需管理员）
 /bot restart                  # 重启机器人（需管理员）
 /bot superusers add <@用户/ID>     # 添加超级用户（需管理员）
 /bot superusers remove <@用户/ID>  # 移除超级用户（需管理员）
@@ -120,7 +120,7 @@ UniBot 的指令基于 [Alconna](https://github.com/ArcletProject/Alconna) 解�
 |--------|------|------|
 | `about` | 关于信息（版本 / 更新状态 / 项目链接） | 所有用户 |
 | `check` | 主动检测是否有新版本 | 所有用户 |
-| `update` | 拉取最新代码并自动重启（基于 git pull） | <Badge type="danger" text="管理员" /> |
+| `update` | 下载最新代码并自动重启（从 GitHub Release 下载） | <Badge type="danger" text="管理员" /> |
 | `restart` | 通过守护进程重启机器人 | <Badge type="danger" text="管理员" /> |
 | `superusers add/remove` | 增删超级用户，写回 `.env` | <Badge type="danger" text="管理员" /> |
 :::
@@ -135,7 +135,7 @@ UniBot 的指令基于 [Alconna](https://github.com/ArcletProject/Alconna) 解�
 ```
 
 - `superusers` 支持 `@用户` 或直接填用户 ID。
-- `update` 依赖 git 部署（通过 `git pull --ff-only` 拉取最新代码），仅当实际拉取到新提交时才重启；非 Watchdog 启动时提示无法自动更新。
+- `update` 通过 GitHub Release 下载最新代码包（`UniBot.zip`）并替换核心代码，仅同步 `Scripts/` 与入口文件，用户配置一律保留；非 Watchdog 启动时提示无法自动更新。
 - `restart` / `update` 需由 Watchdog 守护进程启动（`Watchdog.py`），否则提示无法自动执行。
 - `superusers` 改动即时生效，但框架层权限需重启后完全生效（与旧 `/config` 行为一致）。
 
