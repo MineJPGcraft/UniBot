@@ -37,7 +37,7 @@ The WebUI dependencies must be installed first, and WebUI must be enabled in `Co
 ```bash
 # Install webui dependencies (required for both the install script and manual deployment)
 cd UniBot
-uv sync --extra webui --inexact
+uv sync --no-dev --extra webui
 ```
 
 ```toml
@@ -193,7 +193,7 @@ View the current account info and change your own password.
 
 ### WebUI Shows 404 / Fails to Load
 
-1. Confirm `[webui] enabled = true` and that `uv sync --extra webui --inexact` has been run.
+1. Confirm `[webui] enabled = true` and that `uv sync --no-dev --extra webui` has been run.
 2. Confirm the access path is `/webui` and the port is correct (default `8000`).
 3. Check the bot logs and confirm whether the WebUI static assets were downloaded and mounted successfully.
 

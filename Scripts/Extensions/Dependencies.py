@@ -8,7 +8,7 @@
 写入一律通过 `uv add --optional extensions` / `uv remove --optional extensions`
 完成，不再手工拼接 pyproject.toml 文本，避免格式漂移与锁文件不同步。
 `extensions` 组由框架独占：组内已无扩展声明（且未被保护）的条目会被 `uv remove`
-清理；其它 extra（如 webui）的依赖不受影响（`uv sync --inexact`）。
+清理；其它 extra（如 webui）的依赖不受影响。
 """
 
 from __future__ import annotations
@@ -166,14 +166,23 @@ def build_uv_remove_main_command(packages: list[str]) -> list[str]:
 
 def build_uv_sync_command() -> list[str]:
     """
-    构造 uv sync 命令：带上全部已启用的 extras，并加 --inexact。
+    构造 uv sync 命令：排除 dev 组、带上全部已启用的 extras（含 webui）。
 
-    --inexact 是关键：uv sync 默认会把环境同步到「仅含选中组」的快照状态，
-    单 extra 会卸载其它组已安装的包（如 webui 的 psutil）；加 --inexact 后
-    只安装缺失项，不卸载多余项。
+    - ``--no-dev``：运行时环境不应安装 pytest / ruff 等 dev 依赖；缺少它时
+      uv 会把 dev 组一并装进生产虚拟环境。
+    - ``--extra webui``：WebUI 依赖必须始终同步。Config.toml 缺失/损坏时
+      ``get_enabled_extras`` 读不到 webui，会漏装 psutil 等包导致面板无法加载，
+      因此这里把 webui 作为框架级必需 extra 无条件带上。
+
+    精确同步（不再加 ``--inexact``）：命令已显式列出全部必需组
+    （webui + extensions + 已启用 extras）并排除 dev 组，让 uv 按快照精确对齐、
+    清理多余项正是所需行为。
     """
-    command = ['uv', 'sync', '--inexact']
-    for extra in get_enabled_extras():
+    command = ['uv', 'sync', '--no-dev']
+    enabled_extras = get_enabled_extras()
+    if 'webui' not in enabled_extras:
+        enabled_extras.append('webui')
+    for extra in enabled_extras:
         command.extend(('--extra', extra))
     # 扩展依赖统一收口到 extensions 可选组
     command.extend(('--extra', EXTENSIONS_EXTRA))
@@ -247,7 +256,7 @@ async def sync_extension_dependencies(log: LogSink | None = None) -> None:
     """
     按当前扩展声明同步 extensions 组并执行 uv sync（异步，供任务中心调用）。
 
-    流程：计划增删 → `uv remove` → `uv add`（均 --no-sync）→ `uv sync --inexact`。
+    流程：计划增删 → `uv remove` → `uv add`（均 --no-sync）→ `uv sync --no-dev`。
     组内无变化时仍执行一次 uv sync，保证环境与声明一致。
     """
     if log is not None:

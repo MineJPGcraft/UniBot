@@ -241,10 +241,10 @@ Different optional features require additional dependencies, so sync the corresp
 
 ```bash
 # WebUI admin panel
-uv sync --extra webui --inexact
+uv sync --no-dev --extra webui
 
 # Extension dependencies (Python dependencies declared by enabled extensions)
-uv sync --extra extensions --inexact
+uv sync --no-dev --extra webui --extra extensions
 ```
 
 ==Before enabling a feature, first confirm that the corresponding extra is installed==, otherwise the feature cannot work properly.

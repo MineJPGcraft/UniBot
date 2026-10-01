@@ -9,7 +9,7 @@
 - extensions 组由框架独占，组内无扩展声明的条目会被计划移除；
 - 仍被已启用扩展使用的共享依赖不会被移除；
 - 计划幂等：pyproject 已与声明一致时增删清单均为空；
-- uv 命令参数顺序与 `--inexact` 约定正确。
+- uv 命令参数顺序与 `--no-dev` 约定正确。
 """
 
 import textwrap
@@ -212,22 +212,34 @@ class TestUvCommandBuilders:
         assert Dependencies.build_uv_add_main_command(['dep-a']) == ['uv', 'add', '--no-sync', 'dep-a']
         assert Dependencies.build_uv_remove_main_command(['dep-a']) == ['uv', 'remove', '--no-sync', 'dep-a']
 
-    def test_sync_command_includes_inexact_and_extras(self, tmp_path, monkeypatch):
-        """uv sync 必须带 --inexact 并包含全部已启用 extras 与 extensions。"""
+    def test_sync_command_includes_no_dev_and_extras(self, tmp_path, monkeypatch):
+        """uv sync 必须带 --no-dev 并包含全部已启用 extras 与 extensions（不再带 --inexact）。"""
         _write_config_toml(tmp_path, webui_enabled=True)
         _setup(tmp_path, monkeypatch)
 
         command = Dependencies.build_uv_sync_command()
-        assert command[:3] == ['uv', 'sync', '--inexact']
+        assert command[:3] == ['uv', 'sync', '--no-dev']
+        assert '--inexact' not in command
         assert '--extra' in command
         assert 'webui' in command
         assert 'extensions' in command
 
-    def test_sync_command_skips_disabled_extras(self, tmp_path, monkeypatch):
-        """未启用的可选功能不应出现在 uv sync 的 extra 列表中。"""
+    def test_sync_command_forces_webui_even_when_disabled(self, tmp_path, monkeypatch):
+        """webui 为框架级必需 extra：即使 Config.toml 未开启也应始终同步。"""
         _write_config_toml(tmp_path, webui_enabled=False)
         _setup(tmp_path, monkeypatch)
 
         command = Dependencies.build_uv_sync_command()
-        assert 'webui' not in command
+        assert 'webui' in command
+        assert 'extensions' in command
+
+    def test_sync_command_skips_disabled_extras(self, tmp_path, monkeypatch):
+        """除 webui 外的未启用可选功能不应出现在 uv sync 的 extra 列表中。"""
+        _write_config_toml(tmp_path, webui_enabled=True)
+        monkeypatch.setattr(Dependencies, 'EXTRA_CONFIG_FIELDS', {'telemetry': ('telemetry', 'enabled')})
+        _setup(tmp_path, monkeypatch)
+
+        command = Dependencies.build_uv_sync_command()
+        assert 'telemetry' not in command
+        assert 'webui' in command
         assert 'extensions' in command

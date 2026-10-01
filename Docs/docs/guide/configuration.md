@@ -250,10 +250,10 @@ WebUI 管理面板的界面语言（中/英）在面板右上角切换、仅保�
 
 ```bash
 # WebUI 管理面板
-uv sync --extra webui --inexact
+uv sync --no-dev --extra webui
 
 # 扩展依赖（已启用扩展声明的 Python 依赖，聚合自各扩展清单）
-uv sync --extra extensions --inexact
+uv sync --no-dev --extra webui --extra extensions
 ```
 
 ==启用某个功能前，先确认对应的 extra 已安装==，否则该功能无法正常工作。

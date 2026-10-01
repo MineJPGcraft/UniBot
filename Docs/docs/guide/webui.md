@@ -38,7 +38,7 @@ WebUI 依赖需要先安装，且需在 `Config.toml` 中开启：
 ```bash
 # 安装 webui 依赖（安装脚本 / 手动部署均需执行）
 cd UniBot
-uv sync --extra webui --inexact
+uv sync --no-dev --extra webui
 ```
 
 ```toml
@@ -204,7 +204,7 @@ UniBot 扩展系统的管理入口（需管理员权限）：
 
 ### 访问 WebUI 显示 404 / 无法加载
 
-1. 确认 `[webui] enabled = true` 且已执行 `uv sync --extra webui --inexact`。
+1. 确认 `[webui] enabled = true` 且已执行 `uv sync --no-dev --extra webui`。
 2. 确认访问路径为 `/webui`，且端口正确（默认 `8000`）。
 3. 查看机器人日志，确认 WebUI 静态资源是否成功下载与挂载。
 
