@@ -6,8 +6,8 @@ from pathlib import Path
 import nonebot
 from pydantic import ValidationError
 
-from Scripts import Process
-from Scripts.Logging import configure_handlers, configure_logging, logger
+from Core import Process
+from Core.Logging import configure_handlers, configure_logging, logger
 
 LOG_PATH = Path('Logs/')
 
@@ -19,10 +19,10 @@ driver = nonebot.get_driver()
 
 @driver.on_startup
 async def startup() -> None:
-    from Scripts.Config import config
-    from Scripts.Extensions import extension_manager
-    from Scripts.Managers import task_manager, version_manager
-    from Scripts.Telemetry import telemetry
+    from Core.Config import config
+    from Core.Extension import extension_manager
+    from Core.Managers import task_manager, version_manager
+    from Core.Telemetry import telemetry
 
     if config.telemetry.enabled:
         telemetry.init()
@@ -33,9 +33,9 @@ async def startup() -> None:
     await extension_manager.start()
 
     if config.webui.enabled:
-        # 启动钩子在 main() 插件加载完成后执行，此时导入 Scripts.Api 是安全的
-        from Scripts.Api.Limiter import rate_limiter
-        from Scripts.Api.Managers import data_manager, webui_manager
+        # 启动钩子在 main() 插件加载完成后执行，此时导入 Core.Web 是安全的
+        from Core.Web.Limiter import rate_limiter
+        from Core.Web.Managers import data_manager, webui_manager
 
         data_manager.load()
         rate_limiter.start()
@@ -44,10 +44,10 @@ async def startup() -> None:
 
 @driver.on_shutdown
 async def shutdown() -> None:
-    from Scripts.Config import config
-    from Scripts.Extensions import extension_manager
-    from Scripts.Managers import task_manager
-    from Scripts.Telemetry import telemetry
+    from Core.Config import config
+    from Core.Extension import extension_manager
+    from Core.Managers import task_manager
+    from Core.Telemetry import telemetry
 
     if config.telemetry.enabled:
         await telemetry.stop()
@@ -55,8 +55,8 @@ async def shutdown() -> None:
     await task_manager.stop()
 
     if config.webui.enabled:
-        from Scripts.Api.Limiter import rate_limiter
-        from Scripts.Api.Managers import data_manager
+        from Core.Web.Limiter import rate_limiter
+        from Core.Web.Managers import data_manager
 
         rate_limiter.stop()
         await data_manager.save()
@@ -65,8 +65,8 @@ async def shutdown() -> None:
 @driver.on_bot_connect
 async def notify_update_on_connect() -> None:
     """机器人连接时若开启播报且检测到新版本，向消息群推送一次更新提醒。"""
-    from Scripts.Managers import version_manager
-    from Scripts.Platforms.Panels import sync_panels_for_all_bots
+    from Core.Managers import version_manager
+    from Core.Platforms.Panels import sync_panels_for_all_bots
 
     await version_manager.try_notify_update()
     # 连接时把 UniBot 指令同步为 QQ 群指令面板（对所有群生效，失败仅告警不阻断）
@@ -136,14 +136,12 @@ def register_adapters(driver, adapters: list[dict]) -> None:
             logger.warning(f'Failed to load adapter {module_name}, skipped. Reason: {error}')
 
 
-def load_plugins(plugins: list[str | dict]) -> None:
-    """加载已启用的 NoneBot 插件。"""
-    for plugin in plugins:
-        if isinstance(plugin, str):
-            nonebot.load_plugin(plugin)
+def load_plugins(modules: list[str]) -> None:
+    """程序化加载已启用的 NoneBot 插件（来自 Config/Plugins.toml）。"""
+    for module_name in modules:
+        if not module_name:
             continue
-        if (module_name := plugin.get('module_name', '')) and plugin.get('enabled', True):
-            nonebot.load_plugin(module_name)
+        nonebot.load_plugin(module_name)
 
 
 def exit_on_sigterm(_signal_number: int, _frame: object) -> None:
@@ -154,21 +152,32 @@ def exit_on_sigterm(_signal_number: int, _frame: object) -> None:
 def main():
     """初始化并运行机器人进程。"""
     # NoneBot 初始化必须在本地模块导入之前完成。
-    from Scripts.Config import config as bot_config
-    from Scripts.Managers import config_manager
+    from Core.Config import config as bot_config
+    from Core.LocaleLoader import register_all as register_locales
+    from Core.Managers import config_manager, plugin_registry
+    from Scripts.migrate_messages import run_startup_migrations
 
     configure_logging()
     config_manager.init()
 
+    # 先执行历史数据迁移（独立脚本，纯文件级；旧消息包 → Core/Locales/Messages.*，幂等）
+    run_startup_migrations()
+    # 再注册核心/内置语言包并同步语言上下文（引擎自身不读磁盘，读取迁移后的文件）
+    register_locales()
+
     register_adapters(driver, config_manager.nonebot_config.get('adapters', []))
 
-    nonebot.load_plugin('Scripts.Plugins.Extensions')
-    load_plugins(config_manager.nonebot_config.get('plugins', []))
+    # 框架内置插件随源码分发，必须先于用户插件加载（保证 startup 钩子先注册先执行）
+    nonebot.load_plugin('Core.Builtin.Plugins.Extensions')
+    for builtin_plugin in ('Core.Builtin.Plugins.Collector', 'Core.Builtin.Plugins.Events', 'Core.Builtin.Plugins.Token'):
+        nonebot.load_plugin(builtin_plugin)
+    # 用户/市场插件登记在 Config/Plugins.toml（运行时状态，不写入 pyproject.toml）
+    load_plugins(plugin_registry.enabled_modules())
 
     if bot_config.webui.enabled:
-        # 函数内延迟导入：Scripts.Api 聚合全部路由，部分模块顶层依赖插件托管包，
+        # 函数内延迟导入：Core.Web 聚合全部路由，部分模块顶层依赖插件托管包，
         # 必须等插件加载完成后再导入，避免 uninfo 等被抢先注册为普通模块
-        from Scripts.Api.Managers import webui_manager
+        from Core.Web.Managers import webui_manager
 
         webui_manager.mount(nonebot.get_app())
 

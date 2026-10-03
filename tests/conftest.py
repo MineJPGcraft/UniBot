@@ -5,15 +5,20 @@ from pathlib import Path
 
 import pytest
 
-# 确保 UniBot 根目录在 sys.path 中，使 `from Scripts...` 可导入
+# 确保 UniBot 根目录在 sys.path 中，使 `from Core...` 可导入
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import nonebot  # noqa: E402
 
-# 必须在任何 Scripts 模块导入前初始化（Config.py 顶层调用 get_plugin_config）
+# 必须在任何 Core 模块导入前初始化（Config.py 顶层调用 get_plugin_config）
 nonebot.init()
+
+# 注册语言包：内置插件在模块导入期即访问 messages 兼容层，须在任何测试模块导入前完成
+from Core.LocaleLoader import register_all as _register_locales  # noqa: E402
+
+_register_locales()
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -25,7 +30,7 @@ def _init_nonebot():
 @pytest.fixture(autouse=True)
 def _isolate_extension_manager():
     """每个测试前清空扩展管理器状态，避免测试间相互污染。"""
-    from Scripts.Extensions import command_manager, extension_manager
+    from Core.Extension import command_manager, extension_manager
 
     extension_manager.reset()
     command_manager._commands.clear()

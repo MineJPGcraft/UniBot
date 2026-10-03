@@ -7,7 +7,7 @@
 
 import pytest
 
-from Scripts.Config import Config, _merge_toml
+from Core.Config import Config, _merge_toml
 
 
 def test_toml_overrides_environment_variable(monkeypatch):

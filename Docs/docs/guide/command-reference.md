@@ -135,7 +135,7 @@ UniBot 的指令基于 [Alconna](https://github.com/ArcletProject/Alconna) 解�
 ```
 
 - `superusers` 支持 `@用户` 或直接填用户 ID。
-- `update` 通过 GitHub Release 下载最新代码包（`UniBot.zip`）并替换核心代码，仅同步 `Scripts/` 与入口文件，用户配置一律保留；非 Watchdog 启动时提示无法自动更新。
+- `update` 通过 GitHub Release 下载最新代码包（`UniBot.zip`）并替换核心代码，仅同步 `Core/` 与入口文件，用户配置一律保留；非 Watchdog 启动时提示无法自动更新。
 - `restart` / `update` 需由 Watchdog 守护进程启动（`Watchdog.py`），否则提示无法自动执行。
 - `superusers` 改动即时生效，但框架层权限需重启后完全生效（与旧 `/config` 行为一致）。
 

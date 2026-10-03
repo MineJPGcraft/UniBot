@@ -36,15 +36,32 @@ line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "Q", "SIM", "UP"]
-ignore = ["E501", "SIM108"]
+select = ["E", "F", "I", "Q", "SIM", "UP", "C90", "PLR", "TRY", "RET", "BLE"]
+ignore = [
+    "E501",
+    "SIM108",
+    # 异常信息由捕获点上下文化，无需每条 raise 都带独立长消息（框架层统一文案）
+    "TRY003",
+    # 魔法数值多为协议常量/范围判定，硬性阈值改用具名常量意义有限
+    "PLR2004",
+    # 框架回调/API 签名由第三方契约决定，位置参数与数量不可随意收敛
+    "PLR0913",
+    "PLR0917",
+    # 项目风格鼓励守卫子句早返回，多 return 是预期写法（见 AGENT.md §14）
+    "PLR0911",
+    # 扩展/插件加载与调用需捕获宽泛异常以保证隔离与健壮性，属预期设计
+    "BLE001",
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
 
 [tool.ruff.format]
 quote-style = "single"
 docstring-code-format = true
 
 [tool.ruff.lint.isort]
-known-first-party = ["Extensions", "Scripts"]
+known-first-party = ["Core", "Extensions"]
 
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = "single"
@@ -57,11 +74,8 @@ index-url = "https://mirrors.huaweicloud.com/repository/pypi/simple"
 webui_version = 'v1.0.6'
 
 [tool.nonebot]
-plugins = [
-    { module_name = "Scripts.Plugins.Collector", enabled = true },
-    { module_name = "Scripts.Plugins.Events", enabled = true },
-    { module_name = "Scripts.Plugins.Token", enabled = true },
-]
+# 插件登记已移出 pyproject.toml（运行时状态存于 Config/Plugins.toml）；
+# 框架内置插件由 Bot.py 程序化加载，用户/市场插件读 Config/Plugins.toml。
 
 [[tool.nonebot.adapters]]
 name = "Minecraft"

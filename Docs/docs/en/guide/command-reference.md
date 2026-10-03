@@ -135,7 +135,7 @@ Common examples:
 ```
 
 - `superusers` supports `@user` or a bare user ID.
-- `update` downloads the latest code package (`UniBot.zip`) from the GitHub Release and replaces the core code, syncing only `Scripts/` and the entry files while keeping user configuration intact; when not started by Watchdog, it reports that automatic updates are unavailable.
+- `update` downloads the latest code package (`UniBot.zip`) from the GitHub Release and replaces the core code, syncing only `Core/` and the entry files while keeping user configuration intact; when not started by Watchdog, it reports that automatic updates are unavailable.
 - `restart` / `update` require the bot to be started by the Watchdog daemon (`Watchdog.py`); otherwise, it reports that it cannot be executed automatically.
 - `superusers` changes take effect immediately, but framework-level permissions fully take effect only after a restart (consistent with the old `/config` behavior).
 

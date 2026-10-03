@@ -5,13 +5,13 @@ import nonebot
 import psutil
 from fastapi import APIRouter, BackgroundTasks, Depends
 
-from Scripts import Globals
-from Scripts.Api.Locale import text
-from Scripts.Config import config
-from Scripts.Constants import TaskKind, UserRole
-from Scripts.Managers import task_center, version_manager
-from Scripts.Managers.TaskCenter import TaskContext
-from Scripts.Process import is_watchdog_process, request_restart
+from Core.Config import config
+from Core.Constants import TaskKind, UserRole
+from Core.Managers import task_center, version_manager
+from Core.Managers.TaskCenter import TaskContext
+from Core.Process import is_watchdog_process, request_restart
+from Core.RuntimeState import runtime_state
+from Core.Web.Locale import text
 
 from .Auth import get_current_user, require_role
 from .WebSocket import ws_clients
@@ -37,7 +37,7 @@ async def run_update_task(context: TaskContext) -> str:
 def get_status_data() -> dict:
     """生成机器人运行状态数据（REST 接口与 WebSocket 推送共用）。"""
     adapter_names = list(nonebot.get_adapters().keys())
-    player_service, server_service = Globals.player_service, Globals.server_service
+    player_service, server_service = runtime_state.player_service, runtime_state.server_service
     servers = server_service.servers if server_service else {}
     players_bound = len(player_service.players) if player_service else 0
     return {
@@ -65,7 +65,7 @@ async def get_status(current_user: dict = Depends(get_current_user)):
 @router.get('/token', summary='获取认证令牌')
 async def get_auth_token(current_user: dict = Depends(get_current_user)):
     """获取当前认证令牌，用于在群聊中发送以完成快速授权。"""
-    return {'code': 0, 'data': {'token': Globals.auth_token}, 'message': 'ok'}
+    return {'code': 0, 'data': {'token': runtime_state.auth_token}, 'message': 'ok'}
 
 
 @router.post('/check-update', summary='检测最新版本')

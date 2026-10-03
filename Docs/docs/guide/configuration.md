@@ -17,7 +17,8 @@ UniBot 采用 **双配置文件** 体系，分别管理框架层与业务层配�
 | `Config.toml` | 项目根目录 | 机器人自定义配置（指令、消息、图片等） | TOML |
 | `Config/Extensions.toml` | `Config/` 目录 | 扩展启停开关（每扩展一个键） | TOML |
 | `Config/Extensions/<id>.toml` | `Config/Extensions/` 目录 | 各扩展的独立配置（每扩展一个文件） | TOML |
-| `Config/Messages.zh.toml` / `Config/Messages.en.toml` | `Config/` 目录 | 机器人消息双语包（按 `language` 加载） | TOML |
+| `Core/Locales/System.{zh,en}.toml` | `Core/Locales/` 目录 | 系统内置文案（系统指令 + 扩展/插件名称），只读、不可改 | TOML |
+| `Core/Locales/Messages.{zh,en}.toml` | `Core/Locales/` 目录 | 机器人消息文案（可自由修改，保存即热生效） | TOML |
 :::
 
 ==日常使用中，绝大多数配置都能在 WebUI 里可视化完成，无需手动编辑这些文件。== 本页面向需要深入调整或手动部署的场景。
@@ -209,22 +210,23 @@ enabled = true
 
 ---
 
-## `Config/Messages.zh.toml` / `Config/Messages.en.toml` — 消息文本
+## `Core/Locales/` — 语言包
 
-机器人的所有对外提示/播报文本均集中于消息包文件，支持 `{占位符}` 格式化；在 WebUI 保存后立即热生效。
+机器人的所有文本由统一 I18n 引擎承载，支持 `{占位符}` 格式化，分为两层（语言包统一放在 `Core/Locales/` 下，置于 `Core/` 内以防止用户直接误改）：
 
-- `language = "zh"` 时加载 `Messages.zh.toml`（旧版单文件 `Messages.toml` 会自动作为中文包兼容回退）
-- `language = "en"` 时加载 `Messages.en.toml`
-- 两份语言包含完全相同的键，可分别自定义；切换语言通过 `Config.toml` 的 `language` 字段
+- **系统层 `Core/Locales/System.{zh,en}.toml`**（系统自带，**只读**）：仅包含**系统指令**（`/bot`）与**所有扩展/插件的名称、描述**。用户即便修改其中的键也会被忽略，以保护系统界面文案。
+- **消息层 `Core/Locales/Messages.{zh,en}.toml`**（用户可改）：除系统键以外的全部消息（事件播报、其余指令、WebUI 后端 `api.*` 等）。在 WebUI 或直接编辑保存后立即热生效。
+- 扩展语言包位于 `Extensions/<id>/Locales/{zh,en}.toml`，命名空间 `ext.<id>.*`；`/bot` 与扩展/插件名称属系统层，不可被覆盖。
+- `language = "zh"` 时读取 `zh` 包，`language = "en"` 时读取 `en` 包；旧版 `Config/Messages.*.toml` 的用户改动会在首次启动时一次性迁入 `Core/Locales/Messages.*.toml`（幂等）。
 
 ```toml
-[events]
+[core.events]
 player_join = "玩家 {player} 加入了游戏。"        # en 包: "Player {player} joined the game."
 
-[commands.send]
+[core.commands.send]
 sent = "已向服务器发送消息：{content}。"
 
-[commands.luck]
+[core.commands.luck]
 result = "你今天的人品为 {point}，{tips}"
 ```
 

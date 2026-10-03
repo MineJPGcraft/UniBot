@@ -17,7 +17,8 @@ UniBot uses a **dual-config-file** system, separately managing the framework lay
 | `Config.toml` | Project root | Bot custom config (commands, messages, images, etc.) | TOML |
 | `Config/Extensions.toml` | `Config/` directory | Extension toggle switch (one key per extension) | TOML |
 | `Config/Extensions/<id>.toml` | `Config/Extensions/` directory | Independent config for each extension (one file per extension) | TOML |
-| `Config/Messages.zh.toml` / `Config/Messages.en.toml` | `Config/` directory | Bilingual bot message packs (loaded by `language`) | TOML |
+| `Core/Locales/System.{zh,en}.toml` | `Core/Locales/` directory | System built-in text (system commands + extension/plugin names), read-only | TOML |
+| `Core/Locales/Messages.{zh,en}.toml` | `Core/Locales/` directory | Bot message text (freely editable, hot-applies on save) | TOML |
 :::
 
 ==In daily use, the vast majority of configuration can be done visually in the WebUI without manually editing these files.== This page is for scenarios that require deep tuning or manual deployment.
@@ -200,23 +201,24 @@ After modification, the extension validates and applies the config immediately; 
 
 ---
 
-## `Config/Messages.zh.toml` / `Config/Messages.en.toml` — Message Text
+## `Core/Locales/` — Language Packs
 
-All of the bot's outbound prompts/broadcast text is centralized in message pack files. They support `{placeholder}` formatting and apply instantly after saving in the WebUI.
+All of the bot's text is carried by a unified I18n engine with `{placeholder}` formatting, split into two layers (language packs live under `Core/Locales/`, placed inside `Core/` to prevent accidental edits):
 
-- With `language = "zh"`, `Messages.zh.toml` is loaded (the legacy single file `Messages.toml` is still accepted as a Chinese-pack fallback)
-- With `language = "en"`, `Messages.en.toml` is loaded
-- Both packs share identical keys and can be customized independently; switch packs via the `language` field in `Config.toml`
+- **System layer `Core/Locales/System.{zh,en}.toml`** (shipped with the system, **read-only**): contains only the **system command** (`/bot`) and the **names/descriptions of every extension/plugin**. Edits to these keys are ignored to protect system-facing text.
+- **Message layer `Core/Locales/Messages.{zh,en}.toml`** (user-editable): every message outside the system keys (event broadcasts, other commands, WebUI backend `api.*`, etc.). Saving in the WebUI or editing directly applies instantly.
+- Extension packs live in `Extensions/<id>/Locales/{zh,en}.toml` under the `ext.<id>.*` namespace; the `/bot` command and extension/plugin names belong to the system layer and cannot be overridden.
+- With `language = "zh"`, the `zh` pack is read; with `language = "en"`, the `en` pack is read; legacy `Config/Messages.*.toml` user changes are migrated into `Core/Locales/Messages.*.toml` once on first start (idempotent).
 
 ```toml
-[events]
-player_join = "玩家 {player} 加入了游戏。"        # en pack: "Player {player} joined the game."
+[core.events]
+player_join = "Player {player} joined the game."
 
-[commands.send]
-sent = "已向服务器发送消息：{content}。"
+[core.commands.send]
+sent = "Message sent to the server: {content}."
 
-[commands.luck]
-result = "你今天的人品为 {point}，{tips}"
+[core.commands.luck]
+result = "Your luck today is {point}, {tips}"
 ```
 
 *Note: do not delete existing keys.* Missing required items will cause the bot to fail to start.

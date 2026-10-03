@@ -25,7 +25,7 @@ At load time, the framework discovers, validates, and assembles extensions unifo
 Each code extension must create **exactly one** `Extension` instance during module import, usually named `extension`:
 
 ```python
-from Scripts.Extensions import Extension
+from Core.Extension import Extension
 
 extension = Extension(
     id='WeatherExt',
@@ -38,7 +38,7 @@ extension = Extension(
 Metadata can be declared through constructor arguments, or as class attributes on an `Extension` subclass:
 
 ```python
-from Scripts.Extensions import Extension
+from Core.Extension import Extension
 
 
 class WeatherExtension(Extension):
@@ -75,7 +75,7 @@ Both forms produce exactly the same runtime contract. It is recommended to creat
 Suitable for simple commands; a single file is enough:
 
 ```python title="Extensions/Hello.py"
-from Scripts.Extensions import Command, Extension
+from Core.Extension import Command, Extension
 
 extension = Extension(id='Hello', name='你好', version='1.0.0', types=('command',))
 
@@ -96,7 +96,7 @@ The `extension.id` of a single-file extension must match the file name. Single-f
 Suitable for complete extensions with multiple modules, configuration, and dependencies:
 
 ```python title="Extensions/WeatherExt/__init__.py"
-from Scripts.Extensions import Extension
+from Core.Extension import Extension
 
 extension = Extension()
 
@@ -249,7 +249,7 @@ Command extensions define the main command by inheriting `Command` and register 
 
 ```python
 # Extensions/Greet/__init__.py
-from Scripts.Extensions import Command, Extension, SubCommand
+from Core.Extension import Command, Extension, SubCommand
 from nonebot_plugin_alconna import Match
 
 extension = Extension(config_model=None)
@@ -347,7 +347,7 @@ Define reusable service capabilities by inheriting `Service` and register them w
 
 ```python
 from pydantic import BaseModel, Field
-from Scripts.Extensions import Extension, Service
+from Core.Extension import Extension, Service
 
 
 class GreetConfig(BaseModel):
@@ -398,9 +398,9 @@ UniBot ships three `api` type extensions with the framework, ready to use out of
 Lookup supports both **service class** and **registered name** forms; looking up by class additionally validates the actual type:
 
 ```python
-from Scripts.Extensions.Builtin.Services.Players import PlayerService
-from Scripts.Extensions.Builtin.Services.Servers import ServerService
-from Scripts.Extensions.Builtin.Services.Task import TaskService
+from Core.Builtin.Services.Players import PlayerService
+from Core.Builtin.Services.Servers import ServerService
+from Core.Builtin.Services.Task import TaskService
 
 player_service = extension.api.get(PlayerService)  # by class; raises TypeError on type mismatch
 server_service = extension.api.get('server')  # by registered name
@@ -443,7 +443,7 @@ Extension id `Servers`; encapsulates server query, command execution, and messag
 
 ### TaskService — Scheduled Task Service
 
-Extension id `Task`; wraps the global `TaskManager` scheduling capability, proxying the `Scripts.Managers.task_manager` singleton without duplicating scheduling state.
+Extension id `Task`; wraps the global `TaskManager` scheduling capability, proxying the `Core.Managers.task_manager` singleton without duplicating scheduling state.
 
 ::: table title="TaskService Methods" copy="all"
 | Method | Description |
@@ -476,8 +476,8 @@ types = ["command"]
 ```
 
 ```python title="Extensions/BroadcastExt/__init__.py"
-from Scripts.Extensions import Command, Extension, SubCommand
-from Scripts.Extensions.Builtin.Services.Servers import ServerService
+from Core.Extension import Command, Extension, SubCommand
+from Core.Builtin.Services.Servers import ServerService
 
 extension = Extension()
 
@@ -530,7 +530,7 @@ Key points:
 Renderer extensions provide engine capabilities for image rendering. Inherit `BaseRenderer` and implement `setup` / `render` / `shutdown`:
 
 ```python
-from Scripts.Extensions import BaseRenderer, Extension
+from Core.Extension import BaseRenderer, Extension
 
 extension = Extension(config_model=None)
 
@@ -576,7 +576,7 @@ Different renderers may load local / online resources differently: for example, 
 Renderers can override `deal_online_asset()` / `deal_file_asset()` to adjust the conversion logic:
 
 ```python
-from Scripts.Extensions import BaseRenderer, Extension, FileAsset
+from Core.Extension import BaseRenderer, Extension, FileAsset
 
 
 @extension.register_renderer
@@ -691,7 +691,7 @@ If the template needs to display resources such as images / fonts, the extension
 ```python
 from pathlib import Path
 
-from Scripts.Extensions import FileAsset, OnlineAsset
+from Core.Extension import FileAsset, OnlineAsset
 
 return await extension.render_image(
     'Card',
@@ -756,12 +756,12 @@ UniBot ships 8 command extensions with the framework; all are ordinary `Command`
 | `Server` | `ServerCommand` | `/server` | `builtin:server` | Server list |
 :::
 
-Command extensions can override any built-in command through **class inheritance**: inherit the built-in `Command` class and override the fields or methods you want to change, while still reusing the inherited business logic. The built-in command classes are imported from `Scripts.Extensions.Builtin.Commands`:
+Command extensions can override any built-in command through **class inheritance**: inherit the built-in `Command` class and override the fields or methods you want to change, while still reusing the inherited business logic. The built-in command classes are imported from `Core.Builtin.Commands`:
 
 ```python
 # Extensions/MyListExt/Commands.py
-from Scripts.Extensions import Extension
-from Scripts.Extensions.Builtin.Commands.List import ListCommand
+from Core.Extension import Extension
+from Core.Builtin.Commands.List import ListCommand
 
 
 extension = Extension()
@@ -780,8 +780,8 @@ Only override part of the behavior, keeping the rest built-in:
 
 ```python
 # Extensions/MyBotExt/Commands.py
-from Scripts.Extensions import Extension
-from Scripts.Extensions.Builtin.Commands.Bot import BotCommand
+from Core.Extension import Extension
+from Core.Builtin.Commands.Bot import BotCommand
 
 
 extension = Extension()

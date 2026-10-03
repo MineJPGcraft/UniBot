@@ -2,9 +2,9 @@
 
 import asyncio
 
-from Scripts import Globals
-from Scripts.Extensions.Builtin.Services.Task import TaskService
-from Scripts.Managers import task_manager
+from Core.Builtin.Services.Task import TaskService
+from Core.Managers import task_manager
+from Core.RuntimeState import runtime_state
 
 
 def test_task_service_proxies_global_manager() -> None:
@@ -50,15 +50,15 @@ def test_task_service_add_once() -> None:
 
 
 def test_task_service_enable_disable_manages_global() -> None:
-    """on_enable 应启动全局调度并登记 Globals，on_disable 应停止并清理。"""
+    """on_enable 应启动全局调度并登记 runtime_state，on_disable 应停止并清理。"""
     service = TaskService()
 
     async def run():
         await service.on_enable()
-        assert Globals.task_service is service
+        assert runtime_state.task_service is service
         assert task_manager.started is True
         await service.on_disable()
-        assert Globals.task_service is None
+        assert runtime_state.task_service is None
         assert task_manager.started is False
 
     asyncio.run(run())

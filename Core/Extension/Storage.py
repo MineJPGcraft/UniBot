@@ -19,7 +19,7 @@ from typing import Any, Generic, TypeVar
 import tomlkit
 from pydantic import BaseModel
 
-from Scripts.Logging import logger
+from Core.Logging import logger
 
 from .Errors import StorageError
 

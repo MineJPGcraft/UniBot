@@ -5,7 +5,7 @@ Config.toml / .env / 扩展配置三类表单。本测试锁定该契约，避�
 字段列表（`fields` / `type: 'list'` 等旧形态）。
 """
 
-from Scripts.Api.Config.Schema import (
+from Core.Web.Config.Schema import (
     build_config_groups,
     build_config_schema,
     build_env_groups,

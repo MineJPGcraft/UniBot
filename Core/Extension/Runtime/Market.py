@@ -4,17 +4,17 @@
 市场扩展从 GitHub Release 以源码 zip 分发（不走 PyPI）。本模块提供：
 - 注册表条目模型（`MarketExtension` / `MarketRelease`）
 - 安装状态模型（`ExtensionInstallState`，写入 `States.toml`）
-- 市场扩展包解压与清单读取（安全解压复用 `Scripts.Utils.safe_extract_zip`）。
+- 市场扩展包解压与清单读取（安全解压复用 `Core.Utils.safe_extract_zip`）。
 """
 
 from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from Scripts.Utils import ArchiveError, safe_extract_zip
+from Core.Utils import ArchiveError, safe_extract_zip
 
-from .Base import ExtensionManifest, is_unibot_compatible, parse_manifest
-from .Errors import ManifestError
+from ..Errors import ManifestError
+from ..Manifest import ExtensionManifest, is_unibot_compatible, parse_manifest
 
 
 class MarketRelease(BaseModel):

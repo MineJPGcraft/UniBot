@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypeVar, overload
 
-from Scripts.Logging import logger
+from Core.Logging import logger
 
 if TYPE_CHECKING:
-    from .Manager import ExtensionManager
+    from ..Runtime.Host import ExtensionHost
 
 
 ServiceT = TypeVar('ServiceT', bound='Service')
@@ -36,7 +36,7 @@ class Service:
 class ServiceRegistry:
     """扩展的服务注册入口，将服务写入全局 ExtensionManager。"""
 
-    def __init__(self, manager: ExtensionManager) -> None:
+    def __init__(self, manager: ExtensionHost) -> None:
         self._manager = manager
         self._services: list[Service] = []
 

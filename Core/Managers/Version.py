@@ -6,9 +6,9 @@ from pathlib import Path
 import tomlkit
 from packaging.version import InvalidVersion, Version
 
-from Scripts.Config import config
-from Scripts.Logging import exception_logger, logger
-from Scripts.Network import github_download, request
+from Core.Config import config
+from Core.Logging import exception_logger, logger
+from Core.Network import github_download, request
 
 from .Config import config_manager
 
@@ -46,7 +46,7 @@ class VersionManager:
                 return
 
             # 函数内导入：本模块位于插件加载前的早期导入链，禁止顶层引入插件托管包（alconna / uninfo）
-            from Scripts.Utils import send_message_to_groups
+            from Core.Utils import send_message_to_groups
 
             if await send_message_to_groups(f'检测到新版本 {self.latest_version}，请及时更新！'):
                 self.notified_version = self.latest_version
@@ -111,30 +111,30 @@ class VersionManager:
     def _apply_update(self, archive_data: bytes) -> str | None:
         """安全解压 UniBot.zip 并替换核心代码，成功返回 None，失败返回错误信息。
 
-        替换范围：Scripts 目录 + 根目录入口文件（Bot.py / Watchdog.py）。
+        替换范围：Core 目录 + 根目录入口文件（Bot.py / Watchdog.py）。
         仅同步 pyproject.toml 的版本号，用户配置（Config.toml / .env 等）一律保留。
         """
-        from Scripts.Utils import safe_extract_zip
+        from Core.Utils import safe_extract_zip
 
-        scripts_dir = Path('Scripts')
+        core_dir = Path('Core')
         try:
             with tempfile.TemporaryDirectory() as temp_dir_name:
                 temp_dir = Path(temp_dir_name)
                 safe_extract_zip(archive_data, temp_dir)
-                source = temp_dir / 'Scripts'
+                source = temp_dir / 'Core'
                 if not source.is_dir():
                     return 'Archive is missing the core directory, update cancelled.'
-                backup_dir = scripts_dir.with_name('Scripts.bak')
+                backup_dir = core_dir.with_name('Core.bak')
                 shutil.rmtree(backup_dir, ignore_errors=True)
-                if scripts_dir.exists():
-                    scripts_dir.rename(backup_dir)
+                if core_dir.exists():
+                    core_dir.rename(backup_dir)
                 try:
                     # 必须用复制而非移动：临时目录与工作目录可能不同盘，Windows 下 os.replace 无法跨盘移动
-                    shutil.copytree(source, scripts_dir)
+                    shutil.copytree(source, core_dir)
                 except Exception:
-                    shutil.rmtree(scripts_dir, ignore_errors=True)
+                    shutil.rmtree(core_dir, ignore_errors=True)
                     if backup_dir.exists():
-                        backup_dir.rename(scripts_dir)
+                        backup_dir.rename(core_dir)
                     raise
                 shutil.rmtree(backup_dir, ignore_errors=True)
                 # 覆盖根目录入口文件（Bot.py / Watchdog.py），用户配置一律保留
@@ -145,11 +145,11 @@ class VersionManager:
                         logger.debug(f'Root file {file_name} overwritten.')
                 # pyproject.toml 仅同步版本号，保留本地其余配置
                 self._sync_version_from_archive(temp_dir / 'pyproject.toml')
-            logger.success('Core code updated to the latest version.')
-            return None
         except Exception as error:
             exception_logger.warning(f'Failed to extract the update archive: {error}')
             return 'Update failed, please check the console logs.'
+        logger.success('Core code updated to the latest version.')
+        return None
 
     def _sync_version_from_archive(self, archive_pyproject: Path) -> None:
         """从压缩包 pyproject.toml 同步项目版本与 WebUI 版本到本地，保留本地其余配置。"""

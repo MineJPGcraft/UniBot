@@ -1,0 +1,87 @@
+# 本文件为系统内置文案（系统指令与扩展/插件名称），请勿修改；修改将被忽略。
+
+[core.commands.bot]
+description = "管理机器人。"
+usage = "/bot <superusers|about|check|update|restart|reload>"
+superusers_desc = "管理超级用户"
+superusers_add_desc = "添加超级用户"
+superusers_remove_desc = "移除超级用户"
+target_arg = "目标（@用户 / 用户ID）"
+about_desc = "查看关于信息。"
+about_usage = "/bot about"
+check_desc = "检测是否有新版本"
+update_desc = "更新机器人到最新版本"
+restart_desc = "重启机器人"
+reload_desc = "热重载扩展"
+no_permission = "你没有权限执行此命令！"
+already_added = "{value} 已在 {name} 中！"
+not_found = "{value} 不在 {name} 中！"
+add_success = "已将 {value} 添加到 {name}！"
+remove_success = "已将 {value} 从 {name} 中移除！"
+write_failed = "配置写入失败，请查看控制台日志！"
+restart_hint = "（重启机器人后框架权限完全生效）"
+about_document = "项目文档：{url}"
+about_repo = "项目地址 {url}"
+about_invite = "欢迎加入 QQ 交流群 {group}，对这个项目感兴趣不妨点个 Star 吧！"
+version_outdated = "当前版本为 {current}，发现新版本，请及时更新！"
+version_latest = "当前版本为 {current}，已是最新版本！"
+check_new_version = "发现新版本 {latest}，当前版本为 {current}，请及时更新！"
+check_up_to_date = "当前已是最新版本 {version}！"
+check_failed = "检测失败，请检查网络稍后再试！"
+update_watchdog_required = "机器人未通过 Watchdog 启动，无法自动更新！"
+update_failed = "更新失败：{error}"
+update_success = "更新成功，机器人正在重启，请稍候……"
+restart_watchdog_required = "机器人未通过 Watchdog 启动，无法自动重启！"
+restarting = "机器人正在重启，请稍候……"
+reload_success = "扩展已热重载！"
+reload_failed = "扩展热重载失败：{error}"
+
+[builtin.send]
+name = "消息发送"
+
+[builtin.bound]
+name = "玩家绑定"
+
+[builtin.command]
+name = "控制台命令"
+
+[builtin.help]
+name = "命令帮助"
+
+[builtin.list]
+name = "在线玩家"
+
+[builtin.luck]
+name = "今日人品"
+
+[builtin.server]
+name = "服务器列表"
+
+[builtin.bot]
+name = "机器人管理"
+
+[builtin.servers]
+name = "Minecraft 服务器服务"
+
+[builtin.players]
+name = "玩家账号服务"
+
+[builtin.task]
+name = "定时任务服务"
+
+[builtin.events]
+name = "消息互通"
+description = "处理玩家事件以及聊天平台与 Minecraft 服务器之间的消息同步。"
+usage = "由相关消息与服务器事件自动触发。"
+
+[builtin.token]
+name = "认证令牌"
+description = "监听所有平台消息，校验认证令牌并授权群聊与用户。"
+usage = "在任意平台群聊中发送机器人打印的认证令牌即可完成授权。"
+auth_success = "认证成功：\n  {results}"
+result_separator = "；\n  "
+group_already_authorized = "本群已在授权列表中"
+group_authorized = "已将本群加入 {groups}"
+already_superuser = "你已是超级用户"
+superuser_write_failed = "超级用户写入失败"
+superuser_granted = "已将你设为超级用户"

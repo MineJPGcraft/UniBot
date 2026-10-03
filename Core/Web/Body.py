@@ -2,7 +2,7 @@
 
 from fastapi import HTTPException, Request
 
-from Scripts.Api.Locale import text
+from Core.Web.Locale import text
 
 
 async def parse_json_object(request: Request) -> dict:

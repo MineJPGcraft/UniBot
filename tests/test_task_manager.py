@@ -2,8 +2,8 @@
 
 import asyncio
 
-from Scripts.Managers import task_manager as global_task_manager
-from Scripts.Managers.Task import TaskManager
+from Core.Managers import task_manager as global_task_manager
+from Core.Managers.Task import TaskManager
 
 
 def test_registration_validation():

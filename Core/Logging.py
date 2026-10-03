@@ -22,15 +22,15 @@ if TYPE_CHECKING:
 
 # 模块名前缀 → 展示名，按前缀长度从长到短排列
 MODULE_ALIASES: tuple[tuple[str, str], ...] = (
-    ('Scripts.Platforms.Connectors', 'Conn'),
-    ('Scripts.Platforms.Panels', 'Panel'),
-    ('Scripts.Extensions.Builtin', 'Builtin'),
-    ('Scripts.Extensions', 'Ext'),
-    ('Scripts.Managers', 'Mgr'),
-    ('Scripts.Api.Managers', 'WebMgr'),
-    ('Scripts.Api', 'WebApi'),
-    ('Scripts.Plugins', 'Plg'),
-    ('Scripts', 'Core'),
+    ('Core.Platforms.Connectors', 'Conn'),
+    ('Core.Platforms.Panels', 'Panel'),
+    ('Core.Builtin', 'Builtin'),
+    ('Core.Extension', 'Ext'),
+    ('Core.Managers', 'Mgr'),
+    ('Core.Web.Managers', 'WebMgr'),
+    ('Core.Web', 'WebApi'),
+    ('Core.Builtin.Plugins', 'Plg'),
+    ('Core', 'Core'),
     ('nonebot_plugin_alconna', 'Alconna'),
     ('nonebot', 'NoneBot'),
     ('fastapi', 'FastAPI'),
@@ -62,7 +62,7 @@ def print_banner() -> None:
 def resolve_module_alias(module_name: str | None) -> str:
     """将完整模块名映射为简短的展示名，提升日志辨识度。
 
-    仅 Scripts 内部模块保留子模块名（如 Core.Config、Builtin.List），
+    仅 Core 内部模块保留子模块名（如 Core.Config、Builtin.List），
     第三方模块只显示一级别名（如 uvicorn.lifespan.on → HTTP）。
     """
     if not module_name:
@@ -74,10 +74,10 @@ def resolve_module_alias(module_name: str | None) -> str:
         if module_name == prefix:
             return alias
         if module_name.startswith(f'{prefix}.'):
-            if prefix.startswith('Scripts'):
+            if prefix.startswith('Core'):
                 remainder = module_name[len(prefix) + 1 :]
                 # 内置扩展去掉 Commands./Services. 中间层，避免展示名过长
-                if prefix == 'Scripts.Extensions.Builtin':
+                if prefix == 'Core.Builtin':
                     remainder = remainder.removeprefix('Commands.')
                     remainder = remainder.removeprefix('Services.')
                 return f'{alias}/{remainder}'

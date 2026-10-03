@@ -8,14 +8,14 @@ WebUI API 通过 `extension.api.get(PlayerService)`（或全局注册名 `player
 
 from typing import Any, TypedDict, override
 
-from Scripts import Globals
-from Scripts.Config import config
-from Scripts.Extensions import Extension, Service
-from Scripts.Messages import messages
+from Core.Config import config
+from Core.Extension import Extension, Service
+from Core.I18n import i18n_text
+from Core.RuntimeState import runtime_state
 
 # 创建唯一扩展实例，能力经实例装饰器登记
 # 内置扩展数据存储指向 Data 根目录，Player 扩展读写 `Player.json`
-extension = Extension(id='Players', name=messages.builtin_extensions.players, version='1.0.0', types=('api',))
+extension = Extension(id='Players', name=i18n_text('builtin.players.name'), version='1.0.0', types=('api',))
 
 # 玩家绑定数据文件名（位于 Data 根目录）
 DATA_FILE = 'Players.json'
@@ -56,16 +56,16 @@ class PlayerService(Service):
         if current_data is not None:
             self._accounts = dict(current_data['accounts'])
             self._players = [list(players) for players in current_data['players']]
-            Globals.player_service = self
+            runtime_state.player_service = self
             return
         self._migrate_legacy_data(data)
-        Globals.player_service = self
+        runtime_state.player_service = self
 
     @override
     async def on_disable(self) -> None:
         """服务关闭时释放内存缓存。"""
-        if Globals.player_service is self:
-            Globals.player_service = None
+        if runtime_state.player_service is self:
+            runtime_state.player_service = None
         self._accounts.clear()
         self._players.clear()
 

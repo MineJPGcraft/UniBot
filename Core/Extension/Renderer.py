@@ -19,26 +19,23 @@ import asyncio
 import copy
 import html
 import json
-import re
 from collections.abc import Callable
 from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from random import choice
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader, TemplateNotFound
-from pydantic import BaseModel, ConfigDict, Field, create_model
+from pydantic import BaseModel
 
-from Scripts.Logging import logger
+from Core.Logging import logger
 
-from ..Config import config
-from .Base import TemplateFieldConfig
 from .Errors import ExtensionError
 from .Storage import ExtensionConfigStore
 
 if TYPE_CHECKING:
-    from .Manager import ExtensionManager
+    from ..Runtime.Host import ExtensionHost
 
 # 模板根目录（UniBot/Resources），默认字体所在处
 RESOURCES_DIR = Path(__file__).parent.parent.parent / 'Resources'
@@ -46,10 +43,6 @@ FONT_PATH: Path = RESOURCES_DIR / 'Font.ttf'
 
 # 支持的图片扩展名
 _IMAGE_SUFFIXES = {'.png', '.jpg', '.jpeg', '.webp', '.bmp'}
-# 受限配置字段名：合法 Python 标识符且不以 _ 开头
-_IDENTIFIER_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
-# 颜色：#RRGGBB 或 #RRGGBBAA
-_COLOR_RE = re.compile(r'^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$')
 # 单次资源读取上限（2 MiB）
 _RESOURCE_MAX_BYTES = 2 * 1024 * 1024
 
@@ -70,130 +63,6 @@ _RESERVED_CONTEXT_KEYS = {
 def encode_context(context: dict) -> dict:
     """对模板上下文做 JSON 编码 + HTML 转义，防止注入。"""
     return json.loads(html.escape(json.dumps(context), False))
-
-
-def build_template_config_model(
-    extension_id: str,
-    schema: dict[str, TemplateFieldConfig],
-) -> type[BaseModel]:
-    """
-    把清单受限 config_schema 编译为 Pydantic 模型。
-
-        字段名必须为合法 Python 标识符且不以 `_` 开头；每项必须提供类型与
-        默认值。类型仅限 `string/integer/number/boolean/color/select`，约束
-        与类型不匹配、select 缺选项或默认值不在选项中等情况一律阻止注册。
-    """
-    fields: dict[str, tuple[Any, Any]] = {}
-    for field_name, field_cfg in schema.items():
-        if not _IDENTIFIER_RE.match(field_name) or field_name.startswith('_'):
-            raise ExtensionError(
-                f'template {extension_id} 配置字段名非法：{field_name}！字段名必须是合法 Python 标识符且不能以下划线开头！'
-            )
-        fields[field_name] = _map_template_field(extension_id, field_name, field_cfg)
-    return create_model(
-        f'TemplateConfig_{extension_id}',
-        __config__=ConfigDict(extra='forbid'),
-        **fields,  # type: ignore[arg-type]
-    )
-
-
-def _reject_misplaced_constraints(
-    cfg: TemplateFieldConfig,
-    reject: Callable[[str], ExtensionError],
-    *,
-    allow_min_max: bool = False,
-    allow_length: bool = False,
-    allow_options: bool = False,
-) -> None:
-    """校验约束字段与当前类型匹配，错位约束（如数值字段的 options）一律拒绝。"""
-    if not allow_min_max and (cfg.min is not None or cfg.max is not None):
-        raise reject('min/max only apply to integer/number')
-    if not allow_length and (cfg.min_length is not None or cfg.max_length is not None):
-        raise reject('min_length/max_length only apply to string')
-    if not allow_options and cfg.options:
-        raise reject('options only apply to select')
-
-
-def _map_template_field(
-    extension_id: str,
-    field_name: str,
-    cfg: TemplateFieldConfig,
-) -> tuple[Any, Any]:
-    """按类型映射为 Pydantic 字段，并校验约束与默认值合法性。"""
-    field_type = cfg.type
-    default = cfg.default
-
-    def reject(reason: str) -> ExtensionError:
-        return ExtensionError(f'template {extension_id} config field {field_name} {reason}')
-
-    # 保留 title/description；color 编译为 str 后原始类型会丢失，
-    # 因此按统一契约补 `format: 'color'`（与 Config.toml / .env 的 Schema 一致）。
-    # select 编译为 Literal 自带 enum，无需额外标记。
-    field_kwargs: dict[str, Any] = {}
-    if field_type == 'color':
-        field_kwargs['json_schema_extra'] = {'format': 'color'}
-    if cfg.title:
-        field_kwargs['title'] = cfg.title
-    if cfg.description:
-        field_kwargs['description'] = cfg.description
-
-    def typed_number_constraint(target: type) -> dict[str, Any]:
-        """构造数值范围约束，min/max 类型不符时拒绝。"""
-        constraints: dict[str, Any] = {}
-        if cfg.min is not None:
-            if not isinstance(cfg.min, target) or isinstance(cfg.min, bool):
-                raise reject(f'min must be of type {target.__name__}')
-            constraints['ge'] = cfg.min
-        if cfg.max is not None:
-            if not isinstance(cfg.max, target) or isinstance(cfg.max, bool):
-                raise reject(f'max must be of type {target.__name__}')
-            constraints['le'] = cfg.max
-        return constraints
-
-    def length_constraints() -> dict[str, Any]:
-        """构造字符串长度约束，取值非法时拒绝。"""
-        constraints: dict[str, Any] = {}
-        for attr, key in (('min_length', 'min_length'), ('max_length', 'max_length')):
-            value = getattr(cfg, attr)
-            if value is None:
-                continue
-            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-                raise reject(f'{attr} must be a non-negative integer')
-            constraints[key] = value
-        return constraints
-
-    if field_type in ('integer', 'number'):
-        target = int if field_type == 'integer' else float
-        if not isinstance(default, target) or isinstance(default, bool):
-            raise reject(f'default must be of type {target.__name__}')
-        _reject_misplaced_constraints(cfg, reject, allow_min_max=True)
-        return (target, Field(default=default, **typed_number_constraint(target), **field_kwargs))
-
-    if field_type == 'string':
-        if not isinstance(default, str):
-            raise reject('default must be a string')
-        _reject_misplaced_constraints(cfg, reject, allow_length=True)
-        return (str, Field(default=default, **length_constraints(), **field_kwargs))
-
-    if field_type == 'boolean':
-        if not isinstance(default, bool):
-            raise reject('default must be a boolean')
-        _reject_misplaced_constraints(cfg, reject)
-        return (bool, Field(default=default, **field_kwargs))
-
-    if field_type == 'color':
-        if not isinstance(default, str) or not _COLOR_RE.match(default):
-            raise reject('default must be a #RRGGBB or #RRGGBBAA color')
-        _reject_misplaced_constraints(cfg, reject)
-        return (str, Field(default=default, **field_kwargs))
-
-    # select
-    if not cfg.options:
-        raise reject('select type requires non-empty options')
-    if default not in cfg.options:
-        raise reject('default must be one of the options')
-    _reject_misplaced_constraints(cfg, reject)
-    return (Literal[tuple(cfg.options)], Field(default=default, **field_kwargs))
 
 
 class _ReadOnlyConfig:
@@ -303,7 +172,7 @@ class BaseRenderer:
 class RendererRegistry:
     """渲染器注册表：收集 renderer 引擎实例。"""
 
-    def __init__(self, manager: ExtensionManager) -> None:
+    def __init__(self, manager: ExtensionHost) -> None:
         self._manager = manager
 
     def register(self, renderer: BaseRenderer) -> None:
@@ -314,9 +183,15 @@ class RendererRegistry:
 class RendererManager:
     """统一管理渲染引擎与模板/资源注册，负责编排渲染与引擎并发/超时。"""
 
-    def __init__(self, get_renderer_factory: Callable[[str], BaseRenderer | None]) -> None:
+    def __init__(
+        self,
+        get_renderer_factory: Callable[[str], BaseRenderer | None],
+        get_image_config: Callable[[], Any],
+    ) -> None:
         # 从扩展管理器获取渲染引擎实例的函数：name -> BaseRenderer | None
         self._get_renderer = get_renderer_factory
+        # 当前 [image] 配置读取器（由 Bootstrap 注入，避免框架层反向依赖 Core.Config）
+        self._get_image_config = get_image_config
         # 已 setup 的引擎实例：name -> BaseRenderer
         self._active: dict[str, BaseRenderer] = {}
         # 各引擎并发上限与单次渲染超时（秒）
@@ -399,7 +274,7 @@ class RendererManager:
 
         回退顺序：config 指定模板 -> 兼容旧配置的 'default' 注册 -> 首个注册模板。
         """
-        template_id = (config.image.template or '').strip() or 'Default'
+        template_id = (self._get_image_config().template or '').strip() or 'Default'
         registration = self.templates.get(template_id)
         if registration is not None:
             return registration
@@ -453,7 +328,7 @@ class RendererManager:
             其次回退旧版内置路径（UniBot/Resources/Font.ttf，兼容历史安装）；
             均未找到时抛出明确错误。
         """
-        configured = (config.image.font or '').strip()
+        configured = (self._get_image_config().font or '').strip()
         if configured:
             path = Path(configured).expanduser().resolve()
             if not path.is_file():
@@ -579,7 +454,7 @@ class RendererManager:
                 f'template {registration.extension_id} declares unregistered resource extensions: {missing}'
             )
         # 解析渲染引擎：先激活，供资源包装转换使用
-        renderer_name = renderer or config.image.renderer
+        renderer_name = renderer or self._get_image_config().renderer
         active_renderer = self._active.get(renderer_name)
         if active_renderer is None:
             active_renderer = await self.setup(renderer_name)

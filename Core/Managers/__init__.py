@@ -3,6 +3,7 @@
 from .Cache import cache_manager as cache_manager
 from .Config import config_manager as config_manager
 from .Plugin import plugin_manager as plugin_manager
+from .PluginRegistry import plugin_registry as plugin_registry
 from .Statistics import statistics_manager as statistics_manager
 from .Task import task_manager as task_manager
 from .TaskCenter import task_center as task_center

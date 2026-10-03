@@ -5,7 +5,7 @@ from typing import override
 
 import pytest
 
-from Scripts.Extensions import (
+from Core.Extension import (
     Command,
     CommandError,
     CommandFieldError,

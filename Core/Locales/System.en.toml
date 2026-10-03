@@ -1,0 +1,87 @@
+# 本文件为系统内置文案（系统指令与扩展/插件名称），请勿修改；修改将被忽略。
+
+[core.commands.bot]
+description = "Manage the bot."
+usage = "/bot <superusers|about|check|update|restart|reload>"
+superusers_desc = "Manage superusers"
+superusers_add_desc = "Add a superuser"
+superusers_remove_desc = "Remove a superuser"
+target_arg = "target (@user / user ID)"
+about_desc = "Show about information."
+about_usage = "/bot about"
+check_desc = "Check for new versions"
+update_desc = "Update the bot to the latest version"
+restart_desc = "Restart the bot"
+reload_desc = "Reload extensions"
+no_permission = "You do not have permission to run this command!"
+already_added = "{value} is already in {name}!"
+not_found = "{value} is not in {name}!"
+add_success = "Added {value} to {name}!"
+remove_success = "Removed {value} from {name}!"
+write_failed = "Failed to write the configuration; please check the console logs!"
+restart_hint = " (Framework permissions fully take effect after restarting the bot.)"
+about_document = "Documentation: {url}"
+about_repo = "Source code: {url}"
+about_invite = "Feel free to join our QQ group 962802248 — if you like this project, please give it a star!"
+version_outdated = "Current version is {current}; a new version is available, please update soon!"
+version_latest = "Current version is {current}; already up to date!"
+check_new_version = "New version {latest} found; current version is {current}, please update soon!"
+check_up_to_date = "Already up to date with version {version}!"
+check_failed = "Check failed; please verify your network and try again later!"
+update_watchdog_required = "The bot was not started via Watchdog; automatic update is unavailable!"
+update_failed = "Update failed: {error}"
+update_success = "Update succeeded; the bot is restarting, please wait..."
+restart_watchdog_required = "The bot was not started via Watchdog; automatic restart is unavailable!"
+restarting = "The bot is restarting, please wait..."
+reload_success = "Extensions reloaded!"
+reload_failed = "Extension reload failed: {error}"
+
+[builtin.send]
+name = "Message Sender"
+
+[builtin.bound]
+name = "Player Binding"
+
+[builtin.command]
+name = "Console Command"
+
+[builtin.help]
+name = "Command Help"
+
+[builtin.list]
+name = "Online Players"
+
+[builtin.luck]
+name = "Daily Luck"
+
+[builtin.server]
+name = "Server List"
+
+[builtin.bot]
+name = "Bot Management"
+
+[builtin.servers]
+name = "Minecraft Server Service"
+
+[builtin.players]
+name = "Player Account Service"
+
+[builtin.task]
+name = "Scheduled Task Service"
+
+[builtin.events]
+name = "Message Sync"
+description = "Handles player events and message syncing between chat platforms and Minecraft servers."
+usage = "Triggered automatically by related messages and server events."
+
+[builtin.token]
+name = "Auth Token"
+description = "Listens to messages on every platform, verifies auth tokens and authorizes groups and users."
+usage = "Send the auth token printed by the bot in any platform group chat to complete authorization."
+auth_success = "Authentication succeeded:\n  {results}"
+result_separator = ";\n  "
+group_already_authorized = "This group is already authorized"
+group_authorized = "Added this group to {groups}"
+already_superuser = "You are already a superuser"
+superuser_write_failed = "Failed to write superuser config"
+superuser_granted = "You have been granted superuser permissions"

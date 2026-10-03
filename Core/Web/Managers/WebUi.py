@@ -5,10 +5,10 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from Scripts.Api.Locale import get_language, text
-from Scripts.Logging import exception_logger, logger
-from Scripts.Managers import config_manager
-from Scripts.Network import github_download
+from Core.Logging import exception_logger, logger
+from Core.Managers import config_manager
+from Core.Network import github_download
+from Core.Web.Locale import get_language, text
 
 assets_missing_template = """
 <!DOCTYPE html>
@@ -79,10 +79,10 @@ class WebUiManager:
 
     async def ensure_downloaded(self) -> bool:
         """确保 WebUI 静态资源已下载且版本匹配，否则重新下载。"""
-        # 函数内导入：Scripts.Utils 顶层依赖 nonebot_plugin_uninfo / alconna，
+        # 函数内导入：Core.Utils 顶层依赖 nonebot_plugin_uninfo / alconna，
         # 这些包必须经 NoneBot 插件机制加载；本模块在 Bot.main() 早期导入，
         # 顶层导入会把 uninfo 抢先变成普通模块，导致后续 require() 失败
-        from Scripts.Utils import safe_extract_zip
+        from Core.Utils import safe_extract_zip
 
         if not self.version:
             logger.warning('No WebUI version configured, skipping download.')
@@ -112,8 +112,8 @@ class WebUiManager:
         """挂载 WebUI API 路由到 /webui 前缀下（需在 nonebot.init() 之后、nonebot.run() 之前调用）。"""
         # 函数内导入：api_router 聚合全部路由，部分模块顶层依赖插件托管包，
         # 必须等 NoneBot 插件加载完成后才能导入，避免 uninfo 等被抢先注册为普通模块
-        from Scripts.Api import api_router, setup_cors, setup_request_language
-        from Scripts.Api.WebSocket import log_sink
+        from Core.Web import api_router, setup_cors, setup_request_language
+        from Core.Web.WebSocket import log_sink
 
         self.app = app
         setup_cors(app)

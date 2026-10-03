@@ -2,7 +2,7 @@
 
 import asyncio
 
-from Scripts.Managers.Statistics import StatisticsManager
+from Core.Managers.Statistics import StatisticsManager
 
 
 def _manager(tmp_path) -> StatisticsManager:

@@ -3,8 +3,8 @@
 import asyncio
 from typing import Any
 
-from Scripts import Globals
-from Scripts.Extensions.Builtin.Services.Players import PlayerService, extension
+from Core.Builtin.Services.Players import PlayerService, extension
+from Core.RuntimeState import runtime_state
 
 
 class _DataStore:
@@ -43,7 +43,7 @@ def test_player_service_creates_missing_data_file(monkeypatch) -> None:
 
     asyncio.run(service.on_enable())
 
-    assert Globals.player_service is service
+    assert runtime_state.player_service is service
     assert service.players == {}
     assert store.read_count == 1
     assert store.write_count == 1
@@ -57,7 +57,7 @@ def test_player_service_uses_memory_cache(monkeypatch) -> None:
     service = PlayerService()
 
     asyncio.run(service.on_enable())
-    assert Globals.player_service is service
+    assert runtime_state.player_service is service
     assert service.players == {'10001': ['Steve']}
     assert store.data == {
         'accounts': {'qq_api:10001': 0},
@@ -77,7 +77,7 @@ def test_player_service_uses_memory_cache(monkeypatch) -> None:
     }
 
     asyncio.run(service.on_disable())
-    assert Globals.player_service is None
+    assert runtime_state.player_service is None
     assert service.players == {}
 
 

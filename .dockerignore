@@ -33,5 +33,5 @@ build/
 .env
 !Resources/
 !Plugins/
-!Scripts/
+!Core/
 !.env

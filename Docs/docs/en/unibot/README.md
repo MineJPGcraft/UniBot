@@ -89,10 +89,12 @@ UniBot/
 ├── Plugins/               # NoneBot plugins (command modules)
 │   ├── Commands/          # Built-in commands
 │   └── Events.py          # Event processing hub
-├── Scripts/               # Core scripts
-│   ├── Extensions/        # Extension system framework
-│   ├── Managers/          # Managers (data, servers, plugins, etc.)
-│   ├── Api/               # REST API routes
+├── Core/                  # Core code
+│   ├── Extension/         # Extension system framework
+│   ├── Managers/          # Managers (config, plugins, task center, etc.)
+│   ├── Web/               # WebUI REST API routes
+│   ├── I18n/              # Unified I18n engine
+│   ├── Builtin/           # Built-in commands / services / plugins / locales
 │   ├── Config.py          # Config models
 │   ├── Network.py         # Network utilities
 │   └── ...

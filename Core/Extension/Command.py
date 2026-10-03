@@ -19,10 +19,9 @@ from nonebot.matcher import MatcherSource
 from nonebot_plugin_alconna import on_alconna
 from nonebot_plugin_alconna.uniseg import Image, UniMessage
 
-from Scripts.Config import config
-from Scripts.Logging import exception_logger, logger
-from Scripts.Rules import command_group_rule
-from Scripts.Utils import turn_message_text
+from Core.Logging import exception_logger, logger
+from Core.Rules import command_group_rule
+from Core.Utils import turn_message_text
 
 from .Errors import CommandError, CommandFieldError
 
@@ -230,16 +229,29 @@ def _command_source(command: Command) -> MatcherSource | None:
 # ===== 命令管理器 =====
 
 
+def _default_image_mode() -> bool:
+    """默认图像模式读取器：函数内导入 Core.Config，避免框架层顶层反向依赖。"""
+    from Core.Config import config
+
+    return config.image.mode
+
+
 class CommandManager:
     """统一收集并构建所有命令 matcher。"""
 
     command_id_separator = ':'
 
-    def __init__(self) -> None:
+    def __init__(self, image_mode_enabled: Callable[[], bool] | None = None) -> None:
         self._built = False
         self._matchers: list[Any] = []
         # 稳定 command_id -> 命令实例
         self._commands: dict[str, Command[Any]] = {}
+        # 图像模式开关经注入提供，默认读全局 [image].mode（框架不顶层依赖 Core.Config）
+        self._image_mode_enabled = image_mode_enabled or _default_image_mode
+
+    def set_image_mode_enabled(self, provider: Callable[[], bool]) -> None:
+        """由 Bootstrap 注入图像模式读取器（覆盖默认的全局 [image].mode 读取）。"""
+        self._image_mode_enabled = provider
 
     # ----- 注册阶段 -----
 
@@ -383,8 +395,7 @@ class CommandManager:
             self._assign_subcommand(matcher, nested, f'{path}.{nested.name}')
         matcher.assign(path)(self._route(matcher, subcommand.image_handler, subcommand.handler, subcommand))
 
-    @staticmethod
-    def _route(matcher, image_handler, handler: Handler, command: Command[Any]) -> Handler:
+    def _route(self, matcher, image_handler, handler: Handler, command: Command[Any]) -> Handler:
         """
         绑定处理器并统一处理返回值。
 
@@ -398,7 +409,9 @@ class CommandManager:
                 （如 Uninfo、Match）照常由 nonebot 注入。
         """
         target = (
-            image_handler if config.image.mode and type(command).image_handler is not Command.image_handler else handler
+            image_handler
+            if self._image_mode_enabled() and type(command).image_handler is not Command.image_handler
+            else handler
         )
 
         @wraps(target)
@@ -407,10 +420,10 @@ class CommandManager:
                 # 异步生成器：不 await，逐项收集后转多行文本发送
                 if inspect.isasyncgenfunction(target):
                     await matcher.finish(await turn_message_text(target(*args, **kwargs)))
-                    return
+                    return None
                 result = await target(*args, **kwargs)
                 if result is None:
-                    return
+                    return None
                 message = result
                 if isinstance(result, AsyncIterable):
                     message = await turn_message_text(result)

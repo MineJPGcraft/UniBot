@@ -8,8 +8,8 @@
 
 import asyncio
 
-from Scripts.Constants import TaskKind
-from Scripts.Managers.TaskCenter import (
+from Core.Constants import TaskKind
+from Core.Managers.TaskCenter import (
     MAX_HISTORY,
     TaskCancelledError,
     TaskCenter,

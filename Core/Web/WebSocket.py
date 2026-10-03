@@ -3,7 +3,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from Scripts.Logging import logger
+from Core.Logging import logger
 
 from .Auth import COOKIE_ACCESS_KEY, decode_access_token_payload
 
@@ -65,52 +65,16 @@ def log_sink(message):
 @router.websocket('/ws')
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket 端点，支持订阅日志、服务器、玩家、系统事件。"""
-    # 通过 cookie 中的 access_token 验证身份（fallback 到 query 参数兼容旧版）
-    token = websocket.cookies.get(COOKIE_ACCESS_KEY, '') or websocket.query_params.get('token', '')
-    if not decode_access_token_payload(token):
-        await websocket.close(code=4001, reason='Unauthorized')
+    if not await _authenticate_websocket(websocket):
         return
 
     await websocket.accept()
     ws_clients[websocket] = set()
     logger.debug('WebUI WebSocket client connected.')
 
-    async def status_pusher():
-        """定期向订阅了 status 事件的当前客户端推送运行状态。"""
-        from .Status import get_status_data  # 延迟导入避免循环依赖
-
-        while True:
-            await asyncio.sleep(STATUS_PUSH_INTERVAL)
-            if 'status' not in ws_clients.get(websocket, set()):
-                continue
-            try:
-                await websocket.send_json({'type': 'status', 'data': get_status_data()})
-            except Exception:
-                break
-
-    push_task = asyncio.create_task(status_pusher())
-
+    push_task = asyncio.create_task(_status_pusher(websocket))
     try:
-        while True:
-            data = await websocket.receive_json()
-            message_type = data.get('type', '')
-
-            if message_type == 'subscribe':
-                events = data.get('events', [])
-                ws_clients[websocket] = set(events)
-                await websocket.send_json({'type': 'subscribed', 'events': list(ws_clients[websocket])})
-                # 订阅日志后补发缓存的最近日志，供前端初始化实时日志列表
-                if 'log' in ws_clients[websocket] and log_cache:
-                    await websocket.send_json({'type': 'log_history', 'data': list(log_cache)})
-
-            elif message_type == 'unsubscribe':
-                events = data.get('events', [])
-                ws_clients[websocket] -= set(events)
-                await websocket.send_json({'type': 'subscribed', 'events': list(ws_clients[websocket])})
-
-            elif message_type == 'ping':
-                await websocket.send_json({'type': 'pong'})
-
+        await _pump_messages(websocket)
     except WebSocketDisconnect:
         logger.debug('WebUI WebSocket client disconnected.')
     except Exception as error:
@@ -118,3 +82,55 @@ async def websocket_endpoint(websocket: WebSocket):
     finally:
         push_task.cancel()
         ws_clients.pop(websocket, None)
+
+
+async def _authenticate_websocket(websocket: WebSocket) -> bool:
+    """校验 WebSocket 身份，失败即关闭连接并返回 `False`。"""
+    # 通过 cookie 中的 access_token 验证身份（fallback 到 query 参数兼容旧版）
+    token = websocket.cookies.get(COOKIE_ACCESS_KEY, '') or websocket.query_params.get('token', '')
+    if decode_access_token_payload(token):
+        return True
+    await websocket.close(code=4001, reason='Unauthorized')
+    return False
+
+
+async def _status_pusher(websocket: WebSocket) -> None:
+    """定期向订阅了 status 事件的当前客户端推送运行状态。"""
+    from .Status import get_status_data  # 延迟导入避免循环依赖
+
+    while True:
+        await asyncio.sleep(STATUS_PUSH_INTERVAL)
+        if 'status' not in ws_clients.get(websocket, set()):
+            continue
+        try:
+            await websocket.send_json({'type': 'status', 'data': get_status_data()})
+        except Exception:
+            break
+
+
+async def _pump_messages(websocket: WebSocket) -> None:
+    """循环接收并分发客户端消息，直至断开。"""
+    while True:
+        data = await websocket.receive_json()
+        message_type = data.get('type', '')
+        if message_type == 'subscribe':
+            await _handle_subscribe(websocket, data.get('events', []))
+        elif message_type == 'unsubscribe':
+            await _handle_unsubscribe(websocket, data.get('events', []))
+        elif message_type == 'ping':
+            await websocket.send_json({'type': 'pong'})
+
+
+async def _handle_subscribe(websocket: WebSocket, events: list) -> None:
+    """处理订阅请求，并在订阅日志后补发缓存日志。"""
+    ws_clients[websocket] = set(events)
+    await websocket.send_json({'type': 'subscribed', 'events': list(ws_clients[websocket])})
+    # 订阅日志后补发缓存的最近日志，供前端初始化实时日志列表
+    if 'log' in ws_clients[websocket] and log_cache:
+        await websocket.send_json({'type': 'log_history', 'data': list(log_cache)})
+
+
+async def _handle_unsubscribe(websocket: WebSocket, events: list) -> None:
+    """处理取消订阅请求。"""
+    ws_clients[websocket] -= set(events)
+    await websocket.send_json({'type': 'subscribed', 'events': list(ws_clients[websocket])})

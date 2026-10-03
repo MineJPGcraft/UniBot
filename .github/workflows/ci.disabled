@@ -70,7 +70,7 @@ jobs:
         run: uv run ruff check .
 
       - name: Compile check
-        run: uv run python -m compileall -q Scripts
+        run: uv run python -m compileall -q Core
 
       - name: Run tests
         run: uv run pytest -q

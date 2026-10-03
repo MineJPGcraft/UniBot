@@ -3,9 +3,9 @@
 import asyncio
 from typing import Any
 
-from Scripts import Globals
-from Scripts.Extensions import extension_manager
-from Scripts.Extensions.Builtin.Services import Servers
+from Core.Builtin.Services import Servers
+from Core.Extension import extension_manager
+from Core.RuntimeState import runtime_state
 
 
 class _Adapter:
@@ -47,7 +47,7 @@ def test_server_service_lifecycle_and_selection(monkeypatch) -> None:
     asyncio.run(service.on_enable())
 
     assert service.name == 'server'
-    assert Globals.server_service is service
+    assert runtime_state.server_service is service
     assert service.check_online() is True
     assert service.get_server(1) is first
     assert service.get_server('2') is second
@@ -56,7 +56,7 @@ def test_server_service_lifecycle_and_selection(monkeypatch) -> None:
 
     asyncio.run(service.on_disable())
     assert service.check_online() is False
-    assert Globals.server_service is None
+    assert runtime_state.server_service is None
 
 
 def test_server_service_is_registered() -> None:

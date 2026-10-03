@@ -10,7 +10,7 @@ from typing import override
 
 import pytest
 
-from Scripts.Extensions import Command, SubCommand
+from Core.Extension import Command, SubCommand
 
 
 class BuiltinListCommand(Command):
@@ -87,7 +87,7 @@ class TestClassOverride:
 
 class TestCommandIdOverride:
     def test_register_override_replaces_existing(self):
-        from Scripts.Extensions import CommandManager
+        from Core.Extension import CommandManager
 
         manager = CommandManager()
         manager.register_command(BuiltinListCommand(), 'builtin:list')
@@ -97,7 +97,7 @@ class TestCommandIdOverride:
         assert command.description == '覆写后的描述'
 
     def test_register_duplicate_without_override_raises(self):
-        from Scripts.Extensions import CommandError, CommandManager
+        from Core.Extension import CommandError, CommandManager
 
         manager = CommandManager()
         manager.register_command(BuiltinListCommand(), 'builtin:list')

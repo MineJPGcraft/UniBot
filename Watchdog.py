@@ -5,8 +5,8 @@ import sys
 import time
 from pathlib import Path
 
-from Scripts.Logging import configure_handlers, logger, print_banner
-from Scripts.Process import RESTART_EXIT_CODE, WATCHDOG_ENVIRONMENT
+from Core.Logging import configure_handlers, logger, print_banner
+from Core.Process import RESTART_EXIT_CODE, WATCHDOG_ENVIRONMENT
 
 MAX_RESTART_ATTEMPTS = 3
 RESTART_WINDOW_SECONDS = 60

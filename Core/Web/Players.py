@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import FileResponse
 
-from Scripts import Globals
-from Scripts.Api.Locale import text
-from Scripts.Config import config
-from Scripts.Constants import UserRole
-from Scripts.Managers import cache_manager
-from Scripts.Network import AVATAR_SIZE, fetch_player_avatar
+from Core.Config import config
+from Core.Constants import UserRole
+from Core.Managers import cache_manager
+from Core.Network import AVATAR_SIZE, fetch_player_avatar
+from Core.RuntimeState import runtime_state
+from Core.Web.Locale import text
 
 from .Auth import get_current_user, require_role
 from .Schemas import BindPlayerRequest
@@ -22,7 +22,7 @@ async def get_players(
     current_user: dict = Depends(get_current_user),
 ):
     """获取所有玩家绑定关系，支持搜索和分页。"""
-    player_service = Globals.player_service
+    player_service = runtime_state.player_service
     bindings = player_service.players if player_service else {}
     all_items = []
     for user_id, bound_players in bindings.items():
@@ -70,7 +70,7 @@ async def get_player_avatar(
 @router.get('/{user}', summary='查询用户绑定')
 async def get_user_bindings(user: str, current_user: dict = Depends(get_current_user)):
     """查询指定用户的所有绑定。"""
-    player_service = Globals.player_service
+    player_service = runtime_state.player_service
     bindings = player_service.players if player_service else {}
     if user not in bindings:
         return {'code': 1, 'data': None, 'message': text('players.user_not_found')}
@@ -83,7 +83,7 @@ async def bind_player(body: BindPlayerRequest, current_user: dict = Depends(requ
     if not body.user or not body.player:
         return {'code': 1, 'data': None, 'message': text('players.bind_fields_required')}
 
-    player_service = Globals.player_service
+    player_service = runtime_state.player_service
     if player_service is None:
         return {'code': 1, 'data': None, 'message': text('players.service_unavailable')}
 
@@ -116,7 +116,7 @@ async def bind_player(body: BindPlayerRequest, current_user: dict = Depends(requ
 @router.delete('/{user}/{player}', summary='解除绑定')
 async def unbind_player(user: str, player: str, current_user: dict = Depends(require_role(UserRole.admin, UserRole.operator))):
     """解除用户与游戏 ID 的绑定。"""
-    player_service = Globals.player_service
+    player_service = runtime_state.player_service
     if player_service is None:
         return {'code': 1, 'data': None, 'message': text('players.service_unavailable')}
     bindings = player_service.players

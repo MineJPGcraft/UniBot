@@ -29,8 +29,8 @@ JSON Schema 的自定义扩展位，Pydantic 侧则用 `json_schema_extra` 等�
 
 from typing import Any
 
-from Scripts.Api.Locale import text
-from Scripts.Constants import QQ_INTENT_FIELDS
+from Core.Constants import QQ_INTENT_FIELDS
+from Core.Web.Locale import text
 
 from .Adapters import PLATFORM_OPTIONS
 
@@ -258,7 +258,7 @@ def build_config_groups() -> list[dict]:
 
 # ===== .env 环境变量字段定义 =====
 
-# QQ 官方机器人 Intent 订阅清单：单一来源在 Scripts/Constants.py（扫码登录默认值共用）
+# QQ 官方机器人 Intent 订阅清单：单一来源在 Core/Constants.py（扫码登录默认值共用）
 
 
 def _intent_schema() -> dict[str, Any]:

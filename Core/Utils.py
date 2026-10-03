@@ -10,7 +10,7 @@ from nonebot_plugin_alconna import SupportScope as AlconnaSupportScope
 from nonebot_plugin_alconna import Target
 from nonebot_plugin_uninfo import SupportScope as UninfoSupportScope
 
-from Scripts.Logging import logger
+from Core.Logging import logger
 
 from .Config import config
 
@@ -91,6 +91,7 @@ def check_message(message: str) -> bool:
 def get_player_name(name: str) -> str | None:
     if result := regex.search(name):
         return result.group()
+    return None
 
 
 def get_platform_name(scope: str) -> str:
@@ -114,10 +115,10 @@ async def send_message_to_groups(message: str) -> bool:
             send_tasks.append(Target.group(group_id, scope).send(message))
         if send_tasks:
             await asyncio.gather(*send_tasks)
-        return True
     except Exception as error:
         logger.warning(f'Failed to send group message: {error}')
         return False
+    return True
 
 
 def get_permission(session) -> bool:

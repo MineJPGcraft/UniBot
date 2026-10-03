@@ -8,12 +8,12 @@ from copy import deepcopy
 
 from fastapi import APIRouter, Depends, Request
 
-from Scripts.Api.Locale import text
-from Scripts.Config import CONFIG_TOML_PATH, Config, config, reload_config, validate_config_content
-from Scripts.Constants import BUILTIN_PLUGIN_PREFIX, TaskKind, UserRole
-from Scripts.Extensions.Dependencies import apply_main_dependency_changes
-from Scripts.Managers import config_manager, task_center
-from Scripts.Managers.TaskCenter import TaskContext
+from Core.Config import CONFIG_TOML_PATH, Config, config, reload_config, validate_config_content
+from Core.Constants import BUILTIN_PLUGIN_PREFIX, TaskKind, UserRole
+from Core.Extension.Runtime.Dependencies import apply_main_dependency_changes
+from Core.Managers import config_manager, plugin_registry, task_center
+from Core.Managers.TaskCenter import TaskContext
+from Core.Web.Locale import text
 
 from ..Auth import get_current_user, require_role
 from ..Body import parse_json_object
@@ -90,10 +90,10 @@ def _apply_language_change(previous_language: str) -> str | None:
     if config.language == previous_language:
         return None
     try:
-        # 函数内导入：Scripts.Messages 顶层会触发 Scripts.Config 加载，避免进入早期导入链
-        from Scripts.Messages import reload_messages
+        # 函数内导入：Core.LocaleLoader 顶层会触发 Core.Config 加载，避免进入早期导入链
+        from Core.LocaleLoader import register_all
 
-        reload_messages()
+        register_all()
     except FileNotFoundError as error:
         config.language = previous_language
         config_manager.update_config({'language': previous_language})
@@ -267,7 +267,7 @@ async def get_nonebot_config(current_user: dict = Depends(get_current_user)):
         'code': 0,
         'data': {
             'adapters': adapters,
-            'plugins': nonebot_section.get('plugins', []),
+            'plugins': plugin_registry.list_plugins(),
             'adapter_catalog': catalog,
         },
         'message': 'ok',
@@ -331,16 +331,16 @@ async def uninstall_adapter(body: UninstallAdapterRequest, current_user: dict = 
 
 @router.post('/nonebot/plugins', summary='添加插件')
 async def add_plugin(body: NoneBotItemRequest, current_user: dict = Depends(require_role(UserRole.admin))):
-    """向 pyproject.toml 添加插件。"""
-    if config_manager.add_plugin(body.module_name):
+    """向 Config/Plugins.toml 登记插件。"""
+    if plugin_registry.add(body.module_name):
         return {'code': 0, 'data': None, 'message': text('config.ok.restart_required')}
     return {'code': 1, 'data': None, 'message': text('config.plugin.already_exists')}
 
 
 @router.delete('/nonebot/plugins', summary='移除插件')
 async def remove_plugin(body: NoneBotItemRequest, current_user: dict = Depends(require_role(UserRole.admin))):
-    """从 pyproject.toml 移除插件。"""
+    """从 Config/Plugins.toml 移除插件登记。"""
     if body.module_name.startswith(BUILTIN_PLUGIN_PREFIX):
         return {'code': 1, 'data': None, 'message': text('config.plugin.builtin_protected')}
-    config_manager.remove_plugin(body.module_name)
+    plugin_registry.remove(body.module_name)
     return {'code': 0, 'data': None, 'message': text('config.ok.restart_required')}

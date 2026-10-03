@@ -89,10 +89,12 @@ UniBot/
 ├── Plugins/               # NoneBot 插件（指令模块）
 │   ├── Commands/          # 内置指令
 │   └── Events.py          # 事件处理中枢
-├── Scripts/               # 核心脚本
-│   ├── Extensions/        # 扩展系统框架
-│   ├── Managers/          # 管理器（数据、服务器、插件等）
-│   ├── Api/               # REST API 路由
+├── Core/                  # 核心代码
+│   ├── Extension/         # 扩展系统框架
+│   ├── Managers/          # 管理器（配置、插件、任务中心等）
+│   ├── Web/               # WebUI REST API 路由
+│   ├── I18n/              # 统一 I18n 引擎
+│   ├── Builtin/           # 内置命令 / 服务 / 插件 / 语言包
 │   ├── Config.py          # 配置模型
 │   ├── Network.py         # 网络工具
 │   └── ...

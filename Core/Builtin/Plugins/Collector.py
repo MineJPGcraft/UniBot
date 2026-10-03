@@ -7,9 +7,9 @@ from nonebot.adapters import Bot
 from nonebot.plugin import PluginMetadata
 from nonebot_plugin_uninfo import SceneType, SupportScope, Uninfo
 
-from Scripts.Logging import logger
-from Scripts.Managers import statistics_manager, task_manager
-from Scripts.Utils import get_platform_name
+from Core.Logging import logger
+from Core.Managers import statistics_manager, task_manager
+from Core.Utils import get_platform_name
 
 __plugin_meta__ = PluginMetadata(
     name='数据统计',

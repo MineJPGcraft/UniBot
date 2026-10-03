@@ -3,9 +3,9 @@ from collections import defaultdict
 
 from fastapi import HTTPException, Request
 
-from Scripts.Api.Locale import text
-from Scripts.Logging import logger
-from Scripts.Managers import task_manager
+from Core.Logging import logger
+from Core.Managers import task_manager
+from Core.Web.Locale import text
 
 # 任务管理器中的清理任务名称
 CLEANUP_TASK_NAME = 'rate-limiter-cleanup'

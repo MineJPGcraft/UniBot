@@ -3,8 +3,8 @@
 import asyncio
 from types import SimpleNamespace
 
-from Scripts import Globals
-from Scripts.Plugins import Events
+from Core.Builtin.Plugins import Events
+from Core.RuntimeState import runtime_state
 
 
 class _ServerService:
@@ -35,7 +35,7 @@ def test_achievement_notification_uses_translated_message(monkeypatch) -> None:
 
     monkeypatch.setattr(Events, 'send_message_to_groups', send_to_groups)
     monkeypatch.setattr(Events, 'build_server_message', lambda source, player, content: (source, player, content))
-    monkeypatch.setattr(Globals, 'server_service', server_service)
+    monkeypatch.setattr(runtime_state, 'server_service', server_service)
     monkeypatch.setattr(Events.config, 'bot_prefix', '')
     monkeypatch.setattr(Events.config, 'broadcast_player', True)
     monkeypatch.setattr(Events.config, 'sync_message_between_servers', True)

@@ -21,12 +21,12 @@ from pathlib import Path
 
 import tomlkit
 
-from Scripts.Constants import MARKET_CACHE_TTL
-from Scripts.Logging import exception_logger, logger
-from Scripts.Network import github_download, request
+from Core.Constants import MARKET_CACHE_TTL
+from Core.Logging import exception_logger, logger
+from Core.Network import github_download, request
 
-from .Base import get_unibot_version, is_unibot_compatible, parse_manifest, validate_unibot_constraint
-from .Errors import ExtensionError, ManifestError
+from ..Errors import ExtensionError, ManifestError
+from ..Manifest import get_unibot_version, is_unibot_compatible, parse_manifest, validate_unibot_constraint
 from .Loader import EXTENSIONS_DIR, STATES_FILE, STATES_ROOT
 from .Manager import extension_manager
 from .Market import (

@@ -1,9 +1,9 @@
 import nonebot
 from fastapi import APIRouter, Depends, Query
 
-from Scripts.Api.Locale import text
-from Scripts.Constants import UserRole
-from Scripts.Managers import statistics_manager
+from Core.Constants import UserRole
+from Core.Managers import statistics_manager
+from Core.Web.Locale import text
 
 from .Auth import get_current_user, require_role
 

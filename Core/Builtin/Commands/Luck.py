@@ -7,13 +7,13 @@ from typing import override
 
 from nonebot_plugin_uninfo import Uninfo
 
-from Scripts import Globals
-from Scripts.Extensions import Command, Extension, SubCommand
-from Scripts.Messages import messages
-from Scripts.Utils import turn_message_text
+from Core.Extension import Command, Extension, SubCommand
+from Core.I18n import i18n_text, text, text_value
+from Core.RuntimeState import runtime_state
+from Core.Utils import turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Luck', name=messages.builtin_extensions.luck, version='1.0.1', types=('command',))
+extension = Extension(id='Luck', name=i18n_text('builtin.luck.name'), version='1.0.1', types=('command',))
 
 # 内存中的今日运势排行：桶结构，索引即人品值（10-100），每桶存该分值的用户记录，跨天自动清空
 luck_rank: list[list[dict[str, str | int]]] = [[] for _ in range(101)]
@@ -41,8 +41,8 @@ class LuckCommand(Command):
     """查看今日人品值。"""
 
     name = 'luck'
-    description = messages.commands.luck.description
-    usage = messages.commands.luck.usage
+    description = i18n_text('core.commands.luck.description')
+    usage = i18n_text('core.commands.luck.usage')
 
     @override
     async def handler(self, session: Uninfo):
@@ -56,23 +56,23 @@ class LuckCommand(Command):
         return await extension.render_image('Luck', (500, 0), context=luck_data)
 
     def get_luck_data(self, session: Uninfo) -> dict:
-        bad_things = messages.commands.luck.bad_things
-        good_things = messages.commands.luck.good_things
+        bad_things = text_value('core.commands.luck.bad_things')
+        good_things = text_value('core.commands.luck.good_things')
         user_id = str(session.user.id)
         scene_id = str(session.scene.id)
         seed_hash = md5(f'{date.today()} {scene_id} {user_id}'.encode())
         random.seed(seed := int(seed_hash.hexdigest(), 16))
         luck_point = random.randint(10, 100)
         # 查询即记录排行：已绑定用户显示绑定玩家名，未绑定用户显示昵称
-        bound_players = Globals.player_service.players.get(user_id, []) if Globals.player_service else []
+        bound_players = runtime_state.player_service.players.get(user_id, []) if runtime_state.player_service else []
         record_luck(user_id, bound_players[0] if bound_players else session.user.name or user_id, luck_point)
-        tips = messages.commands.luck.tip_low
+        tips = text('core.commands.luck.tip_low')
         if luck_point > 90:
-            tips = messages.commands.luck.tip_max
+            tips = text('core.commands.luck.tip_max')
         elif luck_point > 60:
-            tips = messages.commands.luck.tip_high
+            tips = text('core.commands.luck.tip_high')
         elif luck_point > 30:
-            tips = messages.commands.luck.tip_mid
+            tips = text('core.commands.luck.tip_mid')
         scene_index = int(scene_id.replace('-', '0'), 32)
         bad_thing = bad_things[(seed & scene_index) % len(bad_things)]
         good_thing = good_things[(seed ^ scene_index) % len(good_things)]
@@ -86,15 +86,15 @@ class LuckCommand(Command):
         }
 
     def luck_handler(self, data: dict):
-        yield messages.commands.luck.result.format(point=data['luck_point'], tips=data['tips'])
-        yield messages.commands.luck.good.format(thing=data['good_thing'])
-        yield messages.commands.luck.bad.format(thing=data['bad_thing'])
+        yield text('core.commands.luck.result', point=data['luck_point'], tips=data['tips'])
+        yield text('core.commands.luck.good', thing=data['good_thing'])
+        yield text('core.commands.luck.bad', thing=data['bad_thing'])
 
     class Rank(SubCommand['LuckCommand']):
         """查看今日运势排行。"""
 
         name = 'rank'
-        description = messages.commands.luck.rank_desc
+        description = i18n_text('core.commands.luck.rank_desc')
 
         @override
         async def handler(self, session: Uninfo):
@@ -121,10 +121,13 @@ class LuckCommand(Command):
 
         def rank_handler(self):
             if not any(luck_rank):
-                yield messages.commands.luck.rank_empty
+                yield text('core.commands.luck.rank_empty')
                 return
-            yield messages.commands.luck.rank_title
+            yield text('core.commands.luck.rank_title')
             for record in self.get_rank_data():
-                yield messages.commands.luck.rank_line.format(
-                    index=record['index'], name=record['name'], point=record['point']
+                yield text(
+                    'core.commands.luck.rank_line',
+                    index=record['index'],
+                    name=record['name'],
+                    point=record['point'],
                 )

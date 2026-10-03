@@ -9,8 +9,8 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from Scripts.Platforms.Panels import Sync as panel_sync
-from Scripts.Platforms.Panels.Sync import (
+from Core.Platforms.Panels import Sync as panel_sync
+from Core.Platforms.Panels.Sync import (
     PANEL_REMARK,
     _remove_managed_panels,
     remove_panels_for_all_bots,

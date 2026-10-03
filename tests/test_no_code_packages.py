@@ -9,11 +9,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from Scripts.Extensions import ExtensionState, ExtensionType, command_manager, extension_manager
-from Scripts.Extensions.Base import TemplateFieldConfig, parse_manifest
-from Scripts.Extensions.Errors import ExtensionError, ManifestError
-from Scripts.Extensions.Loader import ExtensionLoader
-from Scripts.Extensions.Renderer import build_template_config_model
+from Core.Extension import ExtensionState, ExtensionType, command_manager, extension_manager
+from Core.Extension.Errors import ExtensionError, ManifestError
+from Core.Extension.Manifest import TemplateFieldConfig, parse_manifest
+from Core.Extension.Runtime.Loader import ExtensionLoader
+from Core.Extension.TemplateConfig import build_template_config_model
 
 _TEMPLATE_TOML = """
 [manifest]
@@ -231,7 +231,7 @@ default = "hi"
 """
 
 _HYBRID_CODE = """\
-from Scripts.Extensions import Command, Extension
+from Core.Extension import Command, Extension
 
 extension = Extension(id="Hybrid", name="Hybrid", version="1.0.0", types=("template", "command"))
 
@@ -260,10 +260,10 @@ class TestHybridExtension:
         (ext_dir / 'Extension.toml').write_text(_HYBRID_TOML, encoding='Utf-8')
         (ext_dir / '__init__.py').write_text(_HYBRID_CODE, encoding='Utf-8')
         sys.path.insert(0, str(tmp_path))
-        monkeypatch.setattr('Scripts.Extensions.Loader.EXTENSIONS_DIR', extension_dir)
-        monkeypatch.setattr('Scripts.Extensions.Loader.BUILTIN_DIR', builtin_dir)
-        monkeypatch.setattr('Scripts.Extensions.Loader.CONFIG_ROOT', tmp_path / 'Config')
-        monkeypatch.setattr('Scripts.Extensions.Loader.DATA_ROOT', tmp_path / 'Data')
+        monkeypatch.setattr('Core.Extension.Runtime.Loader.EXTENSIONS_DIR', extension_dir)
+        monkeypatch.setattr('Core.Extension.Runtime.Loader.BUILTIN_DIR', builtin_dir)
+        monkeypatch.setattr('Core.Extension.Runtime.Loader.CONFIG_ROOT', tmp_path / 'Config')
+        monkeypatch.setattr('Core.Extension.Runtime.Loader.DATA_ROOT', tmp_path / 'Data')
         yield extension_dir
         sys.path.remove(str(tmp_path))
         for name in list(sys.modules):

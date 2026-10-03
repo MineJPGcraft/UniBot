@@ -2,7 +2,7 @@ import asyncio
 import re
 from pathlib import Path
 
-from Scripts.Logging import logger
+from Core.Logging import logger
 
 
 class CacheManager:

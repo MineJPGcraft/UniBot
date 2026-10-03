@@ -2,7 +2,7 @@ import tomlkit
 from nonebot import get_driver
 from pydantic import BaseModel, model_validator
 
-from Scripts.Constants import CONFIG_TOML_PATH
+from Core.Constants import CONFIG_TOML_PATH
 
 
 class ImageConfig(BaseModel):

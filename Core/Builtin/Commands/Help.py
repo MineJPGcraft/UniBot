@@ -4,12 +4,12 @@ from typing import override
 
 from nonebot_plugin_alconna import Match
 
-from Scripts.Extensions import Command, Extension, command_manager
-from Scripts.Messages import messages
-from Scripts.Utils import turn_message_text
+from Core.Extension import Command, Extension, command_manager
+from Core.I18n import i18n_text, text
+from Core.Utils import turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Help', name=messages.builtin_extensions.help, version='1.0.0', types=('command',))
+extension = Extension(id='Help', name=i18n_text('builtin.help.name'), version='1.0.0', types=('command',))
 
 
 def get_enabled_nodes() -> list[Command]:
@@ -60,7 +60,7 @@ def node_arg_rows(command: Command) -> list[dict]:
             'notice': argument.description,
             'required': argument.required,
             'required_text': (
-                messages.commands.help.arg_required if argument.required else messages.commands.help.arg_optional
+                text('core.commands.help.arg_required') if argument.required else text('core.commands.help.arg_optional')
             ),
         }
         for argument in command.arguments
@@ -79,7 +79,7 @@ def _walk_subcommands(subcommands: list[Command], path_prefix: list[str], indent
         lines.append(f'{indent}{branch} {gen_path_usage(path, subcommand)}{description}')
         for argument in subcommand.arguments:
             if argument.description:
-                arg_line = messages.commands.help.arg_line.format(name=argument.name, notice=argument.description)
+                arg_line = text('core.commands.help.arg_line', name=argument.name, notice=argument.description)
                 lines.append(f'{indent}{continuation}    {arg_line}')
         if subcommand.subcommands:
             lines.extend(_walk_subcommands(subcommand.subcommands, path, f'{indent}{continuation}    '))
@@ -108,12 +108,12 @@ class HelpCommand(Command):
     """查看所有可用命令的帮助信息。"""
 
     name = 'help'
-    description = messages.commands.help.description
-    usage = messages.commands.help.usage
+    description = i18n_text('core.commands.help.description')
+    usage = i18n_text('core.commands.help.usage')
 
     @override
     def declare(self) -> None:
-        self.register_option('command', str, description=messages.commands.help.option_command)
+        self.register_option('command', str, description=i18n_text('core.commands.help.option_command'))
 
     @override
     async def handler(self, command: Match[str]):
@@ -160,29 +160,29 @@ class HelpCommand(Command):
         }
 
     def help_handler(self):
-        yield messages.commands.help.title
+        yield text('core.commands.help.title')
         for command in get_enabled_nodes():
             usage = command.usage or gen_usage(command)
             description = command.description or ''
             yield f'    {usage} — {description}'
             yield from _walk_subcommands(command.subcommands, [command.name], '    ')
-        yield messages.commands.help.footnote
+        yield text('core.commands.help.footnote')
 
     def detailed_handler(self, name: str):
         command = get_node(name)
         if command is None:
-            yield messages.commands.help.not_found.format(name=name)
+            yield text('core.commands.help.not_found', name=name)
             return
-        yield messages.commands.help.detail_title.format(name=name)
-        yield f'    {messages.commands.help.detail_usage.format(usage=command.usage or gen_usage(command))}'
+        yield text('core.commands.help.detail_title', name=name)
+        yield f'    {text("core.commands.help.detail_usage", usage=command.usage or gen_usage(command))}'
         if command.description:
-            yield f'    {messages.commands.help.detail_description.format(description=command.description)}'
+            yield f'    {text("core.commands.help.detail_description", description=command.description)}'
         notices = node_args(command)
         if notices:
-            yield f'    {messages.commands.help.detail_args_title}'
+            yield f'    {text("core.commands.help.detail_args_title")}'
             for arg in notices:
-                yield f'        {messages.commands.help.arg_line.format(name=arg["name"], notice=arg["notice"])}'
+                yield f'        {text("core.commands.help.arg_line", name=arg["name"], notice=arg["notice"])}'
         if not command.subcommands:
             return
-        yield f'    {messages.commands.help.detail_subcommands_title}'
+        yield f'    {text("core.commands.help.detail_subcommands_title")}'
         yield from _walk_subcommands(command.subcommands, [command.name], '        ')

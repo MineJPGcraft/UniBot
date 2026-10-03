@@ -3,7 +3,7 @@ from io import BytesIO
 
 from httpx import AsyncClient
 
-from Scripts.Logging import logger
+from Core.Logging import logger
 
 client = AsyncClient(follow_redirects=True)
 
@@ -60,14 +60,14 @@ async def download(url: str) -> BytesIO | None:
         async with client.stream('GET', url) as stream:
             if stream.status_code != 200:
                 logger.warning(f'Download of {url} failed: unexpected status code {stream.status_code}')
-                return
+                return None
             async for chunk in stream.aiter_bytes():
                 download_bytes.write(chunk)
-        download_bytes.seek(0)
-        return download_bytes
     except Exception as error:
         logger.warning(f'Download of {url} failed: {error}')
-        return
+        return None
+    download_bytes.seek(0)
+    return download_bytes
 
 
 async def github_download(url: str) -> BytesIO | None:
@@ -77,7 +77,7 @@ async def github_download(url: str) -> BytesIO | None:
     for candidate_url in candidate_urls:
         if result := await download(candidate_url):
             return result
-    return
+    return None
 
 
 async def fetch_player_avatar(name: str, size: int) -> tuple[bytes, str] | None:

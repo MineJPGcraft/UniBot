@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from Scripts.Managers.Config import ConfigManager
+from Core.Managers.Config import ConfigManager
 
 
 def _manager(tmp_path: Path, content: str) -> ConfigManager:

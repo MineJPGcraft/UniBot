@@ -11,13 +11,13 @@ from nonebot.adapters.minecraft import Adapter as MCAdapter
 from nonebot.adapters.minecraft import Bot
 from nonebot.adapters.minecraft.message import Message
 
-from Scripts import Globals
-from Scripts.Extensions import Extension, Service
-from Scripts.Logging import logger
-from Scripts.Messages import messages
-from Scripts.Utils import flatten_minecraft_motd, strip_minecraft_color
+from Core.Extension import Extension, Service
+from Core.I18n import i18n_text
+from Core.Logging import logger
+from Core.RuntimeState import runtime_state
+from Core.Utils import flatten_minecraft_motd, strip_minecraft_color
 
-extension = Extension(id='Servers', name=messages.builtin_extensions.servers, version='1.0.0', types=('api',))
+extension = Extension(id='Servers', name=i18n_text('builtin.servers.name'), version='1.0.0', types=('api',))
 
 R = TypeVar('R')
 P = ParamSpec('P')
@@ -55,13 +55,13 @@ class ServerService(Service):
         """服务启动时绑定 Minecraft 适配器的机器人集合。"""
         adapter = get_adapter(MCAdapter)
         self.servers = adapter.bots  # pyright: ignore[reportAttributeAccessIssue]
-        Globals.server_service = self
+        runtime_state.server_service = self
 
     @override
     async def on_disable(self) -> None:
         """服务关闭时释放适配器机器人集合引用。"""
-        if Globals.server_service is self:
-            Globals.server_service = None
+        if runtime_state.server_service is self:
+            runtime_state.server_service = None
         self.servers = {}
 
     def get_server(self, server_flag: str | int) -> Bot | None:

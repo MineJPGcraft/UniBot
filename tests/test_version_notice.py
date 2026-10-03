@@ -2,9 +2,9 @@
 
 import asyncio
 
-from Scripts import Utils
-from Scripts.Config import config
-from Scripts.Managers.Version import VersionManager
+from Core import Utils
+from Core.Config import config
+from Core.Managers.Version import VersionManager
 
 NOTICE_MESSAGE = '检测到新版本 2.0.0，请及时更新！'
 

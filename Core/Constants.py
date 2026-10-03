@@ -10,10 +10,18 @@ from pathlib import Path
 CONFIG_TOML_PATH = Path('Config.toml')
 ENV_PATH = Path('.env')
 PYPROJECT_PATH = Path('pyproject.toml')
-# 消息文本双语包：按 Config.toml 的 language 字段选择加载（旧版单文件仅作中文包回退）
-MESSAGES_ZH_PATH = Path('Config') / 'Messages.zh.toml'
-MESSAGES_EN_PATH = Path('Config') / 'Messages.en.toml'
-MESSAGES_LEGACY_PATH = Path('Config') / 'Messages.toml'
+# 语言包根目录（Core/Locales/，zh/en 双语；置于 Core 内防止用户误改）
+# - System.*.toml：系统内置文案（系统指令 + 扩展/插件名称），只读，用户覆盖被忽略
+# - Messages.*.toml：机器人消息文案，可自由修改，保存后热生效
+LOCALES_DIR = Path('Core') / 'Locales'
+SYSTEM_ZH_PATH = LOCALES_DIR / 'System.zh.toml'
+SYSTEM_EN_PATH = LOCALES_DIR / 'System.en.toml'
+MESSAGES_ZH_PATH = LOCALES_DIR / 'Messages.zh.toml'
+MESSAGES_EN_PATH = LOCALES_DIR / 'Messages.en.toml'
+# 语言 -> 系统/消息文件映射（供加载器复用，避免散落各处）
+SYSTEM_PATHS = {'zh': SYSTEM_ZH_PATH, 'en': SYSTEM_EN_PATH}
+MESSAGE_PATHS = {'zh': MESSAGES_ZH_PATH, 'en': MESSAGES_EN_PATH}
+# 注：旧消息包路径与迁移标记已随迁移逻辑迁出到独立脚本 `Scripts/migrate_messages.py`
 
 # ===== 运行时数据 =====
 DATA_DIR = Path('Data')
@@ -24,12 +32,14 @@ EXTENSIONS_DIR = Path('Extensions')
 MANIFEST_FILE = 'Extension.toml'
 # 扩展启停记录（enabled 标志，重启生效）
 CONFIG_EXTENSIONS_FILE = Path('Config') / 'Extensions.toml'
+# NoneBot 插件登记与启停的运行时存储（替代 pyproject.toml 的 [tool.nonebot].plugins）
+CONFIG_PLUGINS_FILE = Path('Config') / 'Plugins.toml'
 # 市场数据缓存时长（秒），插件市场与扩展市场共用同一刷新周期
 MARKET_CACHE_TTL = 600
 
 # ===== 插件 =====
 # 框架内置插件模块前缀：内置插件不允许经 WebUI 禁用或删除
-BUILTIN_PLUGIN_PREFIX = 'Scripts.'
+BUILTIN_PLUGIN_PREFIX = 'Core.'
 
 
 # ===== WebUI 用户角色 =====

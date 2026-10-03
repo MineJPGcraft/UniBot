@@ -35,8 +35,8 @@ import httpx
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from nonebot.log import logger
 
-from Scripts.Constants import QQ_INTENT_FIELDS
-from Scripts.Managers import config_manager
+from Core.Constants import QQ_INTENT_FIELDS
+from Core.Managers import config_manager
 
 # --------------------------------------------------------------------------- #
 # 常量

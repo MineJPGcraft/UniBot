@@ -25,7 +25,7 @@ description: UniBot 扩展开发指南：从零编写、配置并分发扩展，
 每个代码型扩展在模块导入期间必须创建**且仅创建一个** `Extension` 实例，通常命名为 `extension`：
 
 ```python
-from Scripts.Extensions import Extension
+from Core.Extension import Extension
 
 extension = Extension(
     id='WeatherExt',
@@ -38,7 +38,7 @@ extension = Extension(
 元数据可通过构造参数声明，也可在 `Extension` 子类上用类属性声明：
 
 ```python
-from Scripts.Extensions import Extension
+from Core.Extension import Extension
 
 
 class WeatherExtension(Extension):
@@ -75,7 +75,7 @@ extension = WeatherExtension()
 适合简单指令，一个文件即可：
 
 ```python title="Extensions/Hello.py"
-from Scripts.Extensions import Command, Extension
+from Core.Extension import Command, Extension
 
 extension = Extension(id='Hello', name='你好', version='1.0.0', types=('command',))
 
@@ -96,7 +96,7 @@ class HelloCommand(Command):
 适合多模块、含配置与依赖的完整扩展：
 
 ```python title="Extensions/WeatherExt/__init__.py"
-from Scripts.Extensions import Extension
+from Core.Extension import Extension
 
 extension = Extension()
 
@@ -253,7 +253,7 @@ data = extension.data.read_json('cache.json')
 
 ```python
 # Extensions/Greet/__init__.py
-from Scripts.Extensions import Command, Extension, SubCommand
+from Core.Extension import Command, Extension, SubCommand
 from nonebot_plugin_alconna import Match
 
 extension = Extension(config_model=None)
@@ -351,7 +351,7 @@ async def image_handler(self) -> bytes:
 
 ```python
 from pydantic import BaseModel, Field
-from Scripts.Extensions import Extension, Service
+from Core.Extension import Extension, Service
 
 
 class GreetConfig(BaseModel):
@@ -402,9 +402,9 @@ UniBot 随框架内置三个 `api` 类型扩展，开箱即用，通过 `extensi
 获取方式支持按**服务类**或**注册名**两种写法，按类获取会额外校验实际类型：
 
 ```python
-from Scripts.Extensions.Builtin.Services.Players import PlayerService
-from Scripts.Extensions.Builtin.Services.Servers import ServerService
-from Scripts.Extensions.Builtin.Services.Task import TaskService
+from Core.Builtin.Services.Players import PlayerService
+from Core.Builtin.Services.Servers import ServerService
+from Core.Builtin.Services.Task import TaskService
 
 player_service = extension.api.get(PlayerService)  # 按类获取，类型不匹配抛 TypeError
 server_service = extension.api.get('server')  # 按注册名获取
@@ -447,7 +447,7 @@ if player_service is None:
 
 ### TaskService — 定时任务服务
 
-扩展 id `Task`，封装全局 `TaskManager` 的定时任务调度能力，代理 `Scripts.Managers.task_manager` 单例，不复制调度状态。
+扩展 id `Task`，封装全局 `TaskManager` 的定时任务调度能力，代理 `Core.Managers.task_manager` 单例，不复制调度状态。
 
 ::: table title="TaskService 方法" copy="all"
 | 方法 | 说明 |
@@ -481,8 +481,8 @@ types = ["command"]
 ```
 
 ```python title="Extensions/Broadcast/__init__.py" :active
-from Scripts.Extensions import Command, Extension, SubCommand
-from Scripts.Extensions.Builtin.Services.Servers import ServerService
+from Core.Extension import Command, Extension, SubCommand
+from Core.Builtin.Services.Servers import ServerService
 
 extension = Extension()
 
@@ -536,7 +536,7 @@ class BroadcastCommand(Command):
 渲染器扩展为图片渲染提供引擎能力，继承 `BaseRenderer` 并实现 `setup` / `render` / `shutdown`：
 
 ```python
-from Scripts.Extensions import BaseRenderer, Extension
+from Core.Extension import BaseRenderer, Extension
 
 extension = Extension(config_model=None)
 
@@ -582,7 +582,7 @@ name = "myengine"
 渲染器可覆写 `deal_online_asset()` / `deal_file_asset()` 调整转换逻辑：
 
 ```python
-from Scripts.Extensions import BaseRenderer, Extension, FileAsset
+from Core.Extension import BaseRenderer, Extension, FileAsset
 
 
 @extension.register_renderer
@@ -697,7 +697,7 @@ async def image_handler(self) -> bytes:
 ```python
 from pathlib import Path
 
-from Scripts.Extensions import FileAsset, OnlineAsset
+from Core.Extension import FileAsset, OnlineAsset
 
 return await extension.render_image(
     'Card',
@@ -762,12 +762,12 @@ UniBot 随框架内置 8 个命令扩展，全部都是普通 `Command` 类，==
 | `Server` | `ServerCommand` | `/server` | `builtin:server` | 服务器列表 |
 :::
 
-指令扩展可以通过**类继承**覆盖任意内置命令：继承内置 `Command` 类并覆写需要修改的字段或方法，业务逻辑仍可继承复用。内置命令类从 `Scripts.Extensions.Builtin.Commands` 导入：
+指令扩展可以通过**类继承**覆盖任意内置命令：继承内置 `Command` 类并覆写需要修改的字段或方法，业务逻辑仍可继承复用。内置命令类从 `Core.Builtin.Commands` 导入：
 
 ```python
 # Extensions/MyListExt/Commands.py
-from Scripts.Extensions import Extension
-from Scripts.Extensions.Builtin.Commands.List import ListCommand
+from Core.Extension import Extension
+from Core.Builtin.Commands.List import ListCommand
 
 
 extension = Extension()
@@ -786,8 +786,8 @@ class MyListCommand(ListCommand):
 
 ```python
 # Extensions/MyBotExt/Commands.py
-from Scripts.Extensions import Extension
-from Scripts.Extensions.Builtin.Commands.Bot import BotCommand
+from Core.Extension import Extension
+from Core.Builtin.Commands.Bot import BotCommand
 
 
 extension = Extension()

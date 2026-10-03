@@ -4,8 +4,8 @@ from pathlib import Path
 
 import tomlkit
 
-from Scripts.Constants import CONFIG_TOML_PATH, ENV_PATH, PYPROJECT_PATH
-from Scripts.Logging import logger
+from Core.Constants import CONFIG_TOML_PATH, ENV_PATH, MESSAGE_PATHS, PYPROJECT_PATH
+from Core.Logging import logger
 
 
 class ConfigManager:
@@ -63,7 +63,7 @@ class ConfigManager:
                 self.environment[last_key] = value.strip()
                 self.mapping.append(last_key)
                 continue
-            elif last_key is not None:
+            if last_key is not None:
                 # 变量值跨行：续行追加到上一个值（保留换行符）
                 self.environment[last_key] += '\n' + line
                 continue
@@ -166,49 +166,6 @@ class ConfigManager:
         """获取已登记依赖的包名集合（去除 extras 与版本约束）。"""
         return {self._package_base(dependency) for dependency in self.get_dependencies()}
 
-    def add_plugin(self, module_name: str) -> bool:
-        """添加插件，返回是否成功（False 表示已存在）。"""
-        data = self.read_pyproject()
-        plugins = data.setdefault('tool', {}).setdefault('nonebot', {}).setdefault('plugins', [])
-        if any(
-            plugin == module_name or isinstance(plugin, dict) and plugin.get('module_name') == module_name
-            for plugin in plugins
-        ):
-            return False
-        plugins.append({'module_name': module_name, 'enabled': True})
-        self.write_pyproject(data)
-        return True
-
-    def remove_plugin(self, module_name: str):
-        """移除插件。"""
-        data = self.read_pyproject()
-        plugins = data.get('tool', {}).get('nonebot', {}).get('plugins', [])
-        data['tool']['nonebot']['plugins'] = [
-            plugin
-            for plugin in plugins
-            if not (plugin == module_name or isinstance(plugin, dict) and plugin.get('module_name') == module_name)
-        ]
-        self.write_pyproject(data)
-
-    def set_plugin_enabled(self, module_name: str, enabled: bool):
-        """更新 pyproject.toml 中插件的启用状态。"""
-        data = self.read_pyproject()
-        plugins = data.get('tool', {}).get('nonebot', {}).get('plugins', [])
-        plugin_found = False
-        for index, plugin in enumerate(plugins):
-            if plugin == module_name:
-                plugins[index] = {'module_name': module_name, 'enabled': enabled}
-                plugin_found = True
-                break
-            if isinstance(plugin, dict) and plugin.get('module_name') == module_name:
-                plugin['enabled'] = enabled
-                plugin_found = True
-                break
-        if not plugin_found:
-            plugins.append({'module_name': module_name, 'enabled': enabled})
-        data['tool']['nonebot']['plugins'] = plugins
-        self.write_pyproject(data)
-
     # ===== Config.toml 操作 =====
 
     def read_config_raw(self) -> str:
@@ -229,35 +186,27 @@ class ConfigManager:
             toml_document[key] = value
         self.config_path.write_text(tomlkit.dumps(toml_document), encoding='Utf-8')
 
-    # ===== 消息文本双语包操作 =====
+    # ===== 消息文本覆盖层操作 =====
 
     def active_messages_path(self) -> Path:
-        """获取当前配置语言实际生效的消息文件路径。"""
-        # 函数内导入：Scripts.Messages 顶层会触发 Scripts.Config 加载，避免进入早期导入链
-        from Scripts.Config import config
-        from Scripts.Messages import resolve_messages_path
+        """获取当前配置语言的用户可改消息文件路径（Core/Locales/Messages.<language>.toml）。"""
+        # 函数内导入：Core.Config 顶层导入会进入早期加载链，延迟到调用时避免环
+        from Core.Config import config
 
-        return resolve_messages_path(config.language)
+        return MESSAGE_PATHS.get(config.language, MESSAGE_PATHS['zh'])
 
     def read_messages_raw(self) -> str:
-        """读取当前语言消息文件原始文本（隐藏块内容剥离，不返回给 WebUI）。"""
-        # 函数内导入：Scripts.Messages 顶层会触发 Scripts.Config 加载，避免进入早期导入链
-        from Scripts.Messages import strip_hidden_content
-
-        return strip_hidden_content(self.active_messages_path().read_text('Utf-8'))
+        """读取当前语言覆盖层原始文本（供 WebUI 消息编辑器展示，缺失返回空串）。"""
+        path = self.active_messages_path()
+        return path.read_text('Utf-8') if path.exists() else ''
 
     def write_messages_raw(self, content: str):
-        """以原始文本写回当前语言消息文件（自动并回隐藏块），并校验语法。"""
-        # 函数内导入：Scripts.Messages 顶层会触发 Scripts.Config 加载，避免进入早期导入链
-        from Scripts.Messages import restore_hidden_content
+        """校验并以原始文本写回当前语言覆盖层，写盘后热重载语言包。"""
+        # 函数内导入：避免进入 Config 早期加载链
+        from Core.Config import config
+        from Core.LocaleLoader import write_override
 
-        merged = restore_hidden_content(content, self.active_messages_path().read_text('Utf-8'))
-        tomlkit.parse(merged)
-        self.active_messages_path().write_text(merged, encoding='Utf-8')
-        # 函数内导入：Scripts.Messages 被 Scripts.Config 等模块加载链引用，延迟到调用时避免环
-        from Scripts.Messages import reload_messages
-
-        reload_messages()
+        write_override(config.language, content)
         logger.success('Message texts saved and reloaded.')
 
 

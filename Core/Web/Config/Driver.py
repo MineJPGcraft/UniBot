@@ -5,10 +5,10 @@ NoneBot DRIVER 字段的解析与维护工具。
 
 本模块**只计算**驱动对应的底层依赖包（`driver_packages`）并维护 `.env`，
 不直接改写 `pyproject.toml`：依赖的新增/移除由调用方提交任务中心，
-经 `uv add` / `uv remove` 完成（见 `Scripts/Api/Config/Router.py`）。
+经 `uv add` / `uv remove` 完成（见 `Core/Web/Config/Router.py`）。
 """
 
-from Scripts.Managers import config_manager
+from Core.Managers import config_manager
 
 from .Adapters import ADAPTER_DRIVERS, BASE_DRIVER
 

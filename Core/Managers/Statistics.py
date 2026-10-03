@@ -9,8 +9,8 @@ from asyncio import Lock
 from datetime import UTC, datetime, timedelta
 from json import dumps, loads
 
-from Scripts.Constants import STATISTICS_FILE
-from Scripts.Logging import logger
+from Core.Constants import STATISTICS_FILE
+from Core.Logging import logger
 
 # 按天趋势与群聊明细的保留时长，超出后落盘前清理
 DAILY_RETENTION_DAYS = 90

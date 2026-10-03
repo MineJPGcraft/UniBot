@@ -21,8 +21,8 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
-from Scripts.Constants import TaskKind
-from Scripts.Logging import exception_logger, logger
+from Core.Constants import TaskKind
+from Core.Logging import exception_logger, logger
 
 # 保留的历史任务上限（超出后丢弃最旧的非运行中任务）
 MAX_HISTORY = 50
@@ -300,8 +300,8 @@ class TaskCenter:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             return
-        # 函数内导入：Scripts.Api 聚合全部路由，顶层导入会拖入插件托管包
-        from Scripts.Api.WebSocket import broadcast_event
+        # 函数内导入：Core.Web 聚合全部路由，顶层导入会拖入插件托管包
+        from Core.Web.WebSocket import broadcast_event
 
         loop.create_task(broadcast_event('task', record.snapshot()))
 

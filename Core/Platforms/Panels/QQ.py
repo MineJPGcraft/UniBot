@@ -16,13 +16,13 @@ import time
 
 import httpx
 
-from Scripts.Constants import (
+from Core.Constants import (
     QQ_OPEN_API_BASE,
     QQ_OPEN_API_PANELS_PATH,
     QQ_OPEN_API_TOKEN_PATH,
     QQ_PANEL_TOKEN_REFRESH_MARGIN_SECONDS,
 )
-from Scripts.Platforms.Panels.Base import (
+from Core.Platforms.Panels.Base import (
     BasePanelClient,
     PanelError,
     build_panel_body,

@@ -18,11 +18,11 @@ from __future__ import annotations
 
 from nonebot.log import logger
 
-from Scripts.Config import config
-from Scripts.Extensions import command_manager
-from Scripts.Managers import config_manager
-from Scripts.Platforms.Panels.Base import MAX_ITEMS_PER_PANEL, PanelError
-from Scripts.Platforms.Panels.QQ import MAX_PANELS_PER_BOT, QQPanelClient
+from Core.Config import config
+from Core.Extension import command_manager
+from Core.Managers import config_manager
+from Core.Platforms.Panels.Base import MAX_ITEMS_PER_PANEL, PanelError
+from Core.Platforms.Panels.QQ import MAX_PANELS_PER_BOT, QQPanelClient
 
 # 识别 UniBot 接管面板的固定备注（开发者手建的面板不会被误动）
 PANEL_REMARK = 'UniBot'

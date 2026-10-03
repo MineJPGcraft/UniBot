@@ -5,7 +5,7 @@
   - 基于 `_request()` / `_parse_response()` 实现平台面板 CRUD
   - 共享 `build_panel_body()` 统一构造面板体并校验元素数量
 
-新增平台（Telegram / Discord / 飞书……）时：新建 `Scripts/Platforms/Panels/<Platform>.py`，
+新增平台（Telegram / Discord / 飞书……）时：新建 `Core/Platforms/Panels/<Platform>.py`，
 继承本基类，即可复用 HTTP client、请求发送、错误解析与面板体构造。
 """
 

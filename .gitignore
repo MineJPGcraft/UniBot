@@ -13,6 +13,9 @@ Data/
 Logs/
 # Extensions/Example/
 Config/Extensions/
+Config/Plugins.toml
+# I18n 语言包（Core/Locales/）：System.* 系统只读、Messages.* 用户可改，均随包分发纳入版本控制
+# 迁移完成标记 Data/.locales_migrated 随 Data/ 目录一并忽略
 /WebUi/
 /Extensions/
 /.studio/

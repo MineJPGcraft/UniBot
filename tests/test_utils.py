@@ -1,6 +1,6 @@
 """通用工具函数测试。"""
 
-from Scripts.Utils import flatten_minecraft_motd, strip_minecraft_color
+from Core.Utils import flatten_minecraft_motd, strip_minecraft_color
 
 
 class TestStripMinecraftColor:

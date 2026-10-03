@@ -5,15 +5,27 @@ from pathlib import Path
 
 import pytest
 
-from Scripts.Extensions import BaseRenderer, RendererManager, extension_manager
-from Scripts.Extensions.Loader import CONFIG_ROOT
-from Scripts.Extensions.Renderer import (
+from Core.Extension import BaseRenderer, RendererManager, extension_manager
+from Core.Extension.Renderer import (
     FileAsset,
     OnlineAsset,
     TemplateRegistration,
-    build_template_config_model,
 )
-from Scripts.Extensions.Storage import ExtensionConfigStore
+from Core.Extension.Runtime.Loader import CONFIG_ROOT
+from Core.Extension.Storage import ExtensionConfigStore
+from Core.Extension.TemplateConfig import build_template_config_model
+
+
+class _FakeImageConfig:
+    """渲染测试用的 [image] 配置替身。"""
+
+    template = 'Default'
+    font = ''
+    renderer = ''
+
+
+def _fake_image_config() -> _FakeImageConfig:
+    return _FakeImageConfig()
 
 
 class _FakeRenderer(BaseRenderer):
@@ -84,7 +96,7 @@ class TestRendererRegistration:
 class TestRendererManager:
     def test_setup_activates_renderer(self):
         renderer = _FakeRenderer('fake')
-        manager = RendererManager(lambda name: renderer if name == 'fake' else None)
+        manager = RendererManager(lambda name: renderer if name == 'fake' else None, _fake_image_config)
         asyncio.run(manager.setup('fake'))
         assert renderer.setup_called
         assert manager._active['fake'] is renderer
@@ -92,22 +104,22 @@ class TestRendererManager:
     def test_setup_missing_engine_returns_none(self):
         # 配置的引擎不存在时不再回退，直接返回 None
         fallback = _FakeRenderer('html2pic')
-        manager = RendererManager(lambda name: fallback if name == 'html2pic' else None)
+        manager = RendererManager(lambda name: fallback if name == 'html2pic' else None, _fake_image_config)
         resolved = asyncio.run(manager.setup('nonexistent'))
         assert resolved is None
         assert not fallback.setup_called
 
     def test_setup_with_no_fallback_returns_none(self):
-        manager = RendererManager(lambda name: None)
+        manager = RendererManager(lambda name: None, _fake_image_config)
         assert asyncio.run(manager.setup('anything')) is None
 
     def test_setup_with_empty_name_returns_none(self):
-        manager = RendererManager(lambda name: None)
+        manager = RendererManager(lambda name: None, _fake_image_config)
         assert asyncio.run(manager.setup('')) is None
 
     def test_same_renderer_not_setup_twice(self):
         renderer = _FakeRenderer('fake')
-        manager = RendererManager(lambda name: renderer)
+        manager = RendererManager(lambda name: renderer, _fake_image_config)
         asyncio.run(manager.setup('fake'))
         asyncio.run(manager.setup('fake'))
         assert renderer.setup_called
@@ -115,7 +127,7 @@ class TestRendererManager:
 
     def test_render_delegates_to_active_engine(self):
         renderer = _FakeRenderer('fake')
-        manager = RendererManager(lambda name: renderer if name == 'fake' else None)
+        manager = RendererManager(lambda name: renderer if name == 'fake' else None, _fake_image_config)
         asyncio.run(manager.setup('fake'))
         result = asyncio.run(manager.render('<h1>x</h1>', 'body{}', name='fake'))
         assert result == b'fake:<h1>x</h1>:body{}'
@@ -123,21 +135,21 @@ class TestRendererManager:
 
     def test_render_auto_setup_when_not_active(self):
         renderer = _FakeRenderer('fake')
-        manager = RendererManager(lambda name: renderer if name == 'fake' else None)
+        manager = RendererManager(lambda name: renderer if name == 'fake' else None, _fake_image_config)
         result = asyncio.run(manager.render('a', 'b', name='fake'))
         assert renderer.setup_called
         assert result == b'fake:a:b'
 
     def test_shutdown_cleans_all(self):
         renderer = _FakeRenderer('fake')
-        manager = RendererManager(lambda name: renderer)
+        manager = RendererManager(lambda name: renderer, _fake_image_config)
         asyncio.run(manager.setup('fake'))
         asyncio.run(manager.shutdown())
         assert renderer.shutdown_called
         assert manager._active == {}
 
     def test_render_without_engine_raises(self):
-        manager = RendererManager(lambda name: None)
+        manager = RendererManager(lambda name: None, _fake_image_config)
         with pytest.raises(RuntimeError):
             asyncio.run(manager.render('a', 'b'))
 
@@ -161,7 +173,7 @@ class _SizeAwareRenderer(BaseRenderer):
 class TestRenderSize:
     def test_size_threaded_to_renderer(self):
         renderer = _SizeAwareRenderer()
-        manager = RendererManager(lambda name: renderer if name == 'size-aware' else None)
+        manager = RendererManager(lambda name: renderer if name == 'size-aware' else None, _fake_image_config)
         asyncio.run(manager.setup('size-aware'))
         result = asyncio.run(manager.render('h', 'c', name='size-aware', size=(600, 800)))
         assert renderer.received_size == (600, 800)
@@ -199,7 +211,7 @@ class TestAssetWrapping:
         assert renderer.deal_file_asset(FileAsset(path)) == path.as_uri()
 
     def test_resolve_assets_with_renderer(self):
-        manager = RendererManager(lambda name: None)
+        manager = RendererManager(lambda name: None, _fake_image_config)
         renderer = _FileUriRenderer()
         context = {
             'avatar': FileAsset(Path('/tmp/a.png')),
@@ -216,7 +228,7 @@ class TestAssetWrapping:
         assert resolved['plain'] == 'text'
 
     def test_resolve_assets_with_none_renderer(self):
-        manager = RendererManager(lambda name: None)
+        manager = RendererManager(lambda name: None, _fake_image_config)
         context = {
             'avatar': FileAsset(Path('/tmp/a.png')),
             'icon': OnlineAsset('https://example.com/i.png'),
@@ -232,7 +244,7 @@ class TestAssetWrapping:
 
     def test_asset_str_with_active_renderer(self):
         # 激活渲染器后，FileAsset 转字符串按渲染器 deal_file_asset 处理
-        import Scripts.Extensions.Renderer as renderer_module
+        import Core.Extension.Renderer as renderer_module
 
         renderer = _FileUriRenderer()
         renderer_token = renderer_module._current_renderer.set(renderer)
@@ -244,7 +256,7 @@ class TestAssetWrapping:
 
     def test_resource_functions_return_wrappers(self):
         # 自带 Jinja2 资源函数返回 FileAsset 包装，由渲染器决定引用格式
-        manager = RendererManager(lambda name: None)
+        manager = RendererManager(lambda name: None, _fake_image_config)
         manager.register_resources('R', Path('/tmp/resources'))
         resource_file = Path('/tmp/resources/a.png')
         resource_file.parent.mkdir(parents=True, exist_ok=True)

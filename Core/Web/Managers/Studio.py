@@ -16,9 +16,9 @@ from pathlib import Path
 
 import psutil
 
-from Scripts.Api.Locale import text
-from Scripts.Logging import exception_logger, logger
-from Scripts.Network import github_download, request
+from Core.Logging import exception_logger, logger
+from Core.Network import github_download, request
+from Core.Web.Locale import text
 
 # Studio 发布仓库与最新 release 查询地址
 STUDIO_REPO = 'Minecraft-UniBot/AiStudio'
@@ -56,6 +56,18 @@ def _platform_asset_name() -> str:
     if system == 'win32':
         return 'unibot-studio-windows-x64.exe'
     raise RuntimeError(f'Unsupported platform: {system} {machine}')
+
+
+def _find_asset_sha256(assets: list, asset_name: str) -> str:
+    """在 release 资产中查找目标文件的 sha256 摘要，未找到返回空串。"""
+    for asset in assets:
+        if asset.get('name') != asset_name:
+            continue
+        digest = asset.get('digest', '')
+        if digest.startswith('sha256:'):
+            return digest.removeprefix('sha256:')
+        return ''
+    return ''
 
 
 class StudioManager:
@@ -151,41 +163,43 @@ class StudioManager:
         if self.is_downloaded():
             return True, text('studio.downloaded')
         try:
-            release = await request(STUDIO_LATEST_RELEASE_API)
-            if not isinstance(release, dict):
-                return False, text('studio.fetch_version_failed')
-            release_tag = release.get('tag_name', '')
+            release_tag, expected_sha256 = await self._resolve_release()
             if not release_tag:
                 return False, text('studio.fetch_version_failed')
-            # 在当前平台资产中查找匹配项，取其 sha256 digest 作为校验值
-            expected_sha256 = ''
-            for asset in release.get('assets', []):
-                if asset.get('name') != self.asset_name:
-                    continue
-                digest = asset.get('digest', '')
-                if digest.startswith('sha256:'):
-                    expected_sha256 = digest.removeprefix('sha256:')
-                break
             if not expected_sha256:
                 return False, text('studio.asset_missing', asset_name=self.asset_name)
-            url = STUDIO_DOWNLOAD_URL_TEMPLATE.format(release_tag=release_tag, asset_name=self.asset_name)
-            response = await github_download(url)
-            if response is None:
-                return False, text('studio.download_failed_with_url', url=url)
-            archive_data = response.getvalue()
-            actual_sha256 = hashlib.sha256(archive_data).hexdigest()
-            if actual_sha256.lower() != expected_sha256.lower():
-                return False, text('studio.checksum_mismatch')
-            self.studio_dir.mkdir(parents=True, exist_ok=True)
-            executable = self.executable_path()
-            executable.write_bytes(archive_data)
-            executable.chmod(0o755)
-            (self.studio_dir / VERSION_FILE_NAME).write_text(release_tag, encoding='Utf-8')
-            logger.success(f'Extension Studio downloaded ({release_tag}).')
-            return True, text('studio.download_completed', release_tag=release_tag)
+            return await self._download_and_install(release_tag, expected_sha256)
         except Exception as error:
             exception_logger.error('Failed to download Extension Studio!')
             return False, text('studio.download_failed', error=error)
+
+    async def _resolve_release(self) -> tuple[str, str]:
+        """查询最新 release，返回 (标签, 期望 sha256)；任一缺失则返回空串。"""
+        release = await request(STUDIO_LATEST_RELEASE_API)
+        if not isinstance(release, dict):
+            return '', ''
+        release_tag = release.get('tag_name', '')
+        if not release_tag:
+            return '', ''
+        return release_tag, _find_asset_sha256(release.get('assets', []), self.asset_name)
+
+    async def _download_and_install(self, release_tag: str, expected_sha256: str) -> tuple[bool, str]:
+        """下载资产、校验摘要并写入可执行文件。"""
+        url = STUDIO_DOWNLOAD_URL_TEMPLATE.format(release_tag=release_tag, asset_name=self.asset_name)
+        response = await github_download(url)
+        if response is None:
+            return False, text('studio.download_failed_with_url', url=url)
+        archive_data = response.getvalue()
+        actual_sha256 = hashlib.sha256(archive_data).hexdigest()
+        if actual_sha256.lower() != expected_sha256.lower():
+            return False, text('studio.checksum_mismatch')
+        self.studio_dir.mkdir(parents=True, exist_ok=True)
+        executable = self.executable_path()
+        executable.write_bytes(archive_data)
+        executable.chmod(0o755)
+        (self.studio_dir / VERSION_FILE_NAME).write_text(release_tag, encoding='Utf-8')
+        logger.success(f'Extension Studio downloaded ({release_tag}).')
+        return True, text('studio.download_completed', release_tag=release_tag)
 
     # ===== 启动 / 停止 =====
 

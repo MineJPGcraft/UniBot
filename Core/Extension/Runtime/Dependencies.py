@@ -21,8 +21,8 @@ from pathlib import Path
 
 import tomlkit
 
-from Scripts.Constants import CONFIG_EXTENSIONS_FILE, CONFIG_TOML_PATH, EXTENSIONS_DIR, MANIFEST_FILE, PYPROJECT_PATH
-from Scripts.Logging import logger
+from Core.Constants import CONFIG_EXTENSIONS_FILE, CONFIG_TOML_PATH, EXTENSIONS_DIR, MANIFEST_FILE, PYPROJECT_PATH
+from Core.Logging import logger
 
 # 收集所有扩展依赖的 optional-dependencies 组名（框架独占维护，勿手动编辑）
 EXTENSIONS_EXTRA = 'extensions'

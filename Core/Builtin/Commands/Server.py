@@ -3,13 +3,13 @@
 import asyncio
 from typing import override
 
-from Scripts import Globals
-from Scripts.Extensions import Command, Extension
-from Scripts.Messages import messages
-from Scripts.Utils import turn_message_text
+from Core.Extension import Command, Extension
+from Core.I18n import i18n_text, text
+from Core.RuntimeState import runtime_state
+from Core.Utils import turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Server', name=messages.builtin_extensions.server, version='1.0.0', types=('command',))
+extension = Extension(id='Server', name=i18n_text('builtin.server.name'), version='1.0.0', types=('command',))
 
 
 @extension.register_command
@@ -17,8 +17,8 @@ class ServerCommand(Command):
     """查看已连接的服务器列表及其 CPU / 内存占用。"""
 
     name = 'server'
-    description = messages.commands.server.description
-    usage = messages.commands.server.usage
+    description = i18n_text('core.commands.server.description')
+    usage = i18n_text('core.commands.server.usage')
 
     @override
     async def handler(self):
@@ -33,7 +33,7 @@ class ServerCommand(Command):
 
     async def collect_server_overview(self) -> list[dict]:
         """并发查询所有服务器状态，组装为带编号与占用信息的展示数据。"""
-        server_service = Globals.server_service
+        server_service = runtime_state.server_service
         if server_service is None:
             return []
         bots = list(server_service.servers.items())
@@ -45,13 +45,14 @@ class ServerCommand(Command):
     async def server_handler(self):
         servers = await self.collect_server_overview()
         if not servers:
-            yield messages.commands.server.no_server
+            yield text('core.commands.server.no_server')
             return
         for server in servers:
             if not server['online']:
-                yield messages.commands.server.server_offline_line.format(index=server['index'], name=server['name'])
+                yield text('core.commands.server.server_offline_line', index=server['index'], name=server['name'])
                 continue
-            yield messages.commands.server.server_line.format(
+            yield text(
+                'core.commands.server.server_line',
                 index=server['index'],
                 name=server['name'],
                 cpu_percent=server['cpu_load'],

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Query
 
-from Scripts.Api.Locale import text
-from Scripts.Api.Managers import data_manager
-from Scripts.Constants import UserRole
+from Core.Constants import UserRole
+from Core.Web.Locale import text
+from Core.Web.Managers import data_manager
 
 from .Auth import require_role
 from .Schemas import CreateUserRequest, ResetPasswordRequest, UpdateUserRequest

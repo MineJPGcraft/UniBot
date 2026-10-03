@@ -7,10 +7,10 @@ import jwt
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from Scripts.Api.Locale import text
-from Scripts.Api.Managers import data_manager
-from Scripts.Constants import UserRole
-from Scripts.Logging import logger
+from Core.Constants import UserRole
+from Core.Logging import logger
+from Core.Web.Locale import text
+from Core.Web.Managers import data_manager
 
 from .Limiter import rate_limiter
 from .Schemas import (

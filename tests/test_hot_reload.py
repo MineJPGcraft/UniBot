@@ -6,8 +6,8 @@ import types
 
 import pytest
 
-from Scripts.Extensions import Command, command_manager, extension_manager
-from Scripts.Extensions.Loader import ExtensionLoader
+from Core.Extension import Command, command_manager, extension_manager
+from Core.Extension.Runtime.Loader import ExtensionLoader
 
 # 单个内置命令的 NoneBot 优先级（Command.py 固定 priority=0）
 _MATCHER_PRIORITY = 0
@@ -61,7 +61,7 @@ class TestCleanupMatchers:
 @pytest.fixture(autouse=True)
 def _protect_builtin_modules():
     """快照并恢复内置扩展模块身份，防止热重载后其他测试的模块引用不匹配。"""
-    snapshot = {name: sys.modules[name] for name in sys.modules if name.startswith('Scripts.Extensions.Builtin')}
+    snapshot = {name: sys.modules[name] for name in sys.modules if name.startswith('Core.Builtin')}
     yield
     for name, module in snapshot.items():
         sys.modules[name] = module
@@ -84,8 +84,8 @@ class TestPurgeModules:
 
         assert 'Extensions.Greet' not in sys.modules
         # 框架模块不受影响
-        assert 'Scripts.Extensions' in sys.modules
-        assert 'Scripts.Extensions.Loader' in sys.modules
+        assert 'Core.Extension' in sys.modules
+        assert 'Core.Extension.Runtime.Loader' in sys.modules
 
 
 class TestCheckSyntax:
@@ -94,7 +94,7 @@ class TestCheckSyntax:
         bad_dir.mkdir()
         (bad_dir / 'Broken.py').write_text('def broken(:\n', encoding='Utf-8')
         (bad_dir / 'Good.py').write_text('x = 1\n', encoding='Utf-8')
-        monkeypatch.setattr('Scripts.Extensions.Loader.EXTENSIONS_DIR', bad_dir)
+        monkeypatch.setattr('Core.Extension.Runtime.Loader.EXTENSIONS_DIR', bad_dir)
 
         loader = ExtensionLoader(extension_manager)
         broken = loader.check_syntax()
@@ -107,7 +107,7 @@ class TestCheckSyntax:
 
 _GREET_V1 = '''\
 """v1"""
-from Scripts.Extensions import Command, Extension
+from Core.Extension import Command, Extension
 
 extension = Extension(id="Greet", name="Greet", version="1.0.0", types=("command",))
 
@@ -123,7 +123,7 @@ class GreetCommand(Command):
 
 _GREET_V2 = '''\
 """v2"""
-from Scripts.Extensions import Command, Extension
+from Core.Extension import Command, Extension
 
 extension = Extension(id="Greet", name="Greet", version="2.0.0", types=("command",))
 
@@ -150,10 +150,10 @@ def greet_extension_dir(tmp_path, monkeypatch):
     config_root.mkdir()
     data_root = tmp_path / 'Data'
     sys.path.insert(0, str(tmp_path))
-    monkeypatch.setattr('Scripts.Extensions.Loader.EXTENSIONS_DIR', extension_dir)
-    monkeypatch.setattr('Scripts.Extensions.Loader.BUILTIN_DIR', builtin_dir)
-    monkeypatch.setattr('Scripts.Extensions.Loader.CONFIG_ROOT', config_root)
-    monkeypatch.setattr('Scripts.Extensions.Loader.DATA_ROOT', data_root)
+    monkeypatch.setattr('Core.Extension.Runtime.Loader.EXTENSIONS_DIR', extension_dir)
+    monkeypatch.setattr('Core.Extension.Runtime.Loader.BUILTIN_DIR', builtin_dir)
+    monkeypatch.setattr('Core.Extension.Runtime.Loader.CONFIG_ROOT', config_root)
+    monkeypatch.setattr('Core.Extension.Runtime.Loader.DATA_ROOT', data_root)
     yield extension_dir
     # 清理用户扩展模块与已构建 matcher（内置模块由 _protect_builtin_modules 恢复）
     for name in list(sys.modules):
@@ -218,7 +218,7 @@ class TestReloadCycle:
 # ===== 服务类型扩展重载 =====
 
 _SERVICE_V1 = """\
-from Scripts.Extensions import Extension, Service
+from Core.Extension import Extension, Service
 
 extension = Extension(id="Svc", name="Svc", version="1.0.0", types=("api",))
 
@@ -238,7 +238,7 @@ class GreetService(Service):
 """
 
 _SERVICE_V2 = """\
-from Scripts.Extensions import Extension, Service
+from Core.Extension import Extension, Service
 
 extension = Extension(id="Svc", name="Svc", version="2.0.0", types=("api",))
 
@@ -297,8 +297,8 @@ name = "test_renderer"
 """
 
 _RENDERER_CODE = """\
-from Scripts.Extensions import Extension
-from Scripts.Extensions.Renderer import BaseRenderer
+from Core.Extension import Extension
+from Core.Extension.Renderer import BaseRenderer
 
 extension = Extension(id="Rend", name="Rend", version="1.0.0", types=("renderer",))
 
@@ -311,7 +311,7 @@ class TestRenderer(BaseRenderer):
 
 class TestReloadRenderers:
     def test_reload_replaces_renderer_instances(self, greet_extension_dir, monkeypatch):
-        from Scripts.Config import config
+        from Core.Config import config
 
         monkeypatch.setattr(config.image, 'mode', True)
         monkeypatch.setattr(config.image, 'renderer', 'test_renderer')

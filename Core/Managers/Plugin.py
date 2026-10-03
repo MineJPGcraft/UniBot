@@ -2,14 +2,14 @@ import time
 
 import nonebot
 
-from Scripts.Constants import BUILTIN_PLUGIN_PREFIX, MARKET_CACHE_TTL
-from Scripts.Logging import logger
-from Scripts.Managers import config_manager
-from Scripts.Network import request
+from Core.Constants import BUILTIN_PLUGIN_PREFIX, MARKET_CACHE_TTL
+from Core.Logging import logger
+from Core.Managers.PluginRegistry import plugin_registry
+from Core.Network import request
 
 
 class PluginManager:
-    """插件管理器，管理 pyproject.toml 中登记的插件、依赖插件与插件市场。"""
+    """插件管理器，管理 Config/Plugins.toml 中登记的插件、依赖插件与插件市场。"""
 
     # 插件市场注册表地址（NoneBot 官方插件市场）
     MARKET_URL = 'https://registry.nonebot.dev/plugins.json'
@@ -19,14 +19,8 @@ class PluginManager:
         self.market_cache_time: float = 0
 
     def _configured_plugins(self) -> list[dict]:
-        """获取 pyproject.toml 中登记的插件配置。"""
-        configured_plugins = []
-        for plugin in config_manager.nonebot_config.get('plugins', []):
-            if isinstance(plugin, str):
-                configured_plugins.append({'module_name': plugin, 'enabled': True})
-            elif plugin.get('module_name'):
-                configured_plugins.append(plugin)
-        return configured_plugins
+        """获取 Config/Plugins.toml 中登记的插件配置。"""
+        return plugin_registry.list_plugins()
 
     @staticmethod
     def _can_disable(module_name: str) -> bool:
@@ -44,9 +38,9 @@ class PluginManager:
         return {
             'name': plugin.name if plugin else module_name.rsplit('.', 1)[-1],
             'module_name': module_name,
-            'display_name': metadata.name if metadata else module_name.rsplit('.', 1)[-1],
+            'display_name': str(metadata.name) if metadata else module_name.rsplit('.', 1)[-1],
             'version': extra.get('version', '') if metadata else '',
-            'description': metadata.description if metadata else '',
+            'description': str(metadata.description) if metadata else '',
             'author': extra.get('author', '') if metadata else '',
             'homepage': metadata.homepage if metadata else '',
             'enabled': configured.get('enabled', True) if configured else True,
@@ -85,7 +79,7 @@ class PluginManager:
         plugin = self.get_plugin_detail(name)
         if not plugin or not plugin['can_disable']:
             return False
-        config_manager.set_plugin_enabled(plugin['module_name'], enabled)
+        plugin_registry.set_enabled(plugin['module_name'], enabled)
         return True
 
     # ===== 插件市场 =====
@@ -108,23 +102,23 @@ class PluginManager:
         """
         从市场安装插件：仅登记插件模块。
 
-        依赖包由插件市场任务（`Scripts/Api/Plugins.py`）经 `uv add` 写入
-        `project.dependencies` 并同步环境，本方法不再改写 pyproject.toml 文本。
+        依赖包由插件市场任务（`Core/Web/Plugins.py`）经 `uv add` 写入
+        `project.dependencies` 并同步环境，本方法不改写任何项目元数据。
         """
-        config_manager.add_plugin(module_name)
+        plugin_registry.add(module_name)
         logger.success(f'Plugin <green>{project_link}</green> registered for install.')
         return True, '安装成功，重启后生效'
 
     async def upgrade(self, project_link: str, module_name: str, version: str = '') -> tuple[bool, str]:
-        """升级市场插件：仅确保插件已注册并启用，依赖更新由任务中心走 uv。"""
-        config_manager.add_plugin(module_name)
-        config_manager.set_plugin_enabled(module_name, True)
+        """升级市场插件：仅确保插件已登记并启用，依赖更新由任务中心走 uv。"""
+        plugin_registry.add(module_name)
+        plugin_registry.set_enabled(module_name, True)
         logger.success(f'Plugin <green>{project_link}</green> registered for upgrade.')
         return True, '升级成功，重启后生效'
 
     async def uninstall(self, project_link: str, module_name: str) -> tuple[bool, str]:
         """卸载市场插件：仅移除插件登记，依赖移除由任务中心走 uv remove。"""
-        config_manager.remove_plugin(module_name)
+        plugin_registry.remove(module_name)
         logger.success(f'Plugin <green>{project_link}</green> registered for uninstall.')
         return True, '卸载成功，重启后生效'
 

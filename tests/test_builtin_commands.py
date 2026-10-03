@@ -10,13 +10,13 @@ from typing import override
 
 import pytest
 
-from Scripts.Extensions import Command, CommandError, CommandManager, SubCommand, command_manager
-from Scripts.Extensions.Loader import ExtensionLoader
+from Core.Extension import Command, CommandError, CommandManager, SubCommand, command_manager
+from Core.Extension.Runtime.Loader import ExtensionLoader
 
 
 def _make_extension(command_cls: type) -> 'object':
     """构造一个声明了单个命令类的假扩展实例。"""
-    from Scripts.Extensions import Extension
+    from Core.Extension import Extension
 
     extension = Extension()
     extension.commands = [command_cls]
@@ -294,7 +294,7 @@ class TestNestedSubcommand:
 
 class TestManifestFromAttributes:
     def test_builds_manifest_from_class_attributes(self):
-        from Scripts.Extensions import Extension, ExtensionType, manifest_from_attributes
+        from Core.Extension import Extension, ExtensionType, manifest_from_attributes
 
         class FakeExt(Extension):
             id = 'Fake'
@@ -309,7 +309,7 @@ class TestManifestFromAttributes:
 
     def test_builds_manifest_from_constructor_kwargs(self):
         """直接实例化 Extension 并传入元数据参数，无需继承。"""
-        from Scripts.Extensions import Extension, ExtensionType, manifest_from_attributes
+        from Core.Extension import Extension, ExtensionType, manifest_from_attributes
 
         extension = Extension(id='Fake', name='假扩展', version='1.0.0', types=('command',))
         manifest = manifest_from_attributes(extension)
@@ -318,7 +318,7 @@ class TestManifestFromAttributes:
         assert manifest.extension.types == [ExtensionType('command')]
 
     def test_missing_id_raises(self):
-        from Scripts.Extensions import Extension, ManifestError, manifest_from_attributes
+        from Core.Extension import Extension, ManifestError, manifest_from_attributes
 
         class FakeExt(Extension):
             name = '假扩展'
@@ -328,7 +328,7 @@ class TestManifestFromAttributes:
             manifest_from_attributes(FakeExt())
 
     def test_constructor_without_id_raises(self):
-        from Scripts.Extensions import Extension, ManifestError, manifest_from_attributes
+        from Core.Extension import Extension, ManifestError, manifest_from_attributes
 
         extension = Extension(name='假扩展', version='1.0.0')
         with pytest.raises(ManifestError):

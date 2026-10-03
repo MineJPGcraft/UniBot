@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, ConfigDict, Field
 
-from Scripts.Extensions import (
+from Core.Extension import (
     RESERVED_STATE_FILE,
     ExtensionConfigStore,
     ExtensionDataStore,

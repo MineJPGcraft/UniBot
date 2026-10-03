@@ -2,12 +2,12 @@ import asyncio
 
 from fastapi import APIRouter, Depends
 
-from Scripts import Globals
-from Scripts.Api.Locale import text
-from Scripts.Config import config
-from Scripts.Constants import UserRole
-from Scripts.Logging import logger
-from Scripts.Utils import strip_minecraft_color
+from Core.Config import config
+from Core.Constants import UserRole
+from Core.Logging import logger
+from Core.RuntimeState import runtime_state
+from Core.Utils import strip_minecraft_color
+from Core.Web.Locale import text
 
 from .Auth import get_current_user, require_role
 from .Schemas import BroadcastRequest, ExecuteCommandRequest
@@ -28,7 +28,7 @@ def check_command_allowed(command: str) -> bool:
 @router.get('', summary='获取服务器列表')
 async def get_servers(current_user: dict = Depends(get_current_user)):
     """获取所有服务器状态。"""
-    server_service = Globals.server_service
+    server_service = runtime_state.server_service
     if server_service is None:
         return {'code': 1, 'data': [], 'message': text('servers.service_unavailable')}
     servers = server_service.servers
@@ -40,7 +40,7 @@ async def get_servers(current_user: dict = Depends(get_current_user)):
 @router.get('/{name}', summary='获取服务器详情')
 async def get_server_detail(name: str, current_user: dict = Depends(get_current_user)):
     """获取单个服务器详情。"""
-    server_service = Globals.server_service
+    server_service = runtime_state.server_service
     if server_service is None:
         return {'code': 1, 'data': None, 'message': text('servers.service_unavailable')}
     servers = server_service.servers
@@ -68,7 +68,7 @@ async def get_server_detail(name: str, current_user: dict = Depends(get_current_
 @router.get('/{name}/players', summary='获取服务器在线玩家')
 async def get_server_players(name: str, current_user: dict = Depends(get_current_user)):
     """获取指定服务器的在线玩家列表。"""
-    server_service = Globals.server_service
+    server_service = runtime_state.server_service
     if server_service is None:
         return {'code': 1, 'data': None, 'message': text('servers.service_unavailable')}
     servers = server_service.servers
@@ -92,7 +92,7 @@ async def execute_command(
     if not check_command_allowed(body.command):
         return {'code': 1, 'data': None, 'message': text('servers.command_not_allowed')}
 
-    server_service = Globals.server_service
+    server_service = runtime_state.server_service
     if server_service is None:
         return {'code': 1, 'data': None, 'message': text('servers.service_unavailable')}
 
@@ -118,7 +118,7 @@ async def broadcast_message(body: BroadcastRequest, current_user: dict = Depends
     """广播消息到所有服务器。"""
     if not body.message:
         return {'code': 1, 'data': None, 'message': text('servers.message_empty')}
-    server_service = Globals.server_service
+    server_service = runtime_state.server_service
     if server_service is None:
         return {'code': 1, 'data': None, 'message': text('servers.service_unavailable')}
     await server_service.broadcast(body.message)

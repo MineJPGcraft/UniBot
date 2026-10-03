@@ -9,19 +9,19 @@ from nonebot.rule import Rule
 from nonebot_plugin_alconna.uniseg import UniMsg
 from nonebot_plugin_uninfo import SceneType, SupportScope, Uninfo
 
-from Scripts import Globals
-from Scripts.Config import config
-from Scripts.Logging import logger
-from Scripts.Managers import config_manager
-from Scripts.Messages import messages
+from Core.Config import config
+from Core.I18n import i18n_text, text
+from Core.Logging import logger
+from Core.Managers import config_manager
+from Core.RuntimeState import runtime_state
 
 TOKEN_LENGTH = 10
 """令牌显示长度（取哈希前 N 位，大写十六进制）。"""
 
 __plugin_meta__ = PluginMetadata(
-    name=messages.plugins.token.name,
-    description=messages.plugins.token.description,
-    usage=messages.plugins.token.usage,
+    name=i18n_text('builtin.token.name'),
+    description=i18n_text('builtin.token.description'),
+    usage=i18n_text('builtin.token.usage'),
 )
 
 driver = get_driver()
@@ -52,17 +52,17 @@ def normalize_token(text: str) -> str:
 
 def refresh_token() -> str:
     """刷新令牌：重新计算并覆盖当前令牌（即用即刷），返回新令牌。"""
-    Globals.auth_token = generate_token()
+    runtime_state.auth_token = generate_token()
     logger.info(
-        f'Auth token: <red><b><u>{Globals.auth_token}</u></b></red>, copy and send it in message/command groups to complete setup.'
+        f'Auth token: <red><b><u>{runtime_state.auth_token}</u></b></red>, copy and send it in message/command groups to complete setup.'
     )
-    return Globals.auth_token
+    return runtime_state.auth_token
 
 
 def token_rule(message: UniMsg) -> bool:
     """匹配携带有效认证令牌的消息（非消息事件由依赖跳过）。"""
     plain_text = message.extract_plain_text()
-    return bool(plain_text) and (normalize_token(plain_text) == Globals.auth_token)
+    return bool(plain_text) and (normalize_token(plain_text) == runtime_state.auth_token)
 
 
 # 优先级 0 并阻断：令牌消息不落入其他响应器（避免被同步到游戏），普通消息规则不命中不受影响
@@ -77,8 +77,8 @@ async def handle_auth_token(session: Uninfo, message: UniMsg) -> None:
     if group_info := get_group_info(session):
         results.append(add_group(group_info))
     results.append(add_superuser(session))
-    results_text = messages.plugins.token.result_separator.join(results)
-    await token_watcher.finish(messages.plugins.token.auth_success.format(results=results_text))
+    results_text = text('builtin.token.result_separator').join(results)
+    await token_watcher.finish(text('builtin.token.auth_success', results=results_text))
 
 
 def get_group_info(session: Uninfo) -> str | None:
@@ -104,8 +104,8 @@ def add_group(group_info: str) -> str:
         setattr(config, field_name, updated)
         added.append(field_name)
     if not added:
-        return messages.plugins.token.group_already_authorized
-    return messages.plugins.token.group_authorized.format(groups='、'.join(added))
+        return text('builtin.token.group_already_authorized')
+    return text('builtin.token.group_authorized', groups='、'.join(added))
 
 
 def add_superuser(session: Uninfo) -> str:
@@ -113,12 +113,12 @@ def add_superuser(session: Uninfo) -> str:
     user_id = str(session.user.id)
     current = list(config.superusers)
     if user_id in current:
-        return messages.plugins.token.already_superuser
+        return text('builtin.token.already_superuser')
     updated = current + [user_id]
     try:
         config_manager.update_env({'SUPERUSERS': updated})
     except Exception as error:
         logger.warning(f'Failed to write .env: {error}')
-        return messages.plugins.token.superuser_write_failed
+        return text('builtin.token.superuser_write_failed')
     config.superusers = updated
-    return messages.plugins.token.superuser_granted
+    return text('builtin.token.superuser_granted')

@@ -15,7 +15,7 @@
 import textwrap
 from pathlib import Path
 
-from Scripts.Extensions import Dependencies
+from Core.Extension.Runtime import Dependencies
 
 
 def _write_extension(root: Path, name: str, python_deps: list[str]) -> None:

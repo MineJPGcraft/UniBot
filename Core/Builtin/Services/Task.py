@@ -1,7 +1,7 @@
 """
 内置服务：定时任务管理。
 
-把 TaskManager 从 Scripts.Managers 抽取为内置 API 服务，供内置命令、事件处理器与
+把 TaskManager 从 Core.Managers 抽取为内置 API 服务，供内置命令、事件处理器与
 WebUI API 通过 `extension.api.get(TaskService)`（或全局注册名 `task`）获取。
 服务直接代理全局 `task_manager` 单例，不复制调度状态，保证与 Bot 生命周期一致。
 """
@@ -9,13 +9,13 @@ WebUI API 通过 `extension.api.get(TaskService)`（或全局注册名 `task`）
 from collections.abc import Callable, Coroutine
 from typing import Any, override
 
-from Scripts import Globals
-from Scripts.Extensions import Extension, Service
-from Scripts.Managers import task_manager
-from Scripts.Messages import messages
+from Core.Extension import Extension, Service
+from Core.I18n import i18n_text
+from Core.Managers import task_manager
+from Core.RuntimeState import runtime_state
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Task', name=messages.builtin_extensions.task, version='1.0.0', types=('api',))
+extension = Extension(id='Task', name=i18n_text('builtin.task.name'), version='1.0.0', types=('api',))
 
 TaskRunner = Callable[[], Coroutine[Any, Any, Any]]
 
@@ -69,12 +69,12 @@ class TaskService(Service):
         """服务启动时确保任务管理器已开始调度。"""
         if not task_manager.started:
             await task_manager.start()
-        Globals.task_service = self
+        runtime_state.task_service = self
 
     @override
     async def on_disable(self) -> None:
         """服务关闭时停止全部调度，保留注册信息以便重启恢复。"""
-        if Globals.task_service is self:
-            Globals.task_service = None
+        if runtime_state.task_service is self:
+            runtime_state.task_service = None
         if task_manager.started:
             await task_manager.stop()

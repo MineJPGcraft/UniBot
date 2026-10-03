@@ -6,8 +6,8 @@ from json import dumps, loads
 
 import bcrypt
 
-from Scripts.Constants import DATA_DIR, UserRole
-from Scripts.Logging import logger
+from Core.Constants import DATA_DIR, UserRole
+from Core.Logging import logger
 
 
 class DataManager:

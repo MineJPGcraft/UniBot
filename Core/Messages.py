@@ -1,70 +1,69 @@
-from pathlib import Path
-from typing import Any
+"""
+消息文本兼容薄层：把旧 `messages.<域>.<键>` 访问映射到统一 I18n 引擎。
 
-import tomlkit
+内置命令等现有代码可用旧写法 `messages.commands.bot.description` **零改动**跑通，
+底层解析到 `text('core.commands.bot.description')`。新代码请直接 `from Core.I18n import text`。
 
-from Scripts.Constants import MESSAGES_EN_PATH, MESSAGES_LEGACY_PATH, MESSAGES_ZH_PATH
+映射规则（`_legacy_map`）：
+- `core.<rest>`            → 旧写法 `<rest>`（如 `core.events.player_join` → `events.player_join`）
+- `builtin.<id>.<rest>`    → 旧写法 `plugins.<id>.<rest>`（内置插件文案）
+- `builtin.<id>.name`      → 旧写法 `builtin_extensions.<id>`（内置扩展展示名）
 
+隐藏块工具（`strip_hidden_content` / `restore_hidden_content`）为纯字符串工具，保留备用。
+"""
 
-class MessageGroup:
-    """
-    嵌套消息表，支持 messages.<表>.<子表>.<键> 链式访问消息文本
-        占位符使用 Python str.format 语法，如 messages.xxx.yyy.format(player='Steve')。
-    """
+from Core.I18n import i18n
+from Core.I18n.Context import get_locale
 
-    __slots__ = ('_data',)
-
-    def __init__(self, data: dict):
-        self._data = data
-
-    def __getattr__(self, key: str) -> Any:
-        if key.startswith('_'):
-            raise AttributeError(key)
-        if key not in self._data:
-            raise AttributeError(f'Message [{key}] is missing from the messages file!')
-        value = self._data[key]
-        if isinstance(value, dict):
-            return MessageGroup(value)
-        if isinstance(value, (str, list)):
-            return value
-        raise TypeError(f'[{key}] in the messages file should be a string or a list of strings!')
-
-
-LANGUAGE_MESSAGE_FILES = {'zh': MESSAGES_ZH_PATH, 'en': MESSAGES_EN_PATH}
-
-# 隐藏区块标记：两行注释之间的内容不对 WebUI 消息编辑器展示（机器人加载不受影响）
+# 隐藏区块标记（通用字符串工具沿用）
 HIDDEN_START_MARKER = '# Hidden Start'
 HIDDEN_END_MARKER = '# Hidden End'
 
 
-def resolve_messages_path(language: str) -> Path:
-    """解析语言对应的消息文件路径，旧版单文件仅作为中文包回退。"""
-    if (path := LANGUAGE_MESSAGE_FILES.get(language)) and path.exists():
-        return path
-    if language == 'zh' and MESSAGES_LEGACY_PATH.exists():
-        return MESSAGES_LEGACY_PATH
-    expected_path = LANGUAGE_MESSAGE_FILES.get(language, MESSAGES_ZH_PATH)
-    raise FileNotFoundError(
-        f'Message config file for language [{language}] does not exist, '
-        f'please create {expected_path} and fill in as needed!'
-    )
+def _legacy_map() -> dict[str, str]:
+    """构建「旧点路径 → 新命名空间键」映射。"""
+    mapping: dict[str, str] = {}
+    for key in i18n.available_keys():
+        if key.startswith('core.'):
+            mapping[key[len('core.'):]] = key
+        elif key.startswith('builtin.'):
+            rest = key[len('builtin.'):]
+            mapping[f'plugins.{rest}'] = key
+            if rest.endswith('.name'):
+                mapping[f'builtin_extensions.{rest[:-len(".name")]}'] = key
+    return mapping
 
 
-def load_messages() -> MessageGroup:
-    """按当前配置语言加载对应的消息包（zh / en），文件缺失则抛错。"""
-    # 函数内导入：避免 Scripts.Messages 进入 Scripts.Config 的早期加载链（见 AGENT.md §0.13）
-    from Scripts.Config import config
+class _LegacyGroup:
+    """旧式消息对象：把属性链惰性解析为 I18n 点路径取值。"""
 
-    toml_data = tomlkit.parse(resolve_messages_path(config.language).read_text('Utf-8'))
-    return MessageGroup(dict(toml_data))
+    __slots__ = ('_prefix',)
+
+    def __init__(self, prefix: str = '') -> None:
+        object.__setattr__(self, '_prefix', prefix)
+
+    def __getattr__(self, key: str):
+        if key.startswith('_'):
+            raise AttributeError(key)
+        prefix = object.__getattribute__(self, '_prefix')
+        path = f'{prefix}.{key}' if prefix else key
+        mapping = _legacy_map()
+        if any(candidate.startswith(f'{path}.') for candidate in mapping):
+            return _LegacyGroup(path)
+        if path in mapping:
+            return i18n.render_value(mapping[path], locale=get_locale())
+        raise AttributeError(f'Message [{path}] is missing from the messages file!')
+
+
+# 兼容实例：现有代码 `from Core.Messages import messages`
+messages = _LegacyGroup()
 
 
 def reload_messages() -> None:
-    """重新加载消息配置，供保存后热更新。"""
+    """重新加载语言包，供语言切换/保存覆盖层后热更新。"""
+    from Core.LocaleLoader import register_all
 
-    global messages
-
-    messages = load_messages()
+    register_all()
 
 
 def _split_hidden_blocks(lines: list[str]) -> tuple[list[str], list[tuple[str | None, list[str]]]]:
@@ -143,4 +142,4 @@ def restore_hidden_content(incoming: str, disk_content: str) -> str:
     return '\n'.join(result_lines) + ('\n' if result_lines else '')
 
 
-messages = load_messages()
+messages = _LegacyGroup()

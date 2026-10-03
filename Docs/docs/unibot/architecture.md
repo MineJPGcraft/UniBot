@@ -27,23 +27,21 @@ UniBot
 │   │   ├── Send.py               # 消息发送
 │   │   └── Server.py             # 服务器状态
 │   └── Events.py                 # MC 事件处理中枢
-├── Scripts/
+├── Core/
 │   ├── Managers/
-│   │   ├── Data.py               # 数据持久化
-│   │   ├── Server.py             # 服务器连接管理
-│   │   ├── WebUi.py              # Web UI 静态资源管理
-│   │   ├── Plugin.py             # 插件管理
+│   │   ├── Config.py             # 配置读写
+│   │   ├── Statistics.py         # 统计
+│   │   ├── Plugin.py             # 插件管理与 PluginRegistry
+│   │   ├── TaskCenter.py         # 后台任务中心引擎
 │   │   └── Version.py            # 版本管理
-│   ├── Extensions/               # 扩展系统框架
-│   │   ├── Base.py               # Extension 基类与元数据
-│   │   ├── Command.py            # 命令类体系与 CommandManager
-│   │   ├── Service.py            # Service 基类与 ServiceRegistry
-│   │   ├── Renderer.py           # 渲染引擎、模板与资源编排
-│   │   ├── Loader.py             # 扩展发现、排序与加载
-│   │   └── Manager.py            # ExtensionManager 单例
-│   ├── Api/                      # REST API 路由
+│   ├── Extension/                # 扩展系统框架（大部分模块在顶层，仅运行时引擎收进 Runtime/）
+│   │   ├── (Errors / Manifest / Storage / TemplateConfig / Base / Command / Service / Renderer)
+│   │   └── Runtime/              # 运行时：Host / 注册 / 依赖 / 加载 / 管理 / 市场
+│   ├── I18n/                     # 统一 I18n 引擎
+│   ├── Locales/                  # 语言包（System 只读 / Messages 可改，见配置说明）
+│   ├── Web/                      # WebUI REST API 路由
 │   │   ├── Auth.py               # 登录认证（JWT / Cookie）
-│   │   ├── Config.py             # 配置管理
+│   │   ├── Config/               # 配置管理
 │   │   ├── Players.py            # 玩家管理
 │   │   ├── Servers.py            # 服务器管理
 │   │   ├── Plugins.py            # 插件管理
@@ -53,7 +51,10 @@ UniBot
 │   │   ├── Users.py              # 用户管理
 │   │   ├── WebSocket.py          # WebSocket 推送
 │   │   └── Schemas.py            # 数据模型与校验
+│   ├── Builtin/                  # 内置命令 / 服务 / 插件 / 语言包
 │   ├── Config.py                 # 配置模型定义
+│   ├── RuntimeState.py           # 运行期共享状态单例
+│   ├── LocaleLoader.py           # 语言包磁盘加载
 │   ├── Network.py                # 网络请求工具
 │   └── Utils.py                  # 工具函数
 ├── Extensions/                   # 扩展包（本地 / 市场）
@@ -108,7 +109,7 @@ flowchart LR
 
 ### 管理器单例
 
-所有管理器采用 **单例模式**，在文件底部实例化，通过 `Scripts/Managers/__init__.py` 统一导出：
+所有管理器采用 **单例模式**，在文件底部实例化，通过 `Core/Managers/__init__.py` 统一导出：
 
 - `data_manager`：数据持久化（玩家、服务器、用户数据）
 - `server_manager`：服务器连接管理

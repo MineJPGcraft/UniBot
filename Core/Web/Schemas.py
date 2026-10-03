@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from Scripts.Constants import UserRole
+from Core.Constants import UserRole
 
 # ===== Auth =====
 

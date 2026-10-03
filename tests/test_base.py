@@ -3,7 +3,7 @@
 import pytest
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from Scripts.Extensions import (
+from Core.Extension import (
     Extension,
     ExtensionError,
     ExtensionState,
@@ -211,7 +211,7 @@ class TestExtensionBase:
 
 
 def _fake_metadata():
-    from Scripts.Extensions import ExtensionMetadata
+    from Core.Extension import ExtensionMetadata
 
     manifest = parse_manifest("""
 [manifest]

@@ -2,11 +2,11 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from Scripts.Api.Locale import text
-from Scripts.Constants import TaskKind, UserRole
-from Scripts.Extensions.Dependencies import sync_extension_dependencies
-from Scripts.Managers import task_center
-from Scripts.Managers.TaskCenter import TaskContext
+from Core.Constants import TaskKind, UserRole
+from Core.Extension.Runtime.Dependencies import sync_extension_dependencies
+from Core.Managers import task_center
+from Core.Managers.TaskCenter import TaskContext
+from Core.Web.Locale import text
 
 from .Auth import get_current_user, require_role
 

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends
 
-from Scripts.Api.Locale import text
+from Core.Web.Locale import text
 
 from .Auth import get_current_user
 

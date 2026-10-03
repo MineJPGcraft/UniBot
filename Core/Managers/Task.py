@@ -13,7 +13,7 @@ from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from typing import Any
 
-from Scripts.Logging import logger
+from Core.Logging import logger
 
 # 允许注册的最小间隔（秒），防止空转过载事件循环
 MIN_INTERVAL_SECONDS = 0.01

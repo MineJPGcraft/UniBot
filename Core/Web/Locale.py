@@ -1,71 +1,34 @@
-"""WebUI API 多语言支持。
+"""WebUI 后端 API 多语言薄封装：委托统一 I18n 引擎（Core/I18n）。
 
-按每次请求的 Accept-Language 头解析语言（zh / en），与机器人消息包
-（Config.toml 的 language 字段、Messages 双语包）完全解耦。
-译文存放在 Locales/{zh,en}.json（按域嵌套，键用点路径，如 auth.token_expired），
-text() 按当前请求语言取值，缺失时回退中文。
+按每次请求的 Accept-Language 头解析语言（zh / en），写入 I18n 的 ContextVar；
+译文位于 `Core/Locales/Messages.{zh,en}.toml` 的 `api.*` 段（用户可改）。
 静态界面文案由前端 vue-i18n 处理，不经过本模块。
 """
 
-import json
-from contextvars import ContextVar
-from pathlib import Path
-from typing import Any
-
 from fastapi import FastAPI, Request, Response
 
+from Core.I18n import get_locale, normalize_language, set_locale
+from Core.I18n import text as _render
+
+# 保留旧导出名，兼容既有引用
 SUPPORTED_LANGUAGES = ('zh', 'en')
 DEFAULT_LANGUAGE = 'zh'
-
-LOCALES_DIR = Path(__file__).parent / 'Locales'
-
-# 每个请求各自隔离，未携带可识别头时回退默认语言
-_current_language: ContextVar[str] = ContextVar('current_language', default=DEFAULT_LANGUAGE)
-
-
-def load_translations(language: str) -> dict[str, Any]:
-    """加载指定语言的嵌套翻译表，文件缺失或非法时抛错。"""
-    return json.loads((LOCALES_DIR / f'{language}.json').read_text('Utf-8'))
-
-
-# 启动时一次性加载全部语言到内存
-TRANSLATIONS = {language: load_translations(language) for language in SUPPORTED_LANGUAGES}
+API_NAMESPACE = 'api'
 
 
 def set_current_language(accept_language: str | None) -> None:
     """从 Accept-Language 头解析并设置当前请求语言（如 zh-CN → zh）。"""
-    for part in (accept_language or '').split(','):
-        tag = part.split(';')[0].strip().lower()
-        if language := next((item for item in SUPPORTED_LANGUAGES if tag.startswith(item)), None):
-            _current_language.set(language)
-            return
-    _current_language.set(DEFAULT_LANGUAGE)
+    set_locale(normalize_language(accept_language))
 
 
 def get_language() -> str:
     """获取当前请求语言。"""
-    return _current_language.get()
-
-
-def _lookup(table: dict[str, Any], key: str) -> str:
-    """按点路径在嵌套表中取字符串叶子。"""
-    node: Any = table
-    for part in key.split('.'):
-        if not isinstance(node, dict) or part not in node:
-            raise KeyError(f'Missing translation key [{key}] for lookup!')
-        node = node[part]
-    if not isinstance(node, str):
-        raise KeyError(f'Translation key [{key}] is not a string leaf!')
-    return node
+    return get_locale()
 
 
 def text(key: str, **kwargs) -> str:
-    """按当前请求语言取译文并格式化占位符，缺失键回退中文。"""
-    try:
-        template = _lookup(TRANSLATIONS[_current_language.get()], key)
-    except KeyError:
-        template = _lookup(TRANSLATIONS[DEFAULT_LANGUAGE], key)
-    return template.format(**kwargs) if kwargs else template
+    """按当前请求语言取 API 译文并格式化占位符，缺失键回退默认语言。"""
+    return _render(f'{API_NAMESPACE}.{key}', **kwargs)
 
 
 def setup_request_language(app: FastAPI) -> None:

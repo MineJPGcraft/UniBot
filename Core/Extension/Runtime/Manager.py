@@ -5,34 +5,57 @@ from pathlib import Path
 
 import tomlkit
 
-from Scripts.Config import config
-from Scripts.Constants import CONFIG_EXTENSIONS_FILE
-from Scripts.Logging import exception_logger, logger
+from Core.Constants import CONFIG_EXTENSIONS_FILE
+from Core.Logging import exception_logger, logger
 
-from . import (
-    Extension,
-    ExtensionState,
-)
-from .Loader import (
-    ExtensionLoader,
-)
-from .Renderer import BaseRenderer, RendererManager, TemplateRegistration
+from ..Base import Extension, ExtensionState
+from ..Renderer import BaseRenderer, RendererManager, TemplateRegistration
+from .Loader import ExtensionLoader
+from .Registry import ExtensionRegistry
 
 
 class ExtensionManager:
     """扩展管理器，负责扩展生命周期、服务注册与渲染器管理。"""
 
     def __init__(self) -> None:
-        # 已加载扩展注册表等容器必须实例私有，避免多实例共享与热重载脏状态
-        self.registry: dict[str, Extension] = {}
-        self.services: dict[str, object] = {}
-        self.renderers: dict[str, BaseRenderer] = {}
-        # 无代码扩展包（template/resources）展示信息：extension_id -> info dict
-        self.no_code_info: dict[str, dict] = {}
+        # 注册容器与加载状态必须实例私有，避免多实例共享与热重载脏状态
+        self._registry = ExtensionRegistry()
         self.loader = ExtensionLoader(self)
-        self.renderer_manager = RendererManager(self.get_renderer)
+        # 图像配置经注入提供：默认读全局 [image]（函数内导入，框架层不顶层依赖 Core.Config）
+        self.renderer_manager = RendererManager(self.get_renderer, self._image_config)
         # 串行化热重载，防止 WebUI 与指令并发触发
         self._reload_lock = asyncio.Lock()
+
+    @staticmethod
+    def _image_config():
+        """读取当前 [image] 配置；函数内导入 Core.Config，避免框架层顶层反向依赖。"""
+        from Core.Config import config
+
+        return config.image
+
+    def image_mode_enabled(self) -> bool:
+        """当前是否启用图片输出模式（实现 ExtensionHost 能力）。"""
+        return self._image_config().mode
+
+    @property
+    def registry(self) -> dict[str, Extension]:
+        """已加载扩展注册表：id -> Extension。"""
+        return self._registry.extensions
+
+    @property
+    def services(self) -> dict[str, object]:
+        """已注册的 API 服务表：name -> service。"""
+        return self._registry.services
+
+    @property
+    def renderers(self) -> dict[str, BaseRenderer]:
+        """已注册的渲染引擎表：name -> BaseRenderer。"""
+        return self._registry.renderers
+
+    @property
+    def no_code_info(self) -> dict[str, dict]:
+        """无代码扩展包展示信息：extension_id -> info dict。"""
+        return self._registry.no_code_info
 
     @property
     def templates(self) -> dict[str, TemplateRegistration]:
@@ -48,10 +71,7 @@ class ExtensionManager:
 
     def reset(self) -> None:
         """清空全部注册与加载状态（重新加载前调用，测试也用它做隔离）。"""
-        self.registry.clear()
-        self.services.clear()
-        self.renderers.clear()
-        self.no_code_info.clear()
+        self._registry.clear()
         self.renderer_manager.templates.clear()
         self.renderer_manager.resources.clear()
         self.renderer_manager._environments.clear()
@@ -65,7 +85,7 @@ class ExtensionManager:
     async def reload(self) -> None:
         """热重载全部扩展：停用 → 注销命令 → 清理模块缓存 → 重新加载 → 重建命令 → 重新启用。"""
         # 函数内导入：Command 模块顶层不依赖 Manager，但保持 __init__ 固定导入顺序（Base → Command → … → Manager）
-        from .Command import command_manager
+        from ..Command import command_manager
 
         async with self._reload_lock:
             if failed := self.loader.check_syntax():
@@ -94,9 +114,9 @@ class ExtensionManager:
                 await self._disable_extension(extension)
                 await self._rollback(extension)
         # 图片模式开启时才初始化配置的渲染引擎；初始化失败仅降级图片功能，不阻断启动
-        if config.image.mode:
+        if self._image_config().mode:
             try:
-                await self.renderer_manager.setup(config.image.renderer)
+                await self.renderer_manager.setup(self._image_config().renderer)
             except Exception as error:
                 exception_logger.error(
                     f'Render engine setup failed, image output has been disabled automatically: {error}'
@@ -132,22 +152,27 @@ class ExtensionManager:
 
     # ===== 服务注册与获取 =====
 
+    def register_extension(self, extension_id: str, extension: Extension) -> None:
+        """登记一个已加载的扩展实例。"""
+        self._registry.register_extension(extension_id, extension)
+
+    def register_no_code_info(self, extension_id: str, info: dict) -> None:
+        """登记一个无代码扩展包（template/resources）的展示信息。"""
+        self._registry.register_no_code_info(extension_id, info)
+
     def register_service(self, name: str, service: object) -> None:
         """注册一个 API 服务。"""
-        if name in self.services:
-            logger.warning(f'API service {name} registered twice, the latest one wins.')
-        self.services[name] = service
+        self._registry.register_service(name, service)
 
     def get_service(self, name: str) -> object | None:
         """获取已注册的 API 服务，未注册返回 None。"""
-        return self.services.get(name)
+        return self._registry.get_service(name)
 
     # ===== 渲染器/模板/资源管理 =====
 
     def register_renderer(self, renderer: BaseRenderer) -> None:
         """注册一个渲染引擎实例。"""
-        if renderer.name:
-            self.renderers[renderer.name] = renderer
+        self._registry.register_renderer(renderer)
 
     def register_template(self, registration: TemplateRegistration) -> None:
         """注册 template 无代码扩展包。"""
@@ -167,7 +192,7 @@ class ExtensionManager:
 
     def get_renderer(self, name: str) -> BaseRenderer | None:
         """获取指定名称的渲染引擎实例。"""
-        return self.renderers.get(name)
+        return self._registry.get_renderer(name)
 
     # ===== 启停状态 =====
 
@@ -198,10 +223,10 @@ class ExtensionManager:
             metadata = extension.metadata
             return {
                 'id': metadata.id,
-                'name': metadata.name,
+                'name': str(metadata.name),
                 'version': metadata.version,
                 'author': metadata.author,
-                'description': metadata.description,
+                'description': str(metadata.description),
                 'types': [entry.value for entry in metadata.types],
                 'state': extension.state.value,
                 'failure_reason': extension.failure_reason,

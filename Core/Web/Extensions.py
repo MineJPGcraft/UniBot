@@ -4,11 +4,9 @@ import asyncio
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from Scripts.Api.Locale import text
-from Scripts.Api.Managers import studio_manager
-from Scripts.Config import config, reload_config
-from Scripts.Constants import TaskKind, UserRole
-from Scripts.Extensions import (
+from Core.Config import config, reload_config
+from Core.Constants import TaskKind, UserRole
+from Core.Extension import (
     EXTENSIONS_DIR,
     ExtensionState,
     ExtensionType,
@@ -16,9 +14,11 @@ from Scripts.Extensions import (
     get_unibot_version,
     market_manager,
 )
-from Scripts.Extensions.Dependencies import sync_extension_dependencies
-from Scripts.Managers import config_manager, task_center
-from Scripts.Managers.TaskCenter import TaskContext
+from Core.Extension.Runtime.Dependencies import sync_extension_dependencies
+from Core.Managers import config_manager, task_center
+from Core.Managers.TaskCenter import TaskContext
+from Core.Web.Locale import text
+from Core.Web.Managers import studio_manager
 
 from .Auth import get_current_user, require_role
 from .Body import parse_json_object
@@ -385,8 +385,8 @@ async def get_config_items(current_user: dict = Depends(get_current_user)):
         items.append(
             {
                 'id': metadata.id,
-                'name': metadata.name,
-                'description': metadata.description,
+                'name': str(metadata.name),
+                'description': str(metadata.description),
                 'types': [entry.value for entry in metadata.types],
                 'state': extension.state.value,
                 'schema': schema,
@@ -431,7 +431,7 @@ async def get_render_configs(current_user: dict = Depends(get_current_user)):
             {
                 'id': metadata.id,
                 'kind': 'renderer',
-                'name': metadata.name,
+                'name': str(metadata.name),
                 'renderer_name': name,
                 'current': name == config.image.renderer,
                 'available': name in active_names,
@@ -447,7 +447,8 @@ async def get_render_configs(current_user: dict = Depends(get_current_user)):
         # 混合扩展在 registry 中有实例，展示信息优先取实例
         registry_extension = extension_manager.registry.get(extension_id)
         no_code = extension_manager.no_code_info.get(extension_id, {})
-        display_name = (registry_extension.metadata.name if registry_extension else '') or no_code.get('name')
+        display_name = str(registry_extension.metadata.name) if registry_extension else ''
+        display_name = display_name or no_code.get('name')
         items.append(
             {
                 'id': extension_id,

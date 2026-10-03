@@ -243,4 +243,4 @@ WS /api/ws
 
 Pushes runtime status, log increments, server events, etc. in real time for the frontend dashboard to update live.
 
-*For the complete API definitions, refer directly to the route files under the backend source `Scripts/Api/` directory.*
+*For the complete API definitions, refer directly to the route files under the backend source `Core/Web/` directory.*

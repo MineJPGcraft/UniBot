@@ -7,9 +7,9 @@ from typing import override
 import pytest
 import tomlkit
 
-from Scripts.Extensions import Extension, ExtensionState, Service, ServiceRegistry, extension_manager
-from Scripts.Extensions.Base import parse_manifest
-from Scripts.Extensions.Loader import DiscoveredExtension, ExtensionLoader
+from Core.Extension import Extension, ExtensionState, Service, ServiceRegistry, extension_manager
+from Core.Extension.Manifest import parse_manifest
+from Core.Extension.Runtime.Loader import DiscoveredExtension, ExtensionLoader
 
 
 def _bind_registry(extension: Extension) -> ServiceRegistry:
@@ -159,7 +159,7 @@ class TestLifecycle:
 
     def test_renderer_setup_failure_degrades_not_crash(self, monkeypatch):
         """渲染引擎初始化失败仅降级图片功能，不阻断扩展启动。"""
-        from Scripts.Config import config as app_config
+        from Core.Config import config as app_config
 
         async def _boom(name: str):
             raise RuntimeError('尚未选择浏览器内核')
@@ -203,7 +203,7 @@ class TestLifecycle:
 
 class TestSetEnabled:
     def test_set_enabled_writes_config_file(self, tmp_path, monkeypatch):
-        import Scripts.Extensions.Manager as ext_mod
+        import Core.Extension.Runtime.Manager as ext_mod
 
         # 将 Extension 模块内的 CONFIG_EXTENSIONS_FILE 常量指向临时目录
         config_file = tmp_path / 'Extensions.toml'
@@ -214,7 +214,7 @@ class TestSetEnabled:
         assert data['WeatherExt']['enabled'] is True
 
     def test_set_enabled_merges_multiple_extensions(self, tmp_path, monkeypatch):
-        import Scripts.Extensions.Manager as ext_mod
+        import Core.Extension.Runtime.Manager as ext_mod
 
         config_file = tmp_path / 'Extensions.toml'
         monkeypatch.setattr(ext_mod, 'CONFIG_EXTENSIONS_FILE', config_file)
@@ -250,7 +250,7 @@ class TestValidationIsolation:
 
     def test_incompatible_extension_blocked_not_crash(self, monkeypatch):
         # 固定当前 UniBot 版本，使 ">=999.0.0" 约束必然不满足
-        monkeypatch.setattr('Scripts.Extensions.Base.get_unibot_version', lambda: '1.0.0')
+        monkeypatch.setattr('Core.Extension.Manifest.get_unibot_version', lambda: '1.0.0')
         loader = self._make_loader_with(
             {
                 'Playwright': """
@@ -275,7 +275,7 @@ unibot = ">=999.0.0"
         assert 'UniBot' in info.failure_reason
 
     def test_compatible_extension_still_loads_alongside_blocked(self, monkeypatch):
-        monkeypatch.setattr('Scripts.Extensions.Base.get_unibot_version', lambda: '1.0.0')
+        monkeypatch.setattr('Core.Extension.Manifest.get_unibot_version', lambda: '1.0.0')
         loader = self._make_loader_with(
             {
                 'GoodExt': """
@@ -310,7 +310,7 @@ unibot = ">=999.0.0"
         )
 
     def test_dependent_extension_also_blocked(self, monkeypatch):
-        monkeypatch.setattr('Scripts.Extensions.Base.get_unibot_version', lambda: '1.0.0')
+        monkeypatch.setattr('Core.Extension.Manifest.get_unibot_version', lambda: '1.0.0')
         loader = self._make_loader_with(
             {
                 'Incompat': """

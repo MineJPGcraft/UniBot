@@ -2,15 +2,15 @@ from enum import StrEnum
 
 from fastapi import APIRouter, Depends, Query
 
-from Scripts.Api.Locale import text
-from Scripts.Constants import (
+from Core.Constants import (
     BUILTIN_PLUGIN_PREFIX,
     TaskKind,
     UserRole,
 )
-from Scripts.Extensions.Dependencies import apply_main_dependency_changes
-from Scripts.Managers import config_manager, plugin_manager, task_center
-from Scripts.Managers.TaskCenter import TaskContext
+from Core.Extension.Runtime.Dependencies import apply_main_dependency_changes
+from Core.Managers import config_manager, plugin_manager, plugin_registry, task_center
+from Core.Managers.TaskCenter import TaskContext
+from Core.Web.Locale import text
 
 from .Auth import get_current_user, require_role
 from .Schemas import InstallPluginRequest, UpgradePluginRequest
@@ -58,11 +58,11 @@ async def run_plugin_market_task(
     context.set_message(running_key, name=module_name)
 
     if action == PluginMarketAction.uninstall:
-        config_manager.remove_plugin(module_name)
+        plugin_registry.remove(module_name)
     else:
-        config_manager.add_plugin(module_name)
+        plugin_registry.add(module_name)
         if action == PluginMarketAction.upgrade:
-            config_manager.set_plugin_enabled(module_name, True)
+            plugin_registry.set_enabled(module_name, True)
 
     removing = action == PluginMarketAction.uninstall
     package = f'{project_link}=={version}' if version else project_link
@@ -115,7 +115,7 @@ def installed_state(items: list[dict]) -> list[dict]:
     installed_packages = {config_manager._package_base(dependency) for dependency in config_manager.get_dependencies()}
     registered_modules = {
         plugin.get('module_name') if isinstance(plugin, dict) else plugin
-        for plugin in config_manager.nonebot_config.get('plugins', [])
+        for plugin in plugin_registry.list_plugins()
     }
     result = []
     for item in items:

@@ -27,23 +27,21 @@ UniBot
 │   │   ├── Send.py               # Message sending
 │   │   └── Server.py             # Server status
 │   └── Events.py                 # MC event processing hub
-├── Scripts/
+├── Core/
 │   ├── Managers/
-│   │   ├── Data.py               # Data persistence
-│   │   ├── Server.py             # Server connection management
-│   │   ├── WebUi.py              # Web UI static resource management
-│   │   ├── Plugin.py             # Plugin management
+│   │   ├── Config.py             # Config read/write
+│   │   ├── Statistics.py         # Statistics
+│   │   ├── Plugin.py             # Plugin management and PluginRegistry
+│   │   ├── TaskCenter.py         # Background task center engine
 │   │   └── Version.py            # Version management
-│   ├── Extensions/               # Extension system framework
-│   │   ├── Base.py               # Extension base class and metadata
-│   │   ├── Command.py            # Command class system and CommandManager
-│   │   ├── Service.py            # Service base class and ServiceRegistry
-│   │   ├── Renderer.py           # Rendering engine, template, and resource orchestration
-│   │   ├── Loader.py             # Extension discovery, ordering, and loading
-│   │   └── Manager.py            # ExtensionManager singleton
-│   ├── Api/                      # REST API routes
+│   ├── Extension/                # Extension framework (most modules at top level; only the runtime engine is under Runtime/)
+│   │   ├── (Errors / Manifest / Storage / TemplateConfig / Base / Command / Service / Renderer)
+│   │   └── Runtime/              # Runtime: Host / registry / dependencies / loader / manager / market
+│   ├── I18n/                     # Unified I18n engine
+│   ├── Locales/                  # Language packs (System read-only / Messages editable)
+│   ├── Web/                      # WebUI REST API routes
 │   │   ├── Auth.py               # Login authentication (JWT / Cookie)
-│   │   ├── Config.py             # Config management
+│   │   ├── Config/               # Config management
 │   │   ├── Players.py            # Player management
 │   │   ├── Servers.py            # Server management
 │   │   ├── Plugins.py            # Plugin management
@@ -53,7 +51,10 @@ UniBot
 │   │   ├── Users.py              # User management
 │   │   ├── WebSocket.py          # WebSocket push
 │   │   └── Schemas.py            # Data models and validation
+│   ├── Builtin/                  # Built-in commands / services / plugins / locales
 │   ├── Config.py                 # Config model definitions
+│   ├── RuntimeState.py           # Runtime shared state singleton
+│   ├── LocaleLoader.py           # Locale disk loading
 │   ├── Network.py                # Network request utilities
 │   └── Utils.py                  # Utility functions
 ├── Extensions/                   # Extension packages (local / marketplace)
@@ -108,7 +109,7 @@ The bot is based on NoneBot2's event-driven model. `Plugins/Events.py` acts as t
 
 ### Manager Singletons
 
-All managers use the **singleton pattern**, instantiated at the bottom of their files and exported uniformly through `Scripts/Managers/__init__.py`:
+All managers use the **singleton pattern**, instantiated at the bottom of their files and exported uniformly through `Core/Managers/__init__.py`:
 
 - `data_manager`: data persistence (players, servers, user data)
 - `server_manager`: server connection management

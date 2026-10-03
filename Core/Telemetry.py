@@ -7,9 +7,9 @@ import subprocess
 import uuid
 from pathlib import Path
 
-from Scripts.Logging import logger
-from Scripts.Managers import config_manager, statistics_manager, task_manager
-from Scripts.Network import post_request
+from Core.Logging import logger
+from Core.Managers import config_manager, statistics_manager, task_manager
+from Core.Network import post_request
 
 TELEMETRY_SERVER_URL = 'https://bot-api.mcjpg.dev'
 REPORT_INTERVAL_SECONDS = 10 * 60  # 上报间隔（秒）
