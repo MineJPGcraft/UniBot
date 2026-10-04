@@ -12,12 +12,12 @@ from nonebot.adapters.minecraft import Bot
 from nonebot.adapters.minecraft.message import Message
 
 from Core.Extension import Extension, Service
-from Core.I18n import i18n_text
+from Core.I18n import i18n_deferred
 from Core.Logging import logger
 from Core.RuntimeState import runtime_state
 from Core.Utils import flatten_minecraft_motd, strip_minecraft_color
 
-extension = Extension(id='Servers', name=i18n_text('builtin.servers.name'), version='1.0.0', types=('api',))
+extension = Extension(id='Servers', name=i18n_deferred('builtin.servers.name'), version='1.0.0', types=('api',))
 
 R = TypeVar('R')
 P = ParamSpec('P')

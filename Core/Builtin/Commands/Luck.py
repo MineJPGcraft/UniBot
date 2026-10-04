@@ -8,12 +8,12 @@ from typing import override
 from nonebot_plugin_uninfo import Uninfo
 
 from Core.Extension import Command, Extension, SubCommand
-from Core.I18n import i18n_text, text, text_value
+from Core.I18n import i18n_deferred, text, text_value
 from Core.RuntimeState import runtime_state
 from Core.Utils import turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Luck', name=i18n_text('builtin.luck.name'), version='1.0.1', types=('command',))
+extension = Extension(id='Luck', name=i18n_deferred('builtin.luck.name'), version='1.0.1', types=('command',))
 
 # 内存中的今日运势排行：桶结构，索引即人品值（10-100），每桶存该分值的用户记录，跨天自动清空
 luck_rank: list[list[dict[str, str | int]]] = [[] for _ in range(101)]
@@ -41,8 +41,8 @@ class LuckCommand(Command):
     """查看今日人品值。"""
 
     name = 'luck'
-    description = i18n_text('core.commands.luck.description')
-    usage = i18n_text('core.commands.luck.usage')
+    description = i18n_deferred('core.commands.luck.description')
+    usage = i18n_deferred('core.commands.luck.usage')
 
     @override
     async def handler(self, session: Uninfo):
@@ -94,7 +94,7 @@ class LuckCommand(Command):
         """查看今日运势排行。"""
 
         name = 'rank'
-        description = i18n_text('core.commands.luck.rank_desc')
+        description = i18n_deferred('core.commands.luck.rank_desc')
 
         @override
         async def handler(self, session: Uninfo):

@@ -10,12 +10,12 @@ from collections.abc import Callable, Coroutine
 from typing import Any, override
 
 from Core.Extension import Extension, Service
-from Core.I18n import i18n_text
+from Core.I18n import i18n_deferred
 from Core.Managers import task_manager
 from Core.RuntimeState import runtime_state
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Task', name=i18n_text('builtin.task.name'), version='1.0.0', types=('api',))
+extension = Extension(id='Task', name=i18n_deferred('builtin.task.name'), version='1.0.0', types=('api',))
 
 TaskRunner = Callable[[], Coroutine[Any, Any, Any]]
 

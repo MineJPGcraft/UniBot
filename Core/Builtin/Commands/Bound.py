@@ -7,12 +7,12 @@ from nonebot_plugin_uninfo import Uninfo
 
 from Core.Config import config
 from Core.Extension import Command, Extension, SubCommand
-from Core.I18n import i18n_text, text
+from Core.I18n import i18n_deferred, text
 from Core.RuntimeState import runtime_state
 from Core.Utils import check_player, get_permission
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Bound', name=i18n_text('builtin.bound.name'), version='1.0.0', types=('command',))
+extension = Extension(id='Bound', name=i18n_deferred('builtin.bound.name'), version='1.0.0', types=('command',))
 
 
 @extension.register_command
@@ -20,12 +20,12 @@ class BoundCommand(Command):
     """管理玩家白名单绑定。"""
 
     name = 'bound'
-    description = i18n_text('core.commands.bound.description')
-    usage = i18n_text('core.commands.bound.usage')
+    description = i18n_deferred('core.commands.bound.description')
+    usage = i18n_deferred('core.commands.bound.usage')
 
     @override
     def declare(self) -> None:
-        self.register_option('player', str, description=i18n_text('core.commands.bound.option_player'))
+        self.register_option('player', str, description=i18n_deferred('core.commands.bound.option_player'))
 
     @override
     async def handler(self, session: Uninfo, player: Match[str]):
@@ -57,7 +57,7 @@ class BoundCommand(Command):
         """列出所有绑定。"""
 
         name = 'list'
-        description = i18n_text('core.commands.bound.list_desc')
+        description = i18n_deferred('core.commands.bound.list_desc')
 
         @override
         async def handler(self, session: Uninfo):
@@ -87,11 +87,11 @@ class BoundCommand(Command):
         """查询指定用户的绑定。"""
 
         name = 'query'
-        description = i18n_text('core.commands.bound.query_desc')
+        description = i18n_deferred('core.commands.bound.query_desc')
 
         @override
         def declare(self) -> None:
-            self.register_option('user_id', At | str, description=i18n_text('core.commands.bound.arg_user'))
+            self.register_option('user_id', At | str, description=i18n_deferred('core.commands.bound.arg_user'))
 
         @override
         async def handler(self, session: Uninfo, user_id: Match[At | str]):
@@ -108,11 +108,11 @@ class BoundCommand(Command):
         """移除指定绑定。"""
 
         name = 'remove'
-        description = i18n_text('core.commands.bound.remove_desc')
+        description = i18n_deferred('core.commands.bound.remove_desc')
 
         @override
         def declare(self) -> None:
-            self.register_option('player', At | str, description=i18n_text('core.commands.bound.arg_player'))
+            self.register_option('player', At | str, description=i18n_deferred('core.commands.bound.arg_player'))
 
         @override
         async def handler(self, session: Uninfo, player: Match[At | str]):
@@ -155,12 +155,12 @@ class BoundCommand(Command):
         """为指定用户添加绑定。"""
 
         name = 'append'
-        description = i18n_text('core.commands.bound.append_desc')
+        description = i18n_deferred('core.commands.bound.append_desc')
 
         @override
         def declare(self) -> None:
-            self.register_arg('user_id', At | str, description=i18n_text('core.commands.bound.arg_user'))
-            self.register_arg('player', str, description=i18n_text('core.commands.bound.arg_player'))
+            self.register_arg('user_id', At | str, description=i18n_deferred('core.commands.bound.arg_user'))
+            self.register_arg('player', str, description=i18n_deferred('core.commands.bound.arg_player'))
 
         @override
         async def handler(self, session: Uninfo, user_id: At | str, player: str):

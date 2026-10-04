@@ -16,16 +16,16 @@ from nonebot_plugin_alconna.uniseg import UniMsg
 from nonebot_plugin_uninfo import Uninfo
 
 from Core.Config import config
-from Core.I18n import i18n_text, text
+from Core.I18n import i18n_deferred, text
 from Core.Logging import logger
 from Core.Rules import message_group_rule
 from Core.RuntimeState import runtime_state
 from Core.Utils import check_message, get_platform_name, send_message_to_groups
 
 __plugin_meta__ = PluginMetadata(
-    name=i18n_text('builtin.events.name'),
-    description=i18n_text('builtin.events.description'),
-    usage=i18n_text('builtin.events.usage'),
+    name=i18n_deferred('builtin.events.name'),
+    description=i18n_deferred('builtin.events.description'),
+    usage=i18n_deferred('builtin.events.usage'),
 )
 
 # 玩家聊天中触发「转发到群聊」的指令前缀

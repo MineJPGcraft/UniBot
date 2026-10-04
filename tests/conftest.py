@@ -15,8 +15,8 @@ import nonebot  # noqa: E402
 # 必须在任何 Core 模块导入前初始化（Config.py 顶层调用 get_plugin_config）
 nonebot.init()
 
-# 注册语言包：内置插件在模块导入期即访问 messages 兼容层，须在任何测试模块导入前完成
-from Core.LocaleLoader import register_all as _register_locales  # noqa: E402
+# 注册语言包：内置插件在模块导入期即用 i18n_deferred 注册延迟名，须在任何测试模块导入前完成
+from Core.I18n import register_all as _register_locales  # noqa: E402
 
 _register_locales()
 

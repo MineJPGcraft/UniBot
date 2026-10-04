@@ -6,7 +6,7 @@ import tomlkit
 
 from Core.Config import config
 from Core.Constants import CONFIG_TOML_PATH, ENV_PATH, MESSAGE_PATHS, PYPROJECT_PATH
-from Core.LocaleLoader import write_override
+from Core.I18n import write_override
 from Core.Logging import logger
 
 

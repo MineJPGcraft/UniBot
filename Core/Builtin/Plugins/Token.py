@@ -10,7 +10,7 @@ from nonebot_plugin_alconna.uniseg import UniMsg
 from nonebot_plugin_uninfo import SceneType, SupportScope, Uninfo
 
 from Core.Config import config
-from Core.I18n import i18n_text, text
+from Core.I18n import i18n_deferred, text
 from Core.Logging import logger
 from Core.Managers import config_manager
 from Core.RuntimeState import runtime_state
@@ -19,9 +19,9 @@ TOKEN_LENGTH = 10
 """令牌显示长度（取哈希前 N 位，大写十六进制）。"""
 
 __plugin_meta__ = PluginMetadata(
-    name=i18n_text('builtin.token.name'),
-    description=i18n_text('builtin.token.description'),
-    usage=i18n_text('builtin.token.usage'),
+    name=i18n_deferred('builtin.token.name'),
+    description=i18n_deferred('builtin.token.description'),
+    usage=i18n_deferred('builtin.token.usage'),
 )
 
 driver = get_driver()

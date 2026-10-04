@@ -205,8 +205,8 @@ After modification, the extension validates and applies the config immediately; 
 
 All of the bot's text is carried by a unified I18n engine with `{placeholder}` formatting, split into two layers (language packs live under `Core/Locales/`, placed inside `Core/` to prevent accidental edits):
 
-- **System layer `Core/Locales/System.{zh,en}.toml`** (shipped with the system, **read-only**): contains only the **system command** (`/bot`) and the **names/descriptions of every extension/plugin**. Edits to these keys are ignored to protect system-facing text.
-- **Message layer `Core/Locales/Messages.{zh,en}.toml`** (user-editable): every message outside the system keys (event broadcasts, other commands, WebUI backend `api.*`, etc.). Saving in the WebUI or editing directly applies instantly.
+- **System layer `Core/Locales/System.{zh,en}.toml`** (shipped with the system, **read-only**): contains the **system command** (`/bot`), the **names/descriptions of every extension/plugin**, and the **WebUI backend `api.*` interface text**. Edits to these keys are ignored to protect system-facing text.
+- **Messages layer `Core/Locales/Messages.{zh,en}.toml`** (user-editable): every message outside the system keys (event broadcasts, other commands, etc.). Saving in the WebUI or editing directly applies instantly.
 - Extension packs live in `Extensions/<id>/Locales/{zh,en}.toml` under the `ext.<id>.*` namespace; the `/bot` command and extension/plugin names belong to the system layer and cannot be overridden.
 - With `language = "zh"`, the `zh` pack is read; with `language = "en"`, the `en` pack is read; legacy `Config/Messages.*.toml` user changes are migrated into `Core/Locales/Messages.*.toml` once on first start (idempotent).
 

@@ -4,12 +4,12 @@ import asyncio
 from typing import override
 
 from Core.Extension import Command, Extension
-from Core.I18n import i18n_text, text
+from Core.I18n import i18n_deferred, text
 from Core.RuntimeState import runtime_state
 from Core.Utils import turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Server', name=i18n_text('builtin.server.name'), version='1.0.0', types=('command',))
+extension = Extension(id='Server', name=i18n_deferred('builtin.server.name'), version='1.0.0', types=('command',))
 
 
 @extension.register_command
@@ -17,8 +17,8 @@ class ServerCommand(Command):
     """查看已连接的服务器列表及其 CPU / 内存占用。"""
 
     name = 'server'
-    description = i18n_text('core.commands.server.description')
-    usage = i18n_text('core.commands.server.usage')
+    description = i18n_deferred('core.commands.server.description')
+    usage = i18n_deferred('core.commands.server.usage')
 
     @override
     async def handler(self):

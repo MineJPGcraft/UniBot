@@ -11,7 +11,7 @@ CONFIG_TOML_PATH = Path('Config.toml')
 ENV_PATH = Path('.env')
 PYPROJECT_PATH = Path('pyproject.toml')
 # 语言包根目录（Core/Locales/，zh/en 双语；置于 Core 内防止用户误改）
-# - System.*.toml：系统内置文案（系统指令 + 扩展/插件名称），只读，用户覆盖被忽略
+# - System.*.toml：系统内置文案（系统指令 + 扩展/插件名称 + WebUI 界面 api.*），只读，用户覆盖被忽略
 # - Messages.*.toml：机器人消息文案，可自由修改，保存后热生效
 LOCALES_DIR = Path('Core') / 'Locales'
 SYSTEM_ZH_PATH = LOCALES_DIR / 'System.zh.toml'

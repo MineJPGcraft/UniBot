@@ -6,12 +6,12 @@ from nonebot_plugin_alconna import Match
 from nonebot_plugin_uninfo import Uninfo
 
 from Core.Extension import Command, Extension
-from Core.I18n import i18n_text, text
+from Core.I18n import i18n_deferred, text
 from Core.RuntimeState import runtime_state
 from Core.Utils import get_platform_name
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Send', name=i18n_text('builtin.send.name'), version='1.0.0', types=('command',))
+extension = Extension(id='Send', name=i18n_deferred('builtin.send.name'), version='1.0.0', types=('command',))
 
 
 @extension.register_command
@@ -19,13 +19,13 @@ class SendCommand(Command):
     """向已连接的服务器发送消息。"""
 
     name = 'send'
-    description = i18n_text('core.commands.send.description')
-    usage = i18n_text('core.commands.send.usage')
+    description = i18n_deferred('core.commands.send.description')
+    usage = i18n_deferred('core.commands.send.usage')
     aliases = ('mc',)
 
     @override
     def declare(self) -> None:
-        self.register_arg('message', str, description=i18n_text('core.commands.send.arg_message'), multi=True)
+        self.register_arg('message', str, description=i18n_deferred('core.commands.send.arg_message'), multi=True)
 
     @override
     async def handler(self, session: Uninfo, message: Match[list[str]]):

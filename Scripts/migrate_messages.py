@@ -40,11 +40,11 @@ LEGACY_MESSAGE_PATHS = {
 }
 MIGRATION_MARKER_PATH = _ROOT / 'Data' / '.locales_migrated'
 
-# 支持语言（与 Core/I18n/Context.SUPPORTED_LANGUAGES 一致）
+# 支持语言（与 Core/I18n/Engine/Context.SUPPORTED_LANGUAGES 一致）
 SUPPORTED_LANGUAGES = ('zh', 'en')
 
-# System 层受保护键（系统指令 + 扩展/插件名称），用户改动一律忽略
-_PROTECTED_PREFIXES = ('core.commands.bot', 'builtin')
+# System 层受保护键（系统指令 + 扩展/插件名称 + WebUI 界面文案），用户改动一律忽略
+_PROTECTED_PREFIXES = ('core.commands.bot', 'builtin', 'api')
 
 
 def run_startup_migrations() -> None:
@@ -99,7 +99,7 @@ def _read_toml(path: Path) -> dict[str, Any]:
 
 
 def _default_keys(language: str) -> dict[str, Any]:
-    """读取 System + Messages 默认层，展平为「点路径 → 叶子值」（替代 i18n.available_keys）。"""
+    """读取 System + Messages 默认层，展平为「点路径 → 叶子值」（供迁移比对）。"""
     known: dict[str, Any] = {}
     for path in (SYSTEM_PATHS.get(language), MESSAGE_PATHS.get(language)):
         if path is None or not path.exists():

@@ -214,8 +214,8 @@ enabled = true
 
 机器人的所有文本由统一 I18n 引擎承载，支持 `{占位符}` 格式化，分为两层（语言包统一放在 `Core/Locales/` 下，置于 `Core/` 内以防止用户直接误改）：
 
-- **系统层 `Core/Locales/System.{zh,en}.toml`**（系统自带，**只读**）：仅包含**系统指令**（`/bot`）与**所有扩展/插件的名称、描述**。用户即便修改其中的键也会被忽略，以保护系统界面文案。
-- **消息层 `Core/Locales/Messages.{zh,en}.toml`**（用户可改）：除系统键以外的全部消息（事件播报、其余指令、WebUI 后端 `api.*` 等）。在 WebUI 或直接编辑保存后立即热生效。
+- **系统层 `Core/Locales/System.{zh,en}.toml`**（系统自带，**只读**）：包含**系统指令**（`/bot`）、**所有扩展/插件的名称、描述**，以及 **WebUI 后端 `api.*` 界面文案**。用户即便修改其中的键也会被忽略，以保护系统界面文案。
+- **消息层 `Core/Locales/Messages.{zh,en}.toml`**（用户可改）：除系统键以外的全部消息（事件播报、其余指令等）。在 WebUI 或直接编辑保存后立即热生效。
 - 扩展语言包位于 `Extensions/<id>/Locales/{zh,en}.toml`，命名空间 `ext.<id>.*`；`/bot` 与扩展/插件名称属系统层，不可被覆盖。
 - `language = "zh"` 时读取 `zh` 包，`language = "en"` 时读取 `en` 包；旧版 `Config/Messages.*.toml` 的用户改动会在首次启动时一次性迁入 `Core/Locales/Messages.*.toml`（幂等）。
 

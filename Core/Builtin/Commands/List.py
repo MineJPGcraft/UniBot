@@ -8,13 +8,13 @@ from nonebot_plugin_alconna import Match
 
 from Core.Config import config
 from Core.Extension import Command, Extension, FileAsset
-from Core.I18n import i18n_text, text
+from Core.I18n import i18n_deferred, text
 from Core.Managers import cache_manager
 from Core.Network import fetch_player_avatars
 from Core.RuntimeState import runtime_state
 from Core.Utils import turn_message_text
 
-extension = Extension(id='List', name=i18n_text('builtin.list.name'), version='1.0.0', types=('command',))
+extension = Extension(id='List', name=i18n_deferred('builtin.list.name'), version='1.0.0', types=('command',))
 
 
 @extension.register_command
@@ -22,12 +22,12 @@ class ListCommand(Command):
     """查看服务器在线玩家列表。"""
 
     name = 'list'
-    description = i18n_text('core.commands.list.description')
-    usage = i18n_text('core.commands.list.usage')
+    description = i18n_deferred('core.commands.list.description')
+    usage = i18n_deferred('core.commands.list.usage')
 
     @override
     def declare(self) -> None:
-        self.register_option('server', str, description=i18n_text('core.commands.list.option_server'))
+        self.register_option('server', str, description=i18n_deferred('core.commands.list.option_server'))
 
     @override
     async def handler(self, server: Match[str]):

@@ -8,14 +8,14 @@ from nonebot_plugin_uninfo import Uninfo
 
 from Core.Config import config
 from Core.Extension import Command, Extension, SubCommand, extension_manager
-from Core.I18n import i18n_text, text
+from Core.I18n import i18n_deferred, text
 from Core.Logging import exception_logger, logger
 from Core.Managers import config_manager, version_manager
 from Core.Process import is_watchdog_process, request_restart
 from Core.Utils import get_permission, turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Bot', name=i18n_text('builtin.bot.name'), version='1.0.0', types=('command',))
+extension = Extension(id='Bot', name=i18n_deferred('builtin.bot.name'), version='1.0.0', types=('command',))
 
 # 固定链接与群号信息（语言无关，文案模板见消息包 [commands.bot]）
 _DOCUMENT_URL = 'https://bot.mcjpg.dev/'
@@ -28,8 +28,8 @@ class BotCommand(Command):
     """管理机器人（超级用户 / 关于信息 / 检查更新 / 更新 / 重启）。"""
 
     name = 'bot'
-    description = i18n_text('core.commands.bot.description')
-    usage = i18n_text('core.commands.bot.usage')
+    description = i18n_deferred('core.commands.bot.description')
+    usage = i18n_deferred('core.commands.bot.usage')
 
     # ===== 公用处理函数（被多个子命令共用，定义在父命令类下） =====
 
@@ -53,7 +53,7 @@ class BotCommand(Command):
         """管理超级用户。"""
 
         name = 'superusers'
-        description = i18n_text('core.commands.bot.superusers_desc')
+        description = i18n_deferred('core.commands.bot.superusers_desc')
 
         def update_superusers(self, target: At | str, remove: bool) -> str:
             """增删超级用户：写回 .env 持久化并热更新内存。"""
@@ -81,11 +81,11 @@ class BotCommand(Command):
             """添加超级用户。"""
 
             name = 'add'
-            description = i18n_text('core.commands.bot.superusers_add_desc')
+            description = i18n_deferred('core.commands.bot.superusers_add_desc')
 
             @override
             def declare(self) -> None:
-                self.register_arg('target', At | str, description=i18n_text('core.commands.bot.target_arg'))
+                self.register_arg('target', At | str, description=i18n_deferred('core.commands.bot.target_arg'))
 
             @override
             async def handler(self, session: Uninfo, target: At | str):
@@ -97,11 +97,11 @@ class BotCommand(Command):
             """移除超级用户。"""
 
             name = 'remove'
-            description = i18n_text('core.commands.bot.superusers_remove_desc')
+            description = i18n_deferred('core.commands.bot.superusers_remove_desc')
 
             @override
             def declare(self) -> None:
-                self.register_arg('target', At | str, description=i18n_text('core.commands.bot.target_arg'))
+                self.register_arg('target', At | str, description=i18n_deferred('core.commands.bot.target_arg'))
 
             @override
             async def handler(self, session: Uninfo, target: At | str):
@@ -113,8 +113,8 @@ class BotCommand(Command):
         """查看关于信息。"""
 
         name = 'about'
-        description = i18n_text('core.commands.bot.about_desc')
-        usage = i18n_text('core.commands.bot.about_usage')
+        description = i18n_deferred('core.commands.bot.about_desc')
+        usage = i18n_deferred('core.commands.bot.about_usage')
 
         @override
         async def handler(self):
@@ -140,7 +140,7 @@ class BotCommand(Command):
         """检测是否有新版本。"""
 
         name = 'check'
-        description = i18n_text('core.commands.bot.check_desc')
+        description = i18n_deferred('core.commands.bot.check_desc')
 
         @override
         async def handler(self):
@@ -169,7 +169,7 @@ class BotCommand(Command):
         """从 GitHub Release 更新机器人到最新版本。"""
 
         name = 'update'
-        description = i18n_text('core.commands.bot.update_desc')
+        description = i18n_deferred('core.commands.bot.update_desc')
 
         @override
         async def handler(self, session: Uninfo):
@@ -192,7 +192,7 @@ class BotCommand(Command):
         """重启机器人。"""
 
         name = 'restart'
-        description = i18n_text('core.commands.bot.restart_desc')
+        description = i18n_deferred('core.commands.bot.restart_desc')
 
         @override
         async def handler(self, session: Uninfo):
@@ -211,7 +211,7 @@ class BotCommand(Command):
         """热重载扩展。"""
 
         name = 'reload'
-        description = i18n_text('core.commands.bot.reload_desc')
+        description = i18n_deferred('core.commands.bot.reload_desc')
 
         @override
         async def handler(self, session: Uninfo):

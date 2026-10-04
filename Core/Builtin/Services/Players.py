@@ -10,12 +10,12 @@ from typing import Any, TypedDict, override
 
 from Core.Config import config
 from Core.Extension import Extension, Service
-from Core.I18n import i18n_text
+from Core.I18n import i18n_deferred
 from Core.RuntimeState import runtime_state
 
 # 创建唯一扩展实例，能力经实例装饰器登记
 # 内置扩展数据存储指向 Data 根目录，Player 扩展读写 `Player.json`
-extension = Extension(id='Players', name=i18n_text('builtin.players.name'), version='1.0.0', types=('api',))
+extension = Extension(id='Players', name=i18n_deferred('builtin.players.name'), version='1.0.0', types=('api',))
 
 # 玩家绑定数据文件名（位于 Data 根目录）
 DATA_FILE = 'Players.json'

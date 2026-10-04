@@ -1,15 +1,16 @@
 """
 语言包加载（Infrastructure 层）：读取磁盘上的语言包并注册进 I18n 引擎。
 
-引擎（Core/I18n）自身不读写磁盘；本模块负责：
-- 系统层：`Core/Locales/System.{zh,en}.toml`（只读，系统指令与扩展/插件名称）→ `core.commands.bot` / `builtin.*`
-- 消息层：`Core/Locales/Messages.{zh,en}.toml`（用户可改）→ `core.events` / `core.commands.*` / `api.*`
+引擎（`Core/I18n/Engine`）自身不读写磁盘；本模块负责：
+- 系统层：`Core/Locales/System.{zh,en}.toml`（只读）→ `core.commands.bot.*` / `builtin.*` / `api.*`
+- 消息层：`Core/Locales/Messages.{zh,en}.toml`（用户可改）→ `core.events` / `core.commands.*`
 - 覆盖层：`Core/Locales/Messages.{zh,en}.toml` 中用户改写的键（与消息层同文件，System 键被忽略）
 - 扩展语言包：`Extensions/<id>/Locales/{zh,en}.toml` → `ext.<id>.*`
 
 热切换语言或保存消息文案后重新调用 `register_all()` 即可（引擎整体重建）。
-System 与 Messages 使用同一份磁盘文件（`Core/Locales/Messages.<lang>.toml`）：其中 `core.commands.bot`
-与 `builtin.*` 为系统键（写入被忽略），其余为用户可改键。
+`register_all()` 末尾把**消息语言**对齐 `Config.toml` 的 `language`（界面语言 `api.*` 由
+WebUI 每请求 `Accept-Language` 单独控制，见 `Core/Web/Locale.py`）。
+System 文件中的键（`core.commands.bot.*` / `builtin.*` / `api.*`）均为系统键（写入被忽略）。
 """
 
 from __future__ import annotations
@@ -21,9 +22,10 @@ import tomlkit
 
 from Core.Config import config
 from Core.Constants import MESSAGE_PATHS, SYSTEM_PATHS
-from Core.I18n import i18n
-from Core.I18n.Context import SUPPORTED_LANGUAGES, set_locale
 from Core.Logging import logger
+
+from .Engine import i18n
+from .Engine.Context import SUPPORTED_LANGUAGES, set_messages_locale
 
 
 def _read_toml(path: Path) -> dict[str, Any]:
@@ -50,21 +52,12 @@ def _load_messages() -> None:
     tables = {language: _read_toml(MESSAGE_PATHS[language]) for language in SUPPORTED_LANGUAGES}
     i18n.register_messages(tables)
     for language in SUPPORTED_LANGUAGES:
-        path = MESSAGE_PATHS[language]
-        if not path.exists():
-            continue
-        i18n.load_override(language, tables[language], path.read_text('Utf-8'))
+        i18n.load_override(language, tables[language])
 
 
 def _sync_locale() -> None:
-    """把当前语言上下文对齐 Config.toml 的 language 字段。"""
-    set_locale(config.language)
-
-
-def read_override(language: str) -> str:
-    """读取用户可改语言包原始文本（供 WebUI 消息编辑器展示）。"""
-    path = MESSAGE_PATHS.get(language, MESSAGE_PATHS['zh'])
-    return path.read_text('Utf-8') if path.exists() else ''
+    """把当前消息语言上下文对齐 Config.toml 的 language 字段（界面语言不受影响）。"""
+    set_messages_locale(config.language)
 
 
 def write_override(language: str, content: str) -> None:

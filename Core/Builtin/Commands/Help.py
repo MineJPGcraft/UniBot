@@ -5,11 +5,11 @@ from typing import override
 from nonebot_plugin_alconna import Match
 
 from Core.Extension import Command, Extension, command_manager
-from Core.I18n import i18n_text, text
+from Core.I18n import i18n_deferred, text
 from Core.Utils import turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Help', name=i18n_text('builtin.help.name'), version='1.0.0', types=('command',))
+extension = Extension(id='Help', name=i18n_deferred('builtin.help.name'), version='1.0.0', types=('command',))
 
 
 def get_enabled_nodes() -> list[Command]:
@@ -108,12 +108,12 @@ class HelpCommand(Command):
     """查看所有可用命令的帮助信息。"""
 
     name = 'help'
-    description = i18n_text('core.commands.help.description')
-    usage = i18n_text('core.commands.help.usage')
+    description = i18n_deferred('core.commands.help.description')
+    usage = i18n_deferred('core.commands.help.usage')
 
     @override
     def declare(self) -> None:
-        self.register_option('command', str, description=i18n_text('core.commands.help.option_command'))
+        self.register_option('command', str, description=i18n_deferred('core.commands.help.option_command'))
 
     @override
     async def handler(self, command: Match[str]):

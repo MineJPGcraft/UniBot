@@ -116,7 +116,7 @@ def test_core_constants_is_dependency_free():
 
 
 def test_i18n_engine_is_dependency_free():
-    """I18n 引擎位于 Foundation 层：不得 import Core.Config/Managers/Web/... 等业务模块（不读磁盘、不反向依赖）。"""
+    """I18n 引擎（`Core/I18n/Engine`）位于 Foundation 层：不得 import Core.Config/Managers/Web/... 等业务模块（不读磁盘、不反向依赖）。"""
     forbidden = (
         'Core.Config',
         'Core.Managers',
@@ -124,14 +124,14 @@ def test_i18n_engine_is_dependency_free():
         'Core.Web',
         'Core.Builtin',
         'Core.Platforms',
-        'Core.LocaleLoader',
+        'Core.I18n.Loader',
     )
     offenders: list[str] = []
-    for path in (CORE_DIR / 'I18n').rglob('*.py'):
+    for path in (CORE_DIR / 'I18n' / 'Engine').rglob('*.py'):
         if '__pycache__' in path.parts:
             continue
         offenders.extend(module for module in _iter_imported_modules(path) if _matches(module, forbidden))
-    assert not offenders, f'Core.I18n must not import Core business modules: {offenders}'
+    assert not offenders, f'Core.I18n.Engine must not import Core business modules: {offenders}'
 
 
 def test_manifest_does_not_import_extension():

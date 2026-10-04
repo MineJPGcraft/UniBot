@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Request
 from Core.Config import CONFIG_TOML_PATH, Config, config, reload_config, validate_config_content
 from Core.Constants import BUILTIN_PLUGIN_PREFIX, TaskKind, UserRole
 from Core.Extension.Runtime.Dependencies import apply_main_dependency_changes
-from Core.LocaleLoader import register_all
+from Core.I18n import register_all
 from Core.Managers import config_manager, plugin_registry, task_center
 from Core.Managers.TaskCenter import TaskContext
 from Core.Web.Locale import text

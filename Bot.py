@@ -153,7 +153,7 @@ def main():
     """初始化并运行机器人进程。"""
     # NoneBot 初始化必须在本地模块导入之前完成。
     from Core.Config import config as bot_config
-    from Core.LocaleLoader import register_all as register_locales
+    from Core.I18n import register_all as register_locales
     from Core.Managers import config_manager, plugin_registry
     from Scripts.migrate_messages import run_startup_migrations
 

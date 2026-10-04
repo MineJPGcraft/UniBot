@@ -7,12 +7,12 @@ from nonebot_plugin_uninfo import Uninfo
 
 from Core.Config import config
 from Core.Extension import Command, Extension
-from Core.I18n import i18n_text, text
+from Core.I18n import i18n_deferred, text
 from Core.RuntimeState import runtime_state
 from Core.Utils import get_permission, strip_minecraft_color, turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Command', name=i18n_text('builtin.command.name'), version='1.0.0', types=('command',))
+extension = Extension(id='Command', name=i18n_deferred('builtin.command.name'), version='1.0.0', types=('command',))
 
 
 @extension.register_command
@@ -20,13 +20,13 @@ class CommandCommand(Command):
     """向指定服务器发送控制台命令。"""
 
     name = 'command'
-    description = i18n_text('core.commands.command.description')
-    usage = i18n_text('core.commands.command.usage')
+    description = i18n_deferred('core.commands.command.description')
+    usage = i18n_deferred('core.commands.command.usage')
 
     @override
     def declare(self) -> None:
-        self.register_arg('server', str, description=i18n_text('core.commands.command.arg_server'))
-        self.register_arg('command', str, description=i18n_text('core.commands.command.arg_command'), multi=True)
+        self.register_arg('server', str, description=i18n_deferred('core.commands.command.arg_server'))
+        self.register_arg('command', str, description=i18n_deferred('core.commands.command.arg_command'), multi=True)
 
     @override
     async def handler(self, session: Uninfo, server: Match[str], command: Match[list[str]]):
