@@ -39,8 +39,10 @@ UniBot
 │   │   ├── Runtime/              # Runtime engine: Manager (top-level composer) / Loader / Dependencies at root
 │   │   │   ├── Registries/       # Pure registries for the five extension types (extension/service/command/renderer/template/resources) + Bundle
 │   │   │   └── Managers/         # Per-type managers (Command / Service / Renderer)
-│   │   └── Market/               # Extension market: registry models and install/uninstall transactions
-│   ├── I18n/                     # Unified I18n engine
+│   │   └── Market/               # Extension market: Models (data shapes) / Manager (cache, extraction, install/uninstall transactions)
+│   ├── I18n/                     # Unified I18n subsystem (Engine + Loader)
+│   │   ├── Engine/               # Pure engine (Foundation, zero-dependency, no disk I/O)
+│   │   └── Loader.py             # Locale disk loading (Infrastructure)
 │   ├── Locales/                  # Language packs (System read-only / Messages editable)
 │   ├── Web/                      # WebUI REST API routes
 │   │   ├── Auth.py               # Login authentication (JWT / Cookie)
@@ -57,7 +59,6 @@ UniBot
 │   ├── Builtin/                  # Built-in commands / services / plugins / locales
 │   ├── Config.py                 # Config model definitions
 │   ├── RuntimeState.py           # Runtime shared state singleton
-│   ├── LocaleLoader.py           # Locale disk loading
 │   ├── Network.py                # Network request utilities
 │   └── Utils.py                  # Utility functions
 ├── Extensions/                   # Extension packages (local / marketplace)

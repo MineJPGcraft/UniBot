@@ -218,6 +218,8 @@ unsupported_version = "扩展 {id} 不支持当前 UniBot 版本 {version}，没
 install_success = "扩展 {id} 已安装版本 {version}，重启后生效"
 install_failed_reason = "扩展安装失败：{error}"
 install_compatible_fallback = "扩展 {id} 的最新版本 {latest} 与当前 UniBot 版本不兼容，已自动安装兼容的历史版本 {version}"
+uninstall_success = "扩展 {id} 已卸载，重启后生效"
+uninstall_local_refused = "扩展 {id} 是本地扩展，不允许卸载"
 
 [api.studio]
 downloaded = "Studio 已下载"

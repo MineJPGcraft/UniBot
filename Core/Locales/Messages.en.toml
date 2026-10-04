@@ -218,6 +218,8 @@ unsupported_version = "Extension {id} does not support the current UniBot versio
 install_success = "Extension {id} installed at version {version}, effective after restart"
 install_failed_reason = "Extension installation failed: {error}"
 install_compatible_fallback = "The latest version {latest} of extension {id} is incompatible with the current UniBot version; compatible version {version} was installed instead"
+uninstall_success = "Extension {id} uninstalled, effective after restart"
+uninstall_local_refused = "Extension {id} is a local extension and cannot be uninstalled"
 
 [api.studio]
 downloaded = "Studio is already downloaded"

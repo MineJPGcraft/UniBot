@@ -48,10 +48,10 @@ async def run_extension_install_task(context: TaskContext, extension_id: str, ve
 async def run_extension_uninstall_task(context: TaskContext, extension_id: str, name: str) -> str:
     """任务体：卸载扩展 → 移除不再需要的依赖 → 热重载使其从注册表移除。"""
     context.set_message('task_center.msg_uninstalling_extension', name=name)
-    success, message = await market_manager.uninstall(extension_id)
-    if not success:
-        raise RuntimeError(message)
-    context.log(message)
+    result = await market_manager.uninstall(extension_id)
+    if not result.success:
+        raise RuntimeError(text(result.msg_key, **result.msg_params))
+    context.log(text(result.msg_key, **result.msg_params))
 
     context.set_message('task_center.msg_syncing_dependencies')
     await sync_extension_dependencies(context.log)
@@ -145,8 +145,8 @@ async def get_extensions(current_user: dict = Depends(get_current_user)):
 @router.get('/market', summary='扩展市场列表')
 async def get_market(force: bool = False, current_user: dict = Depends(get_current_user)):
     """获取扩展市场注册表（带缓存），支持 force 强制刷新。"""
-    data = await market_manager.fetch_market(force=force)
-    return {'code': 0, 'data': data, 'message': 'ok'}
+    views = await market_manager.fetch_market(force=force)
+    return {'code': 0, 'data': views, 'message': 'ok'}
 
 
 @router.post('/market/install', summary='从市场安装扩展')
@@ -189,15 +189,7 @@ async def get_market_releases(extension_id: str, current_user: dict = Depends(ge
         'data': {
             'id': extension_id,
             'unibot_version': get_unibot_version(),
-            'releases': [
-                {
-                    'version': item.version,
-                    'unibot_version': item.unibot_version,
-                    'compatible': item.compatible,
-                    'installed': item.installed,
-                }
-                for item in releases
-            ],
+            'releases': releases,
         },
         'message': 'ok',
     }

@@ -39,8 +39,10 @@ UniBot
 │   │   ├── Runtime/              # 运行时引擎：Manager（顶层组合器）/ Loader / Dependencies 在根
 │   │   │   ├── Registries/       # 五类扩展的纯注册容器（extension/service/command/renderer/template/resources）+ Bundle
 │   │   │   └── Managers/         # 各类型管理器（Command / Service / Renderer）
-│   │   └── Market/               # 扩展市场：注册表模型与安装卸载事务
-│   ├── I18n/                     # 统一 I18n 引擎
+│   │   └── Market/               # 扩展市场：Models（数据形状）/ Manager（缓存、解压与安装卸载事务）
+│   ├── I18n/                     # 统一 I18n 子系统（Engine 引擎 + Loader 磁盘加载）
+│   │   ├── Engine/               # 纯引擎（Foundation，零依赖、不读磁盘）
+│   │   └── Loader.py             # 语言包磁盘加载（Infrastructure）
 │   ├── Locales/                  # 语言包（System 只读 / Messages 可改，见配置说明）
 │   ├── Web/                      # WebUI REST API 路由
 │   │   ├── Auth.py               # 登录认证（JWT / Cookie）
@@ -57,7 +59,6 @@ UniBot
 │   ├── Builtin/                  # 内置命令 / 服务 / 插件 / 语言包
 │   ├── Config.py                 # 配置模型定义
 │   ├── RuntimeState.py           # 运行期共享状态单例
-│   ├── LocaleLoader.py           # 语言包磁盘加载
 │   ├── Network.py                # 网络请求工具
 │   └── Utils.py                  # 工具函数
 ├── Extensions/                   # 扩展包（本地 / 市场）

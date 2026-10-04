@@ -34,6 +34,8 @@ MANIFEST_FILE = 'Extension.toml'
 CONFIG_EXTENSIONS_FILE = Path('Config') / 'Extensions.toml'
 # NoneBot 插件登记与启停的运行时存储（替代 pyproject.toml 的 [tool.nonebot].plugins）
 CONFIG_PLUGINS_FILE = Path('Config') / 'Plugins.toml'
+# 扩展安装状态（来源/版本/sha256/依赖归属，由框架独占维护）
+STATES_PATH = DATA_DIR / 'Extension' / 'States.toml'
 # 市场数据缓存时长（秒），插件市场与扩展市场共用同一刷新周期
 MARKET_CACHE_TTL = 600
 

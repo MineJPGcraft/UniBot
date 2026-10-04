@@ -11,7 +11,7 @@ from pathlib import Path
 
 from Core.Config import config
 from Core.Constants import EXTENSIONS_DIR, MANIFEST_FILE
-from Core.LocaleLoader import register_extension_locales, unregister_extension_locales
+from Core.I18n import register_extension_locales, unregister_extension_locales
 from Core.Logging import exception_logger, logger
 
 from ..Command import BUILTIN_PREFIX
@@ -50,8 +50,6 @@ from .Registries import ExtensionRegistries
 BUILTIN_DIR = Path(__file__).parent.parent.parent / 'Builtin'
 CONFIG_ROOT = Path('Config') / 'Extensions'
 DATA_ROOT = Path('Data') / 'Exs'
-STATES_ROOT = Path('Data') / 'Extension'
-STATES_FILE = 'States.toml'
 
 
 @dataclass

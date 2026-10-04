@@ -5,7 +5,7 @@
   `Command`、`Service`、`Renderer`、`Errors`、`Manifest`、`Storage`、`TemplateConfig`
 - `Runtime/`：运行时引擎——`Loader`、`Dependencies`，另含两个组件子包：
   `Registries/`（五类扩展的纯注册容器）与 `Managers/`（对应管理器与编排）
-- `Market/`：扩展市场——`Market`、`MarketManager`
+- `Market/`：扩展市场——`Models.py`（数据形状）+ `Manager.py`（缓存、解压与安装/卸载事务 + `market_manager`）
 
 依赖方向严格单向：根 → `Runtime/` → `Market/`（由 `tests/test_architecture.py` 锁定）。
 运行时组件由 `ExtensionManager` 创建后按引用传入 `ExtensionLoader`，不使用回调注入。
@@ -16,7 +16,7 @@
 
 from nonebot_plugin_alconna import Match
 
-from Core.Constants import CONFIG_EXTENSIONS_FILE, EXTENSIONS_DIR, MANIFEST_FILE
+from Core.Constants import CONFIG_EXTENSIONS_FILE, EXTENSIONS_DIR, MANIFEST_FILE, STATES_PATH
 
 from .Command import (
     UNSET,
@@ -51,13 +51,15 @@ from .Manifest import (
     parse_manifest,
     set_unibot_version,
 )
-from .Market.Market import (
+from .Market import (
     ExtensionInstallState,
+    ExtensionMarketManager,
     MarketExtension,
+    MarketOperationResult,
     MarketRelease,
     extract_market_package,
+    market_manager,
 )
-from .Market.MarketManager import ExtensionMarketManager, InstallResult, MarketReleaseOption, market_manager
 from .Renderer import (
     FONT_PATH,
     RESOURCES_DIR,
@@ -71,8 +73,6 @@ from .Runtime.Loader import (
     BUILTIN_DIR,
     CONFIG_ROOT,
     DATA_ROOT,
-    STATES_FILE,
-    STATES_ROOT,
     ExtensionLoader,
 )
 from .Runtime.Manager import ExtensionManager, extension_manager
@@ -122,13 +122,12 @@ __all__ = [
     'CONFIG_EXTENSIONS_FILE',
     'EXTENSIONS_DIR',
     'MANIFEST_FILE',
+    'STATES_PATH',
     # Loader
     'BUILTIN_DIR',
     'CONFIG_ROOT',
     'DATA_ROOT',
     'ExtensionLoader',
-    'STATES_FILE',
-    'STATES_ROOT',
     # Manager
     'ExtensionManager',
     'extension_manager',
@@ -138,13 +137,11 @@ __all__ = [
     'ServiceRegistry',
     # Market
     'ExtensionInstallState',
+    'ExtensionMarketManager',
     'MarketExtension',
+    'MarketOperationResult',
     'MarketRelease',
     'extract_market_package',
-    # MarketManager
-    'ExtensionMarketManager',
-    'InstallResult',
-    'MarketReleaseOption',
     'market_manager',
     # Service
     'Service',
