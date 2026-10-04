@@ -19,6 +19,7 @@ from typing import Any
 
 import tomlkit
 
+from Core.Config import config
 from Core.Constants import MESSAGE_PATHS, SYSTEM_PATHS
 from Core.I18n import i18n
 from Core.I18n.Context import SUPPORTED_LANGUAGES, set_locale
@@ -56,9 +57,7 @@ def _load_messages() -> None:
 
 
 def _sync_locale() -> None:
-    """把当前语言上下文对齐 Config.toml 的 language 字段（引擎不反向依赖 Config）。"""
-    from Core.Config import config
-
+    """把当前语言上下文对齐 Config.toml 的 language 字段。"""
     set_locale(config.language)
 
 

@@ -7,7 +7,8 @@ from Core.Constants import CONFIG_TOML_PATH
 
 class ImageConfig(BaseModel):
     mode: bool = False
-    renderer: str = ''  # 当前使用的渲染引擎 name，空表示未选择（渲染时回退默认引擎）
+    # 当前使用的渲染引擎 name（大小写不敏感）；留空时按模板声明的渲染引擎自动协商
+    renderer: str = ''
     template: str = 'Default'  # 当前模板包（template 扩展 id，'Default' = 内置默认模板）
     font: str = ''  # 自定义字体文件路径；留空自动从资源扩展根目录查找 Font.ttf
 

@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Request
 from Core.Config import CONFIG_TOML_PATH, Config, config, reload_config, validate_config_content
 from Core.Constants import BUILTIN_PLUGIN_PREFIX, TaskKind, UserRole
 from Core.Extension.Runtime.Dependencies import apply_main_dependency_changes
+from Core.LocaleLoader import register_all
 from Core.Managers import config_manager, plugin_registry, task_center
 from Core.Managers.TaskCenter import TaskContext
 from Core.Web.Locale import text
@@ -90,9 +91,6 @@ def _apply_language_change(previous_language: str) -> str | None:
     if config.language == previous_language:
         return None
     try:
-        # 函数内导入：Core.LocaleLoader 顶层会触发 Core.Config 加载，避免进入早期导入链
-        from Core.LocaleLoader import register_all
-
         register_all()
     except FileNotFoundError as error:
         config.language = previous_language

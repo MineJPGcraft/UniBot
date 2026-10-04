@@ -33,11 +33,7 @@ def _isolate_extension_manager():
     from Core.Extension import command_manager, extension_manager
 
     extension_manager.reset()
-    command_manager._commands.clear()
-    command_manager._built = False
-    command_manager._matchers = []
+    command_manager.clear()
     yield
     extension_manager.reset()
-    command_manager._commands.clear()
-    command_manager._built = False
-    command_manager._matchers = []
+    command_manager.clear()

@@ -304,7 +304,7 @@ async def get_extension_config(extension_id: str, current_user: dict = Depends(g
     extension = extension_manager.registry.get(extension_id)
     if extension is not None:
         return {'code': 0, 'data': _mask_config(extension), 'message': 'ok'}
-    registration = extension_manager.renderer_manager.templates.get(extension_id)
+    registration = extension_manager.templates.get(extension_id)
     if registration is not None:
         return {'code': 0, 'data': registration.config_store.value.model_dump(), 'message': 'ok'}
     raise HTTPException(status_code=404, detail=text('extensions.not_found', extension_id=extension_id))
@@ -323,7 +323,7 @@ async def patch_extension_config(extension_id: str, request: Request, user: dict
         except Exception as error:
             return {'code': 1, 'data': None, 'message': text('extensions.config_invalid', error=error)}
         return {'code': 0, 'data': None, 'message': 'ok'}
-    registration = extension_manager.renderer_manager.templates.get(extension_id)
+    registration = extension_manager.templates.get(extension_id)
     if registration is not None:
         try:
             current = registration.config_store.value.model_dump(mode='json')
@@ -457,6 +457,7 @@ async def get_render_configs(current_user: dict = Depends(get_current_user)):
                 'name': display_name or extension_id,
                 'current': extension_id == config.image.template,
                 'available': True,
+                'support_renders': list(registration.support_renders),
                 'state': registry_extension.state.value if registry_extension else 'enabled',
                 'reason': registry_extension.failure_reason if registry_extension else None,
                 'schema': registration.config_model.model_json_schema(),
@@ -486,10 +487,14 @@ async def switch_renderer(body: NameSwitchRequest, user: dict = Depends(require_
 
 @router.get('/templates', summary='可用模板列表')
 async def get_templates(current_user: dict = Depends(get_current_user)):
-    """返回可用模板包列表（含当前选中）。"""
+    """返回可用模板包列表（含当前选中与声明的渲染引擎）。"""
     templates = [
-        {'name': template_id, 'current': template_id == config.image.template}
-        for template_id in extension_manager.templates
+        {
+            'name': template_id,
+            'current': template_id == config.image.template,
+            'support_renders': list(registration.support_renders),
+        }
+        for template_id, registration in extension_manager.templates.items()
     ]
     return {'code': 0, 'data': templates, 'message': 'ok'}
 

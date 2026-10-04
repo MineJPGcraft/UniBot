@@ -27,8 +27,8 @@ from Core.Network import github_download, request
 
 from ..Errors import ExtensionError, ManifestError
 from ..Manifest import get_unibot_version, is_unibot_compatible, parse_manifest, validate_unibot_constraint
-from .Loader import EXTENSIONS_DIR, STATES_FILE, STATES_ROOT
-from .Manager import extension_manager
+from ..Runtime.Loader import EXTENSIONS_DIR, STATES_FILE, STATES_ROOT
+from ..Runtime.Manager import extension_manager
 from .Market import (
     ExtensionInstallState,
     MarketExtension,
@@ -229,7 +229,11 @@ class ExtensionMarketManager:
                 {'id': extension_id, 'version': release.version},
                 version=release.version,
                 warning_key=warning_key,
-                warning_params={'id': extension_id, 'version': release.version, 'latest': latest.version if latest else ''},
+                warning_params={
+                    'id': extension_id,
+                    'version': release.version,
+                    'latest': latest.version if latest else '',
+                },
             )
         except ManifestError as error:
             return InstallResult(False, 'extensions.install_failed_reason', {'error': str(error)}, error=str(error))

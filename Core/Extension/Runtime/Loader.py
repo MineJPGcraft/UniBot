@@ -8,28 +8,23 @@ import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
+from Core.Config import config
 from Core.Constants import EXTENSIONS_DIR, MANIFEST_FILE
+from Core.LocaleLoader import register_extension_locales, unregister_extension_locales
 from Core.Logging import exception_logger, logger
 
-if TYPE_CHECKING:
-    from .Host import ExtensionHost
-
-from ..Base import (
-    Extension,
-    ExtensionMetadata,
-    ExtensionState,
-)
-from ..Command import (
-    BUILTIN_PREFIX,
-    command_manager,
-)
+from ..Command import BUILTIN_PREFIX
 from ..Errors import (
     CompatibilityError,
     DependencyError,
     LoadError,
     ManifestError,
+)
+from ..Extension import (
+    Extension,
+    ExtensionMetadata,
+    ExtensionState,
 )
 from ..Manifest import (
     _CODE_TYPES,
@@ -40,17 +35,16 @@ from ..Manifest import (
     parse_manifest,
     validate_unibot_constraint,
 )
-from ..Renderer import (
-    RendererRegistry,
-    TemplateRegistration,
-)
-from ..Service import ServiceRegistry
+from ..Renderer import TemplateRegistration
 from ..Storage import (
     ExtensionConfigStore,
     ExtensionDataStore,
 )
 from ..TemplateConfig import build_template_config_model
 from .Dependencies import is_extension_enabled, load_enabled_config
+from .Managers.Command import command_manager
+from .Managers.Renderer import RendererManager
+from .Registries import ExtensionRegistries
 
 # 内置内容目录（框架包内随代码分发）：Core/Builtin/Commands|Services
 BUILTIN_DIR = Path(__file__).parent.parent.parent / 'Builtin'
@@ -78,8 +72,10 @@ class DiscoveredExtension:
 class ExtensionLoader:
     """扫描、校验、排序并加载扩展。"""
 
-    def __init__(self, manager: ExtensionHost) -> None:
-        self.manager = manager
+    def __init__(self, registries: ExtensionRegistries, renderer_manager: RendererManager) -> None:
+        # 注册容器与渲染管理器按引用共享（由 ExtensionManager 创建并持有）
+        self._registries = registries
+        self._renderer_manager = renderer_manager
         # 发现的扩展元信息：id -> DiscoveredExtension
         self._discovered: dict[str, DiscoveredExtension] = {}
         # 已加载的扩展实例（按拓扑顺序）
@@ -125,9 +121,7 @@ class ExtensionLoader:
         targets = [
             name
             for name in sys.modules
-            if name.startswith('Extensions.')
-            or name == 'Core.Builtin'
-            or name.startswith('Core.Builtin.')
+            if name.startswith('Extensions.') or name == 'Core.Builtin' or name.startswith('Core.Builtin.')
         ]
         for name in targets:
             sys.modules.pop(name, None)
@@ -331,7 +325,9 @@ class ExtensionLoader:
                 continue
             self._load_extension(extension_id, info, blocked_reasons)
 
-    def _skip_before_import(self, extension_id: str, info: DiscoveredExtension, blocked_reasons: dict[str, str]) -> bool:
+    def _skip_before_import(
+        self, extension_id: str, info: DiscoveredExtension, blocked_reasons: dict[str, str]
+    ) -> bool:
         """
         处理「无需导入代码」的前置情形，命中返回 `True`。
 
@@ -346,7 +342,7 @@ class ExtensionLoader:
             self._register_display(extension_id, info, ExtensionState.disabled, '')
             return True
         # 图片模式未开启：渲染扩展不加载，避免 html2pic 等依赖未安装时导入失败
-        if not self.manager.image_mode_enabled() and ExtensionType.renderer in info.manifest.extension.types:
+        if not config.image.mode and ExtensionType.renderer in info.manifest.extension.types:
             self._register_display(extension_id, info, ExtensionState.disabled, '图片模式未开启，渲染扩展不加载')
             return True
         # 纯无代码扩展包（template/resources）：不导入入口、无 Extension 实例
@@ -387,7 +383,7 @@ class ExtensionLoader:
         if not self._try_commit_declarations(extension_id, extension, info, blocked_reasons):
             return
         self.extensions.append(extension)
-        self.manager.register_extension(extension_id, extension)
+        self._registries.extensions.register_extension(extension_id, extension)
         logger.success(f'Loaded extension <yellow>{extension_id} v{extension.metadata.version}</yellow>.')
 
     def _try_import(
@@ -440,21 +436,22 @@ class ExtensionLoader:
         builtin: bool = False,
     ) -> None:
         """
-        构建作用域受限的存储与注册入口并注入到扩展实例。
+        构建作用域受限的存储与服务注册入口并注入到扩展实例。
 
         内置扩展的数据存储直接指向 `Data` 根目录；用户扩展保持在
         `Data/Exs/<id>/`（DATA_ROOT）目录式存储下，避免与运行时数据目录混淆。
+        `api` 直接指向全局服务容器，登记时带 `owner_id` 以支持按扩展注销与启停。
         """
         assert extension.config_model is not None
-        api = ServiceRegistry(self.manager)
         config_store = ExtensionConfigStore(CONFIG_ROOT, extension_id, extension.config_model)
         data_store = ExtensionDataStore(Path('Data') if builtin else DATA_ROOT / extension_id)
         extension._bind(
-            api=api,
+            api=self._registries.services,
             data_store=data_store,
             config_store=config_store,
             metadata=ExtensionMetadata(manifest),
             builtin=builtin,
+            renderer_manager=self._renderer_manager,
         )
 
     def _find_blocked_dependency(self, extension_id: str, blocked_reasons: dict) -> str | None:
@@ -475,7 +472,7 @@ class ExtensionLoader:
         extension.state = state
         extension.builtin = info.builtin
         extension.failure_reason = reason if reason else None
-        self.manager.register_extension(extension_id, extension)
+        self._registries.extensions.register_extension(extension_id, extension)
 
     def _register_no_code_display(
         self,
@@ -486,7 +483,7 @@ class ExtensionLoader:
     ) -> None:
         """登记无代码扩展包（template/resources）的展示信息，不创建 Extension 实例。"""
         metadata = ExtensionMetadata(info.manifest)
-        self.manager.register_no_code_info(
+        self._registries.extensions.register_no_code_info(
             extension_id,
             {
                 'id': metadata.id,
@@ -505,18 +502,12 @@ class ExtensionLoader:
     @staticmethod
     def _register_locales(extension_id: str, info: DiscoveredExtension) -> None:
         """注册扩展语言包 Extensions/<id>/Locales/{zh,en}.toml → ext.<id>.*（无需代码）。"""
-        # 函数内导入：LocaleLoader 属 Infrastructure，避免 Loader 顶层耦合读取语言包
-        from Core.LocaleLoader import register_extension_locales
-
         locales_dir = info.directory / 'Locales'
         if locales_dir.is_dir():
             register_extension_locales(extension_id, locales_dir)
 
     def _unregister_extension_locales(self) -> None:
         """注销当前已加载扩展的语言包，避免热重载后残留旧文案。"""
-        # 函数内导入：LocaleLoader 属 Infrastructure，避免 Loader 顶层耦合读取语言包
-        from Core.LocaleLoader import unregister_extension_locales
-
         for extension in self.extensions:
             unregister_extension_locales(extension.id)
 
@@ -547,8 +538,9 @@ class ExtensionLoader:
             resource_ids=tuple(manifest.template.resources),
             config_model=config_model,
             config_store=config_store,
+            support_renders=tuple(manifest.template.support_renders),
         )
-        self.manager.register_template(registration)
+        self._renderer_manager.register_template(registration)
 
     def _commit_resources_package(self, extension_id: str, info: DiscoveredExtension) -> None:
         """校验资源根目录并注册 resources 扩展。"""
@@ -558,7 +550,7 @@ class ExtensionLoader:
             raise ManifestError(
                 f'resources extension {extension_id} root directory [{manifest.resources.root}] does not exist!'
             )
-        self.manager.register_resources(extension_id, resources_root)
+        self._renderer_manager.register_resources(extension_id, resources_root)
 
     @staticmethod
     def _import_extension(extension_id: str, info: DiscoveredExtension) -> Extension:
@@ -585,17 +577,16 @@ class ExtensionLoader:
         return extension
 
     def _commit_services(self, extension: Extension) -> None:
-        """实例化并提交装饰器声明的服务到扩展的 api 注册表。"""
+        """实例化并提交装饰器声明的服务到全局服务容器（带归属扩展）。"""
         for service_cls in extension.services:
             service = service_cls()
             name = getattr(service, 'name', '') or service_cls.__name__
-            extension.api.register(name, service)
+            extension.api.register(name, service, owner_id=extension.id)
 
     def _commit_renderers(self, extension: Extension) -> None:
         """实例化并提交装饰器声明的渲染器到全局注册表。"""
-        renderer_registry = RendererRegistry(self.manager)
         for renderer_cls in extension.renderers:
-            renderer_registry.register(renderer_cls())
+            self._renderer_manager.register(renderer_cls())
 
     def _commit_commands(self, extension_id: str, extension: Extension, *, builtin: bool = False) -> None:
         for command_cls in extension.commands:
@@ -603,19 +594,19 @@ class ExtensionLoader:
             if builtin:
                 # 记录内置命令类，供后续扩展判定是否覆盖内置
                 self._builtin_command_classes.add(command_cls)
-                command_manager.register_command(command, f'{BUILTIN_PREFIX}:{command.name}')
+                command_manager.register_command(command, f'{BUILTIN_PREFIX}:{command.name}', owner_id='builtin')
                 continue
             # 扩展命令：若继承自某个内置命令类，则判定为覆盖内置，以同名
             # command_id 取代内置定义；否则作为新增命令以 extension: 前缀注册
             if builtin_cls := self._find_builtin_override(command_cls):
                 command_id = f'{BUILTIN_PREFIX}:{command.name}'
-                command_manager.register_command(command, command_id, override=True)
+                command_manager.register_command(command, command_id, override=True, owner_id=extension_id)
                 logger.info(
                     f'扩展 {extension_id} 用 {command_cls.__name__} 覆盖内置命令 {builtin_cls.__name__}（{command_id}）！'
                 )
                 continue
             command_id = f'extension:{extension_id}:{command.name}'
-            command_manager.register_command(command, command_id)
+            command_manager.register_command(command, command_id, owner_id=extension_id)
 
     def _find_builtin_override(self, command_cls: type) -> type | None:
         """若命令类继承自某内置命令类，返回该内置类；否则返回 None。"""

@@ -10,10 +10,12 @@ from typing import TYPE_CHECKING, Any, Literal
 from packaging.specifiers import SpecifierSet
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from Core.I18n import DeferredText
+
 from .Errors import CompatibilityError, ManifestError
 
 if TYPE_CHECKING:
-    from .Base import Extension
+    from .Extension import Extension
 
 
 class ExtensionType(StrEnum):
@@ -64,9 +66,6 @@ class ExtensionMeta(BaseModel):
     @classmethod
     def _validate_name(cls, value: object) -> object:
         """name 必须是非空字符串或 DeferredText（延迟求值译文）。"""
-        # 函数内导入：避免 Manifest（Foundation）在模块加载期依赖 I18n 的导入顺序
-        from Core.I18n import DeferredText
-
         if isinstance(value, DeferredText):
             return value
         if isinstance(value, str) and value:
@@ -125,7 +124,17 @@ class TemplateConfig(BaseModel):
 
     entry: str = 'Templates'  # 模板根目录，固定相对于扩展包根目录
     resources: list[str] = []  # 可选 resources 扩展 id，按声明顺序组成资源查找范围
+    support_renders: list[str] = []  # 支持的渲染引擎 name 列表（必填非空，['*'] = 全部支持）
     config_schema: dict[str, TemplateFieldConfig] = Field(default_factory=dict)
+
+    @field_validator('support_renders')
+    @classmethod
+    def _validate_support_renders(cls, value: list[str]) -> list[str]:
+        """support_renders 每项去空格后必须非空。"""
+        normalized = [item.strip() for item in value]
+        if any(not item for item in normalized):
+            raise ValueError('support_renders entries must be non-empty strings!')
+        return normalized
 
 
 class ResourcesConfig(BaseModel):
@@ -151,9 +160,14 @@ class ExtensionManifest(BaseModel):
 
     @model_validator(mode='after')
     def _validate_types(self) -> ExtensionManifest:
-        """校验类型声明：代码能力与无代码类型可混用，renderer 必须声明名称。"""
+        """校验类型声明：代码能力与无代码类型可混用；renderer 必须声明名称，template 必须声明支持的渲染引擎。"""
         if ExtensionType.renderer in set(self.extension.types) and not self.renderer.name:
             raise ValueError('renderer extensions must declare name in the [renderer] section!')
+        if ExtensionType.template in set(self.extension.types) and not self.template.support_renders:
+            raise ValueError(
+                'template extensions must declare support_renders in the [template] section '
+                "(use ['*'] to allow all render engines)!"
+            )
         return self
 
 
@@ -175,6 +189,7 @@ class ExtensionMetadata:
         self.renderer_name = manifest.renderer.name
         self.template_entry = manifest.template.entry
         self.template_resources = list(manifest.template.resources)
+        self.support_renders = list(manifest.template.support_renders)
         self.template_config_schema = manifest.template.config_schema
         self.resources_root = manifest.resources.root
 
@@ -198,12 +213,13 @@ class ExtensionMetadata:
             'renderer': self.renderer_name,
             'template_entry': self.template_entry,
             'template_resources': self.template_resources,
+            'support_renders': self.support_renders,
             'resources_root': self.resources_root,
         }
 
 
 def parse_manifest(content: str) -> ExtensionManifest:
-    """解析 extension.toml 文本内容，返回严格校验后的清单。"""
+    """解析 Extension.toml 文本内容，返回严格校验后的清单。"""
     try:
         data = tomllib.loads(content)
     except Exception as error:

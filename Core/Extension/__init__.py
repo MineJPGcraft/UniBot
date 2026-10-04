@@ -1,13 +1,14 @@
-"""UniBot 扩展系统框架包（大部分模块置于本层，仅运行时引擎收进 `Runtime/`；包根统一 re-export）。
+"""UniBot 扩展系统框架包（根为定义层，`Runtime/` 与 `Market/` 为子包；包根统一 re-export）。
 
-布局：
-- 本层（`Core/Extension/`）：定义与基类模块——`Errors`、`Manifest`、`Storage`、
-  `TemplateConfig`、`Base`（Extension 基类/状态机）、`Command`、`Service`、`Renderer`
-- `Runtime/`：运行时引擎——`Host`（Protocol）、`Registry`、`Dependencies`、`Loader`、
-  `Manager`、`Market`、`MarketManager`
+布局（判据：扩展作者会不会 import 它——会则根，不会则子包）：
+- 根（`Core/Extension/`）：定义与基类——`Extension`（Extension 基类/状态机）、
+  `Command`、`Service`、`Renderer`、`Errors`、`Manifest`、`Storage`、`TemplateConfig`
+- `Runtime/`：运行时引擎——`Loader`、`Dependencies`，另含两个组件子包：
+  `Registries/`（五类扩展的纯注册容器）与 `Managers/`（对应管理器与编排）
+- `Market/`：扩展市场——`Market`、`MarketManager`
 
-依赖方向单向：`Runtime/` → 本层模块；本层不导入 `Runtime/` 实现
-（仅 `TYPE_CHECKING` 引用 `Host` 作类型注解）。
+依赖方向严格单向：根 → `Runtime/` → `Market/`（由 `tests/test_architecture.py` 锁定）。
+运行时组件由 `ExtensionManager` 创建后按引用传入 `ExtensionLoader`，不使用回调注入。
 
 注：顶层采用即时导入（包名与子模块名存在同名类，如 `Command`/`Service`，
 惰性导出会因子模块属性覆盖同名类而造成歧义，故此处保持即时导入）。
@@ -17,19 +18,13 @@ from nonebot_plugin_alconna import Match
 
 from Core.Constants import CONFIG_EXTENSIONS_FILE, EXTENSIONS_DIR, MANIFEST_FILE
 
-from .Base import (
-    Extension,
-    ExtensionState,
-)
 from .Command import (
     UNSET,
     Argument,
     Command,
-    CommandManager,
     Handler,
     ImageHandler,
     SubCommand,
-    command_manager,
 )
 from .Errors import (
     CommandError,
@@ -42,6 +37,10 @@ from .Errors import (
     ManifestError,
     StorageError,
 )
+from .Extension import (
+    Extension,
+    ExtensionState,
+)
 from .Manifest import (
     ExtensionManifest,
     ExtensionMetadata,
@@ -52,14 +51,19 @@ from .Manifest import (
     parse_manifest,
     set_unibot_version,
 )
+from .Market.Market import (
+    ExtensionInstallState,
+    MarketExtension,
+    MarketRelease,
+    extract_market_package,
+)
+from .Market.MarketManager import ExtensionMarketManager, InstallResult, MarketReleaseOption, market_manager
 from .Renderer import (
     FONT_PATH,
     RESOURCES_DIR,
     BaseRenderer,
     FileAsset,
     OnlineAsset,
-    RendererManager,
-    RendererRegistry,
     TemplateRegistration,
     encode_context,
 )
@@ -72,14 +76,9 @@ from .Runtime.Loader import (
     ExtensionLoader,
 )
 from .Runtime.Manager import ExtensionManager, extension_manager
-from .Runtime.Market import (
-    ExtensionInstallState,
-    MarketExtension,
-    MarketRelease,
-    extract_market_package,
-)
-from .Runtime.MarketManager import ExtensionMarketManager, InstallResult, MarketReleaseOption, market_manager
-from .Service import Service, ServiceRegistry
+from .Runtime.Managers import CommandManager, RendererManager, ServiceManager, command_manager
+from .Runtime.Registries import ExtensionRegistries, ServiceRegistry
+from .Service import Service
 from .Storage import (
     RESERVED_STATE_FILE,
     ExtensionConfigStore,
@@ -133,6 +132,10 @@ __all__ = [
     # Manager
     'ExtensionManager',
     'extension_manager',
+    # Managers / Registries
+    'ServiceManager',
+    'ExtensionRegistries',
+    'ServiceRegistry',
     # Market
     'ExtensionInstallState',
     'MarketExtension',
@@ -145,7 +148,6 @@ __all__ = [
     'market_manager',
     # Service
     'Service',
-    'ServiceRegistry',
     # Renderer
     'BaseRenderer',
     'FONT_PATH',
@@ -153,7 +155,6 @@ __all__ = [
     'OnlineAsset',
     'RESOURCES_DIR',
     'RendererManager',
-    'RendererRegistry',
     'TemplateRegistration',
     'build_template_config_model',
     'encode_context',

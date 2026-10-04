@@ -3,17 +3,21 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
 from pydantic import BaseModel, ConfigDict
 
+from Core.I18n import text as render
 from Core.Logging import logger
 
 from .Command import Command
 from .Errors import ExtensionError, ExtensionNotBoundError
 from .Manifest import ExtensionMetadata
-from .Service import ServiceRegistry
 from .Storage import ExtensionConfigStore, ExtensionDataStore
+
+if TYPE_CHECKING:
+    from .Runtime.Managers import RendererManager
+    from .Runtime.Registries import ServiceRegistry
 
 CommandClassT = TypeVar('CommandClassT', bound='Command')
 ServiceClassT = TypeVar('ServiceClassT')
@@ -113,6 +117,7 @@ class Extension(Generic[ConfigModelT]):
         self._config: ExtensionConfigStore[ConfigModelT] | None = None
         self._data: ExtensionDataStore | None = None
         self._api: ServiceRegistry | None = None
+        self._renderer_manager: RendererManager | None = None
         # 构造参数优先，缺省沿用类属性声明
         # 注意：id 通过 _declared_id 写入而非 id property，
         # 因为子类可能把 id 重新定义为只读 property（见测试 _GoodExt）
@@ -165,7 +170,12 @@ class Extension(Generic[ConfigModelT]):
 
     @property
     def api(self) -> ServiceRegistry:
-        """返回当前扩展的服务注册表，未绑定时抛出明确错误。"""
+        """
+        返回全局 API 服务容器，未绑定时抛出明确错误。
+
+        登记服务用 `self.api.register(name, service)`（容器自动记录归属扩展）；
+        获取其它扩展的服务用 `self.api.get(ServiceType或名称)`。
+        """
         self._require_bound()
         assert self._api is not None
         return self._api
@@ -209,8 +219,6 @@ class Extension(Generic[ConfigModelT]):
         `ext.<id>.hello.greeting`。扩展只需在 `Locales/{zh,en}.toml` 放翻译，
         无需接触任何 i18n API；用户可在 `Core/Locales/Messages.*.toml` 覆盖。
         """
-        from Core.I18n import text as render
-
         return render(f'ext.{self.id}.{key}', **kwargs)
 
     async def render_image(
@@ -224,21 +232,15 @@ class Extension(Generic[ConfigModelT]):
         """
         使用当前选中的模板包配置和渲染系统生成图片。
 
-            只做受控转发到框架注入的 `RendererManager`。模板包由核心
+            转发到绑定阶段注入的 `RendererManager`。模板包由核心
             `config.image.template` 选择，`template` 参数表示包内模板名称
             （如 `List`）。Jinja 上下文中的 `config` 始终来自当前 template
             包，与调用方代码扩展配置无关。
         """
         self._require_bound()
-        # 函数内导入：避免导入期循环依赖（Core.Extension 初始化顺序）
-        from Core.Extension import extension_manager
-
-        return await extension_manager.renderer_manager.render_image(
-            template,
-            size,
-            context=context,
-            renderer=renderer,
-        )
+        if self._renderer_manager is None:
+            raise ExtensionError(f'Extension {self.id} has no renderer manager bound!')
+        return await self._renderer_manager.render_image(template, size, context=context, renderer=renderer)
 
     # ===== 生命周期 =====
 
@@ -270,6 +272,7 @@ class Extension(Generic[ConfigModelT]):
         api: ServiceRegistry,
         *,
         builtin: bool = False,
+        renderer_manager: RendererManager | None = None,
     ) -> None:
         """Loader 一次性注入绑定能力；只能调用一次，扩展代码不得直接调用。"""
         if self._bound:
@@ -278,6 +281,7 @@ class Extension(Generic[ConfigModelT]):
         self._config = config_store
         self._data = data_store
         self._api = api
+        self._renderer_manager = renderer_manager
         self.builtin = builtin
         self._bound = True
 

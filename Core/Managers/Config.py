@@ -4,7 +4,9 @@ from pathlib import Path
 
 import tomlkit
 
+from Core.Config import config
 from Core.Constants import CONFIG_TOML_PATH, ENV_PATH, MESSAGE_PATHS, PYPROJECT_PATH
+from Core.LocaleLoader import write_override
 from Core.Logging import logger
 
 
@@ -190,9 +192,6 @@ class ConfigManager:
 
     def active_messages_path(self) -> Path:
         """获取当前配置语言的用户可改消息文件路径（Core/Locales/Messages.<language>.toml）。"""
-        # 函数内导入：Core.Config 顶层导入会进入早期加载链，延迟到调用时避免环
-        from Core.Config import config
-
         return MESSAGE_PATHS.get(config.language, MESSAGE_PATHS['zh'])
 
     def read_messages_raw(self) -> str:
@@ -202,10 +201,6 @@ class ConfigManager:
 
     def write_messages_raw(self, content: str):
         """校验并以原始文本写回当前语言覆盖层，写盘后热重载语言包。"""
-        # 函数内导入：避免进入 Config 早期加载链
-        from Core.Config import config
-        from Core.LocaleLoader import write_override
-
         write_override(config.language, content)
         logger.success('Message texts saved and reloaded.')
 

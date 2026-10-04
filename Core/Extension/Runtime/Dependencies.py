@@ -135,9 +135,7 @@ def get_enabled_extras() -> list[str]:
     except (OSError, tomllib.TOMLDecodeError):
         return []
     return [
-        extra
-        for extra, (section, field) in EXTRA_CONFIG_FIELDS.items()
-        if config.get(section, {}).get(field, False)
+        extra for extra, (section, field) in EXTRA_CONFIG_FIELDS.items() if config.get(section, {}).get(field, False)
     ]
 
 

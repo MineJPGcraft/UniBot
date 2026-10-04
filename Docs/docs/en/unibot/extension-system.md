@@ -102,6 +102,7 @@ name = "html2pic"                # Renderer name
 [template]                       # Template extensions only
 entry = "Templates"              # Template root directory (relative to the extension package root)
 resources = []                   # Optional resource extension IDs
+support_renders = ["*"]          # Supported renderer engine names (required, non-empty; ['*'] = all engines)
 
 [resources]                      # Resources extensions only
 root = "Resources"               # Resources root directory (relative to the extension package root)
@@ -228,6 +229,7 @@ template = "Default"         # Template package
 - Switching templates takes effect immediately, with no restart needed.
 - Switching rendering engines takes effect after restart; if the configured engine does not exist or is not selected, rendering will report an error.
 - Resources extensions are determined by the template's explicit `resources` dependency; when missing or out-of-bounds, the corresponding template is marked unavailable.
+- A template must declare supported rendering engines in `[template].support_renders` (names, case-insensitive); when the current engine is unsupported the framework switches to an installed, available engine from the declaration; `["*"]` means all engines are supported.
 
 ## Loading & Dependency Management
 

@@ -14,7 +14,7 @@ from Core.Extension.Runtime.Loader import DiscoveredExtension, ExtensionLoader
 
 def _bind_registry(extension: Extension) -> ServiceRegistry:
     """为生命周期测试建立最小服务注册表绑定。"""
-    registry = ServiceRegistry(extension_manager)
+    registry = extension_manager.service_manager.registry
     extension._api = registry
     extension._bound = True
     return registry
@@ -85,7 +85,7 @@ class _ServiceExt(Extension):
         super().__init__()
         self._ext_id = ext_id
         registry = _bind_registry(self)
-        registry.register(service.name or type(service).__name__, service)
+        registry.register(service.name or type(service).__name__, service, owner_id=self._ext_id)
 
     @property
     @override
@@ -110,19 +110,19 @@ class TestServices:
         assert extension_manager.get_service('svc') is new_service
 
     def test_get_service_by_type(self):
-        registry = ServiceRegistry(extension_manager)
+        registry = extension_manager.service_manager.registry
         service = _TypedService()
         registry.register(_TypedService.name, service)
 
         assert registry.get(_TypedService) is service
 
     def test_get_missing_service_by_type(self):
-        registry = ServiceRegistry(extension_manager)
+        registry = extension_manager.service_manager.registry
 
         assert registry.get(_TypedService) is None
 
     def test_get_service_by_type_rejects_wrong_runtime_type(self):
-        registry = ServiceRegistry(extension_manager)
+        registry = extension_manager.service_manager.registry
         registry.register(_TypedService.name, object())
 
         with pytest.raises(TypeError, match='API service typed is not of type _TypedService'):
@@ -235,7 +235,7 @@ class TestValidationIsolation:
     def _make_loader_with(manifests: dict[str, str], deps: dict[str, list[str]] | None = None) -> ExtensionLoader:
         """构造携带指定清单的 ExtensionLoader，跳过真实目录扫描。"""
         deps = deps or {}
-        loader = ExtensionLoader(extension_manager)
+        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
         for extension_id, content in manifests.items():
             manifest = parse_manifest(content)
             # 在清单的 [dependencies] 段写入依赖关系

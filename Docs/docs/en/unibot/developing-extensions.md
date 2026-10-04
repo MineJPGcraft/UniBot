@@ -149,6 +149,7 @@ name = "myengine"               # Renderer name, must match BaseRenderer.name
 [template]                      # Only needed for template extensions
 entry = "Templates"             # Template root directory (relative to the extension package root)
 resources = []                  # Optional resource extension ids, forming the resource lookup scope in declaration order
+renderers = []                  # Optional renderer engine names supported by this template (empty = unrestricted)
 
 [resources]                     # Only needed for resource extensions
 root = "Resources"              # Resources root directory (relative to the extension package root)
@@ -167,7 +168,7 @@ root = "Resources"              # Resources root directory (relative to the exte
 | `[dependencies]` | `extensions` | Dependent extension ids, used for topological sorting and missing-dependency detection |
 | `[dependencies]` | `python` | Third-party Python dependencies to install |
 | `[renderer]` | `name` | Renderer name, must match the registered `BaseRenderer.name` |
-| `[template]` | `entry` / `resources` | Template root directory and resource dependencies |
+| `[template]` | `entry` / `resources` / `support_renders` | Template root directory, resource dependencies and supported rendering engines (`support_renders` required, `["*"]` = all) |
 | `[resources]` | `root` | Resources root directory |
 :::
 
@@ -292,6 +293,18 @@ class GreetCommand(Command):
 | `declare()` | Declare parameters and subcommands |
 | `handler` | Main command handler; carries the content to send via `return` |
 | `image_handler` | Render handler in image mode (optional) |
+| `parent` | Held by **subcommands only**, pointing at the direct parent command instance (main commands have no such attribute) |
+:::
+
+::: tip Accessing the parent command
+`parent` is defined on `SubCommand`; the framework passes the parent command instance when instantiating a subcommand, so a subcommand can call shared methods defined on the parent class. Annotate the parent type with the generic parameter to get full type hints:
+
+```python
+class Check(SubCommand['BroadcastCommand']):
+    async def handler(self) -> str:
+        # Call a shared method defined on the parent command class
+        return self.parent.render_summary()
+```
 :::
 
 ### Parameter Declaration
@@ -608,6 +621,7 @@ types = ["template"]
 [template]
 entry = "Templates"
 resources = ["DefaultResources"]
+support_renders = ["*"]
 
 [template.config_schema.primary_color]
 type = "color"
@@ -706,7 +720,8 @@ return await extension.render_image(
 
 - `FileAsset(path)` marks a local file; `OnlineAsset(url)` marks an online URL; the wrappers apply recursively to dicts / lists in the context.
 - Use the corresponding key directly in the template, without worrying about reference differences between engines (html2pic / Playwright).
-- The template package is selected by the core's `config.image.template`; the `template` parameter is the template name within the package.
+- The template package is selected by the core's `config.image.template` (falling back to `Default` when missing); the `template` parameter is the template name within the package.
+- A template must declare its supported rendering engines via `[template].support_renders`; when the current engine is unsupported, the framework automatically switches to an installed, available engine from the declaration.
 - `config` in the Jinja context always comes from the currently selected template package, unrelated to the calling extension's config.
 - Unbound state, image mode disabled, missing template, disabled resource dependency, or unavailable renderer all give clear exceptions or logs.
 

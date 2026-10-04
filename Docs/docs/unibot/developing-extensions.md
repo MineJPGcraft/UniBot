@@ -153,6 +153,7 @@ name = "myengine"               # 渲染器名称，必须与 BaseRenderer.name 
 [template]                      # 仅模板扩展需要
 entry = "Templates"             # 模板根目录（相对扩展包根目录）
 resources = []                  # 可选资源扩展 id，按声明顺序组成资源查找范围
+support_renders = ["*"]         # 支持的渲染引擎 name（必填非空，['*'] = 全部支持）
 
 [resources]                     # 仅资源扩展需要
 root = "Resources"              # 资源根目录（相对扩展包根目录）
@@ -171,7 +172,7 @@ root = "Resources"              # 资源根目录（相对扩展包根目录）
 | `[dependencies]` | `extensions` | 依赖的其它扩展 id，用于拓扑排序与缺失依赖检测 |
 | `[dependencies]` | `python` | 需安装的第三方 Python 依赖 |
 | `[renderer]` | `name` | 渲染器名称，必须与注册的 `BaseRenderer.name` 一致 |
-| `[template]` | `entry` / `resources` | 模板根目录与资源依赖 |
+| `[template]` | `entry` / `resources` / `support_renders` | 模板根目录、资源依赖与支持的渲染引擎（`support_renders` 必填，`["*"]` 表示全部） |
 | `[resources]` | `root` | 资源根目录 |
 :::
 
@@ -296,6 +297,18 @@ class GreetCommand(Command):
 | `declare()` | 声明参数与子命令 |
 | `handler` | 主命令处理器，通过 `return` 携带要发送的内容 |
 | `image_handler` | 图片模式下的渲染处理器（可选） |
+| `parent` | **仅子命令**持有，指向直接父命令实例（主命令无此属性） |
+:::
+
+::: tip 访问父命令
+`parent` 定义在 `SubCommand` 上，框架实例化子命令时自动传入父命令实例，可用于调用父命令类上定义的公用方法。用泛型标注父类型即可获得完整类型提示：
+
+```python
+class Check(SubCommand['BroadcastCommand']):
+    async def handler(self) -> str:
+        # 调用父命令类上定义的公用方法
+        return self.parent.render_summary()
+```
 :::
 
 ### 参数声明
@@ -614,6 +627,7 @@ types = ["template"]
 [template]
 entry = "Templates"
 resources = ["DefaultResources"]
+support_renders = ["*"]
 
 [template.config_schema.primary_color]
 type = "color"
@@ -712,7 +726,8 @@ return await extension.render_image(
 
 - `FileAsset(path)` 标记本地文件，`OnlineAsset(url)` 标记在线 URL；包装会递归作用于上下文中的 dict / list。
 - 模板内直接使用对应键即可，无需关心当前引擎（html2pic / Playwright）的引用差异。
-- 模板包由核心 `config.image.template` 选择，`template` 参数表示包内模板名称。
+- 模板包由核心 `config.image.template` 选择（缺失时回退 `Default`），`template` 参数表示包内模板名称。
+- 模板必须在 `[template].support_renders` 中声明支持的渲染引擎；当前引擎不支持时自动改用声明中已安装的可用引擎。
 - Jinja 上下文中的 `config` 始终来自当前选中的模板包，与调用方扩展的配置无关。
 - 未绑定、图片模式关闭、模板不存在、资源依赖未启用或渲染器不可用都会给出明确异常或日志。
 

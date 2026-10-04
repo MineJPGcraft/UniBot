@@ -80,6 +80,11 @@ def resolve_module_alias(module_name: str | None) -> str:
                 if prefix == 'Core.Builtin':
                     remainder = remainder.removeprefix('Commands.')
                     remainder = remainder.removeprefix('Services.')
+                # 扩展运行时去掉组件子包中间层（Runtime/Managers|Registries）与 Runtime 根层，保留模块名
+                if prefix == 'Core.Extension':
+                    remainder = remainder.removeprefix('Runtime.Managers.')
+                    remainder = remainder.removeprefix('Runtime.Registries.')
+                    remainder = remainder.removeprefix('Runtime.')
                 return f'{alias}/{remainder}'
             return alias
     # 未匹配的第三方模块只显示第一级模块名

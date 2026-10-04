@@ -237,4 +237,4 @@ python = []
 
 def _bind_fake(ext: Extension) -> None:
     """将扩展绑定到一个伪造 metadata，供状态机/属性测试使用。"""
-    ext._bind(metadata=_fake_metadata(), config_store=None, data_store=None, api=None)
+    ext._bind(metadata=_fake_metadata(), config_store=None, data_store=None, api=None, renderer_manager=None)

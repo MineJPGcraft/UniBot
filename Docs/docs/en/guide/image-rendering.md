@@ -60,8 +60,9 @@ Choose the rendering engine as needed: pick `Html2Pic` for speed and low resourc
 
 You can also switch the rendering engine and template directly in **WebUI → Extensions**.
 
-- ==Template auto-fallback==: when the selected template pack is missing or unavailable, it falls back to the default template (`Default` or the first available one).
-- ==Rendering engine must be selected==: image mode requires an installed and selected rendering engine extension; if the engine is missing or unavailable, rendering reports an error.
+- ==Template auto-fallback==: when the selected template pack is missing or unavailable, it falls back to the default template `Default`; if `Default` is also unavailable, rendering reports an error.
+- ==Engine negotiation==: a template must explicitly declare the rendering engines it supports in `[template].support_renders` (`["*"]` means all engines); when the selected engine is not supported by the template (or no engine is selected), the framework automatically switches to an installed, available engine from the template's declaration and logs it.
+- ==Render failure=error==: when no candidate template can match an installed engine, rendering reports an error listing the reason for each template; install a supported rendering engine or switch to a supported template.
 
 ## Adjusting Image Appearance
 

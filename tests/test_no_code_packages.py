@@ -37,6 +37,7 @@ python = []
 [template]
 entry = "Templates"
 resources = ["TestResources"]
+support_renders = ["*"]
 
 [template.config_schema.primary_color]
 type = "color"
@@ -79,6 +80,7 @@ types = ["template", "api"]
 
 [template]
 entry = "Templates"
+support_renders = ["*"]
 """
 
 _COMBINED_TOML = """
@@ -95,6 +97,7 @@ types = ["template", "resources"]
 
 [template]
 entry = "Templates"
+support_renders = ["*"]
 
 [resources]
 root = "Resources"
@@ -110,7 +113,7 @@ class TestTemplatePackage:
     def test_commit_template_package_registers_template(self, tmp_path):
         (tmp_path / 'Templates').mkdir()
         info = _info(tmp_path, _TEMPLATE_TOML)
-        loader = ExtensionLoader(extension_manager)
+        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
         loader._commit_template_package('TestTemplate', info)
         # 展示信息由 _import_and_load 阶段登记（此处模拟）
         loader._register_no_code_display('TestTemplate', info, ExtensionState.enabled, '')
@@ -130,7 +133,7 @@ class TestTemplatePackage:
         assert info['config_schema']['properties']['primary_color']['format'] == 'color'
 
     def test_commit_template_package_missing_entry_raises(self, tmp_path):
-        loader = ExtensionLoader(extension_manager)
+        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
         with pytest.raises(ManifestError, match='entry directory'):
             loader._commit_template_package('TestTemplate', _info(tmp_path, _TEMPLATE_TOML))
 
@@ -153,12 +156,12 @@ class TestTemplatePackage:
 class TestResourcesPackage:
     def test_commit_resources_package_registers_resources(self, tmp_path):
         (tmp_path / 'Resources').mkdir()
-        loader = ExtensionLoader(extension_manager)
+        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
         loader._commit_resources_package('TestResources', _info(tmp_path, _RESOURCES_TOML))
         assert extension_manager.resources['TestResources'] == tmp_path / 'Resources'
 
     def test_commit_resources_package_missing_root_raises(self, tmp_path):
-        loader = ExtensionLoader(extension_manager)
+        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
         with pytest.raises(ManifestError, match='root directory'):
             loader._commit_resources_package('TestResources', _info(tmp_path, _RESOURCES_TOML))
 
@@ -172,7 +175,7 @@ class TestCommitNoCodePackage:
     def test_mixed_commit_registers_template_part(self, tmp_path):
         # 混合扩展的无代码部分照常静态注册
         (tmp_path / 'Templates').mkdir()
-        loader = ExtensionLoader(extension_manager)
+        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
         loader._commit_no_code_package('Mixed', _info(tmp_path, _MIXED_TOML))
         assert 'Mixed' in extension_manager.templates
         assert extension_manager.templates['Mixed'].templates_dir == tmp_path / 'Templates'
@@ -182,7 +185,7 @@ class TestCommitNoCodePackage:
         (tmp_path / 'Templates').mkdir()
         (tmp_path / 'Resources').mkdir()
         info = _info(tmp_path, _COMBINED_TOML)
-        loader = ExtensionLoader(extension_manager)
+        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
         loader._commit_no_code_package('TestCombined', info)
         assert 'TestCombined' in extension_manager.templates
         assert extension_manager.templates['TestCombined'].templates_dir == tmp_path / 'Templates'
@@ -192,7 +195,7 @@ class TestCommitNoCodePackage:
         # 无代码包不创建 Extension 实例，不进 registry
         (tmp_path / 'Templates').mkdir()
         info = _info(tmp_path, _TEMPLATE_TOML)
-        loader = ExtensionLoader(extension_manager)
+        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
         loader._commit_template_package('TestTemplate', info)
         loader._register_no_code_display('TestTemplate', info, ExtensionState.enabled, '')
         assert 'TestTemplate' not in extension_manager.registry
@@ -224,6 +227,7 @@ types = ["template", "command"]
 
 [template]
 entry = "Templates"
+support_renders = ["*"]
 
 [template.config_schema.title]
 type = "string"
@@ -278,7 +282,7 @@ class TestHybridExtension:
         extension = extension_manager.registry['Hybrid']
         assert extension.state is ExtensionState.loaded
         assert set(extension.metadata.types) == {ExtensionType.template, ExtensionType.command}
-        assert 'extension:Hybrid:ping' in command_manager._commands
+        assert 'extension:Hybrid:ping' in command_manager.get_command_nodes()
         # 无代码部分：模板包已静态注册（配置 schema 编译自清单）
         registration = extension_manager.templates['Hybrid']
         assert registration.templates_dir == hybrid_extension_dir / 'Hybrid' / 'Templates'

@@ -72,6 +72,12 @@ class TestCommandDiscovery:
         today = command.find_subcommand('today')
         assert today is not None
         assert today.parent is command
+        # parent 只属于子命令：主命令不持有该属性
+        assert not hasattr(command, 'parent')
+
+    def test_subcommand_requires_parent(self):
+        with pytest.raises(TypeError):
+            SubCommand()
 
     def test_subcommand_arguments_isolated_from_parent(self):
         command = WeatherCommand()

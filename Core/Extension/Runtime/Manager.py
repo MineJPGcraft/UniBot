@@ -1,17 +1,29 @@
-"""扩展管理器单例：注册表、服务、渲染器、启停状态与加载编排。"""
+"""
+扩展管理器单例：生命周期编排、热重载、启停状态与展示信息。
+
+本模块是运行时引擎的**顶层组合器**：创建 `ExtensionRegistries` 容器集合，
+并把容器与 `RendererManager` 按引用交给 `ExtensionLoader`，因此位于 `Runtime/`
+根（而非 `Managers/` 子包）——否则会与 `Loader.py` 形成循环导入。
+
+注册状态全部委托给 `Registries/` 容器：扩展本体与无代码包展示信息在
+`ExtensionRegistry`，服务在 `ServiceRegistry`，渲染器/模板/资源在
+`RendererManager` 持有的三个容器中；命令注册表由全局 `command_manager` 自持。
+"""
 
 import asyncio
 from pathlib import Path
 
 import tomlkit
 
+from Core.Config import config
 from Core.Constants import CONFIG_EXTENSIONS_FILE
 from Core.Logging import exception_logger, logger
 
-from ..Base import Extension, ExtensionState
-from ..Renderer import BaseRenderer, RendererManager, TemplateRegistration
+from ..Extension import Extension, ExtensionState
+from ..Renderer import BaseRenderer, TemplateRegistration
 from .Loader import ExtensionLoader
-from .Registry import ExtensionRegistry
+from .Managers import RendererManager, ServiceManager, command_manager
+from .Registries import ExtensionRegistries
 
 
 class ExtensionManager:
@@ -19,43 +31,37 @@ class ExtensionManager:
 
     def __init__(self) -> None:
         # 注册容器与加载状态必须实例私有，避免多实例共享与热重载脏状态
-        self._registry = ExtensionRegistry()
-        self.loader = ExtensionLoader(self)
-        # 图像配置经注入提供：默认读全局 [image]（函数内导入，框架层不顶层依赖 Core.Config）
-        self.renderer_manager = RendererManager(self.get_renderer, self._image_config)
+        self._registries = ExtensionRegistries()
+        self.service_manager = ServiceManager(self._registries.services)
+        self.renderer_manager = RendererManager(
+            self._registries.renderers,
+            self._registries.templates,
+            self._registries.resources,
+        )
+        # 注册容器与渲染管理器按引用交给 Loader，避免回调注入
+        self.loader = ExtensionLoader(self._registries, self.renderer_manager)
         # 串行化热重载，防止 WebUI 与指令并发触发
         self._reload_lock = asyncio.Lock()
-
-    @staticmethod
-    def _image_config():
-        """读取当前 [image] 配置；函数内导入 Core.Config，避免框架层顶层反向依赖。"""
-        from Core.Config import config
-
-        return config.image
-
-    def image_mode_enabled(self) -> bool:
-        """当前是否启用图片输出模式（实现 ExtensionHost 能力）。"""
-        return self._image_config().mode
 
     @property
     def registry(self) -> dict[str, Extension]:
         """已加载扩展注册表：id -> Extension。"""
-        return self._registry.extensions
+        return self._registries.extensions.extensions
 
     @property
     def services(self) -> dict[str, object]:
         """已注册的 API 服务表：name -> service。"""
-        return self._registry.services
+        return self._registries.services.all()
 
     @property
     def renderers(self) -> dict[str, BaseRenderer]:
         """已注册的渲染引擎表：name -> BaseRenderer。"""
-        return self._registry.renderers
+        return self.renderer_manager.renderers
 
     @property
     def no_code_info(self) -> dict[str, dict]:
         """无代码扩展包展示信息：extension_id -> info dict。"""
-        return self._registry.no_code_info
+        return self._registries.extensions.no_code_info
 
     @property
     def templates(self) -> dict[str, TemplateRegistration]:
@@ -71,10 +77,9 @@ class ExtensionManager:
 
     def reset(self) -> None:
         """清空全部注册与加载状态（重新加载前调用，测试也用它做隔离）。"""
-        self._registry.clear()
-        self.renderer_manager.templates.clear()
-        self.renderer_manager.resources.clear()
-        self.renderer_manager._environments.clear()
+        self._registries.extensions.clear()
+        self._registries.services.clear()
+        self.renderer_manager.reset()
         self.loader.reset()
 
     def load(self) -> None:
@@ -84,9 +89,6 @@ class ExtensionManager:
 
     async def reload(self) -> None:
         """热重载全部扩展：停用 → 注销命令 → 清理模块缓存 → 重新加载 → 重建命令 → 重新启用。"""
-        # 函数内导入：Command 模块顶层不依赖 Manager，但保持 __init__ 固定导入顺序（Base → Command → … → Manager）
-        from ..Command import command_manager
-
         async with self._reload_lock:
             if failed := self.loader.check_syntax():
                 raise RuntimeError(f'Extension syntax check failed: {", ".join(failed)}')
@@ -107,19 +109,20 @@ class ExtensionManager:
             try:
                 await extension.on_load()
                 await extension.on_enable()
-                await extension.api.enable()
+                await self.service_manager.enable(extension.id)
                 extension.transition(ExtensionState.enabled)
             except Exception as error:
                 extension.mark_failed(str(error))
                 await self._disable_extension(extension)
                 await self._rollback(extension)
-        # 图片模式开启时才初始化配置的渲染引擎；初始化失败仅降级图片功能，不阻断启动
-        if self._image_config().mode:
+        # 图片模式开启时才预初始化配置的渲染引擎；未配置时延迟到渲染时按模板协商。
+        # 初始化失败不阻断启动：渲染时会重新尝试并按模板声明协商降级
+        if config.image.mode and config.image.renderer:
             try:
-                await self.renderer_manager.setup(self._image_config().renderer)
+                await self.renderer_manager.setup(config.image.renderer)
             except Exception as error:
                 exception_logger.error(
-                    f'Render engine setup failed, image output has been disabled automatically: {error}'
+                    f'Render engine setup failed, render engine will be negotiated at render time: {error}'
                 )
         logger.success('All extensions started.')
 
@@ -141,38 +144,37 @@ class ExtensionManager:
             extension.transition(ExtensionState.disabled)
         await self.renderer_manager.shutdown()
 
-    @staticmethod
-    async def _disable_extension(extension: Extension) -> None:
+    async def _disable_extension(self, extension: Extension) -> None:
         """先关闭服务再释放扩展资源，清理失败不阻止后续步骤。"""
-        await extension.api.disable()
+        await self.service_manager.disable(extension.id)
         try:
             await extension.on_disable()
         except Exception as error:
             logger.error(f'Extension {extension.id} failed to shut down: {error}')
 
-    # ===== 服务注册与获取 =====
+    # ===== 注册透传（供 Loader / 测试直接登记） =====
 
     def register_extension(self, extension_id: str, extension: Extension) -> None:
         """登记一个已加载的扩展实例。"""
-        self._registry.register_extension(extension_id, extension)
+        self._registries.extensions.register_extension(extension_id, extension)
 
     def register_no_code_info(self, extension_id: str, info: dict) -> None:
         """登记一个无代码扩展包（template/resources）的展示信息。"""
-        self._registry.register_no_code_info(extension_id, info)
+        self._registries.extensions.register_no_code_info(extension_id, info)
 
-    def register_service(self, name: str, service: object) -> None:
-        """注册一个 API 服务。"""
-        self._registry.register_service(name, service)
+    def register_service(self, name: str, service: object, *, owner_id: str = '') -> None:
+        """注册一个 API 服务，`owner_id` 声明归属扩展。"""
+        self._registries.services.register(name, service, owner_id=owner_id)
 
     def get_service(self, name: str) -> object | None:
         """获取已注册的 API 服务，未注册返回 None。"""
-        return self._registry.get_service(name)
+        return self._registries.services.get(name)
 
     # ===== 渲染器/模板/资源管理 =====
 
     def register_renderer(self, renderer: BaseRenderer) -> None:
         """注册一个渲染引擎实例。"""
-        self._registry.register_renderer(renderer)
+        self.renderer_manager.register(renderer)
 
     def register_template(self, registration: TemplateRegistration) -> None:
         """注册 template 无代码扩展包。"""
@@ -192,7 +194,7 @@ class ExtensionManager:
 
     def get_renderer(self, name: str) -> BaseRenderer | None:
         """获取指定名称的渲染引擎实例。"""
-        return self._registry.get_renderer(name)
+        return self.renderer_manager.get_renderer(name)
 
     # ===== 启停状态 =====
 

@@ -34,9 +34,12 @@ UniBot
 │   │   ├── Plugin.py             # 插件管理与 PluginRegistry
 │   │   ├── TaskCenter.py         # 后台任务中心引擎
 │   │   └── Version.py            # 版本管理
-│   ├── Extension/                # 扩展系统框架（大部分模块在顶层，仅运行时引擎收进 Runtime/）
-│   │   ├── (Errors / Manifest / Storage / TemplateConfig / Base / Command / Service / Renderer)
-│   │   └── Runtime/              # 运行时：Host / 注册 / 依赖 / 加载 / 管理 / 市场
+│   ├── Extension/                # 扩展系统框架（根=定义层，Runtime/ + Market/ 为子包）
+│   │   ├── (Errors / Manifest / Storage / TemplateConfig / Extension / Command / Service / Renderer)
+│   │   ├── Runtime/              # 运行时引擎：Manager（顶层组合器）/ Loader / Dependencies 在根
+│   │   │   ├── Registries/       # 五类扩展的纯注册容器（extension/service/command/renderer/template/resources）+ Bundle
+│   │   │   └── Managers/         # 各类型管理器（Command / Service / Renderer）
+│   │   └── Market/               # 扩展市场：注册表模型与安装卸载事务
 │   ├── I18n/                     # 统一 I18n 引擎
 │   ├── Locales/                  # 语言包（System 只读 / Messages 可改，见配置说明）
 │   ├── Web/                      # WebUI REST API 路由
@@ -149,7 +152,7 @@ UniBot 底层完整保留 NoneBot2 生态：NB 插件商店中的现成插件可
 - **Loader**：扫描 `Extensions/` 目录，解析清单，建立依赖图并拓扑排序，导入并绑定扩展实例。
 - **ExtensionManager**：扩展注册表与状态管理（`enabled` / `disabled` / `blocked` / `failed`）。
 - **CommandManager**：统一收集指令定义，校验后构建 Alconna 匹配器。
-- **ServiceRegistry**：服务注册与获取。
+- **ServiceRegistry**：全局服务注册表（含归属扩展），服务登记与获取。
 - **RendererManager**：渲染引擎、模板与资源的统一编排入口。
 
 ### 图片渲染

@@ -18,7 +18,7 @@ from Core.Extension import (
     extract_market_package,
     is_unibot_compatible,
 )
-from Core.Extension.Runtime.MarketManager import ExtensionMarketManager
+from Core.Extension.Market.MarketManager import ExtensionMarketManager
 from Core.Utils import MAX_ARCHIVE_FILES, ArchiveError, safe_extract_zip
 
 
@@ -142,7 +142,7 @@ class TestExtractMarketPackage:
 
 def test_sha256_mismatch_rejected(monkeypatch):
     """SHA-256 与下载内容不匹配时抛 ManifestError。"""
-    from Core.Extension.Runtime.MarketManager import ExtensionMarketManager
+    from Core.Extension.Market.MarketManager import ExtensionMarketManager
 
     manager = ExtensionMarketManager()
     archive = _make_zip({'TestExt/__init__.py': b'pass'})
@@ -153,7 +153,7 @@ def test_sha256_mismatch_rejected(monkeypatch):
     async def run():
         return await manager._download_release('https://example.com/x.zip', hashlib.sha256(b'wrong').hexdigest())
 
-    monkeypatch.setattr('Core.Extension.Runtime.MarketManager.github_download', fake_download)
+    monkeypatch.setattr('Core.Extension.Market.MarketManager.github_download', fake_download)
     with pytest.raises(ManifestError):
         import asyncio
 
@@ -162,7 +162,7 @@ def test_sha256_mismatch_rejected(monkeypatch):
 
 def test_sha256_match_ok(monkeypatch):
     """SHA-256 匹配时下载成功。"""
-    from Core.Extension.Runtime.MarketManager import ExtensionMarketManager
+    from Core.Extension.Market.MarketManager import ExtensionMarketManager
 
     manager = ExtensionMarketManager()
     archive = _make_zip({'TestExt/__init__.py': b'pass'})
@@ -173,7 +173,7 @@ def test_sha256_match_ok(monkeypatch):
     async def run():
         return await manager._download_release('https://example.com/x.zip', hashlib.sha256(archive).hexdigest())
 
-    monkeypatch.setattr('Core.Extension.Runtime.MarketManager.github_download', fake_download)
+    monkeypatch.setattr('Core.Extension.Market.MarketManager.github_download', fake_download)
     import asyncio
 
     result = asyncio.run(run())
@@ -186,7 +186,7 @@ def test_sha256_match_ok(monkeypatch):
 def _patch_unibot_version(monkeypatch, version: str = '1.0.2') -> None:
     """打桩当前 UniBot 版本：Base 内部判定与 MarketManager 直接引用都要覆盖。"""
     monkeypatch.setattr('Core.Extension.Manifest.get_unibot_version', lambda: version)
-    monkeypatch.setattr('Core.Extension.Runtime.MarketManager.get_unibot_version', lambda: version)
+    monkeypatch.setattr('Core.Extension.Market.MarketManager.get_unibot_version', lambda: version)
 
 
 def _market_extension(*releases: tuple[str, str]) -> MarketExtension:
@@ -259,7 +259,7 @@ class TestVersionCompatibility:
     def test_get_releases_flags(self, monkeypatch, tmp_path):
         """版本清单按版本倒序，标记兼容性与已安装版本。"""
         _patch_unibot_version(monkeypatch)
-        monkeypatch.setattr('Core.Extension.Runtime.MarketManager.STATES_ROOT', tmp_path / 'Extension')
+        monkeypatch.setattr('Core.Extension.Market.MarketManager.STATES_ROOT', tmp_path / 'Extension')
         manager = ExtensionMarketManager()
         manager.market_cache = {'TestExt': _market_extension(('1.0.0', '*'), ('1.0.1', '>=9.0.0'))}
         options = manager.get_releases('TestExt')

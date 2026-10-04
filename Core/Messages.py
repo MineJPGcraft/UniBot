@@ -14,6 +14,7 @@
 
 from Core.I18n import i18n
 from Core.I18n.Context import get_locale
+from Core.LocaleLoader import register_all
 
 # 隐藏区块标记（通用字符串工具沿用）
 HIDDEN_START_MARKER = '# Hidden Start'
@@ -61,8 +62,6 @@ messages = _LegacyGroup()
 
 def reload_messages() -> None:
     """重新加载语言包，供语言切换/保存覆盖层后热更新。"""
-    from Core.LocaleLoader import register_all
-
     register_all()
 
 

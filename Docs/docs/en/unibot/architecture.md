@@ -34,9 +34,12 @@ UniBot
 │   │   ├── Plugin.py             # Plugin management and PluginRegistry
 │   │   ├── TaskCenter.py         # Background task center engine
 │   │   └── Version.py            # Version management
-│   ├── Extension/                # Extension framework (most modules at top level; only the runtime engine is under Runtime/)
-│   │   ├── (Errors / Manifest / Storage / TemplateConfig / Base / Command / Service / Renderer)
-│   │   └── Runtime/              # Runtime: Host / registry / dependencies / loader / manager / market
+│   ├── Extension/                # Extension framework (root = definition layer; Runtime/ and Market/ are subpackages)
+│   │   ├── (Errors / Manifest / Storage / TemplateConfig / Extension / Command / Service / Renderer)
+│   │   ├── Runtime/              # Runtime engine: Manager (top-level composer) / Loader / Dependencies at root
+│   │   │   ├── Registries/       # Pure registries for the five extension types (extension/service/command/renderer/template/resources) + Bundle
+│   │   │   └── Managers/         # Per-type managers (Command / Service / Renderer)
+│   │   └── Market/               # Extension market: registry models and install/uninstall transactions
 │   ├── I18n/                     # Unified I18n engine
 │   ├── Locales/                  # Language packs (System read-only / Messages editable)
 │   ├── Web/                      # WebUI REST API routes
@@ -149,7 +152,7 @@ Core components:
 - **Loader**: scans the `Extensions/` directory, parses manifests, builds the dependency graph and topologically sorts it, then imports and binds extension instances.
 - **ExtensionManager**: the extension registry and state management (`enabled` / `disabled` / `blocked` / `failed`).
 - **CommandManager**: collects command definitions uniformly, validates them, and builds Alconna matchers.
-- **ServiceRegistry**: service registration and retrieval.
+- **ServiceRegistry**: the global service registry (with owning-extension tracking) for service registration and retrieval.
 - **RendererManager**: the unified orchestration entry for rendering engines, templates, and resources.
 
 ### Image Rendering

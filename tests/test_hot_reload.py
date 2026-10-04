@@ -34,14 +34,14 @@ class TestCleanupMatchers:
         matcher = command_manager._matchers[0]
         assert matcher in nonebot_matchers[_MATCHER_PRIORITY]
         assert command_manager._built is True
-        assert command_manager._commands
+        assert command_manager.get_command_nodes()
 
         command_manager.cleanup_matchers()
 
         assert matcher not in nonebot_matchers[_MATCHER_PRIORITY]
         assert command_manager._built is False
         assert command_manager._matchers == []
-        assert command_manager._commands == {}
+        assert command_manager.get_command_nodes() == {}
         # arclet 的命令登记一并清除：get_command 未找到时抛 ValueError
         with pytest.raises(ValueError):
             alconna_manager.get_command('greet')
@@ -75,7 +75,7 @@ class TestPurgeModules:
         sys.modules['Extensions'] = fake_package
         sys.modules['Extensions.Greet'] = fake_module
 
-        loader = ExtensionLoader(extension_manager)
+        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
         try:
             loader.purge_modules()
         finally:
@@ -96,7 +96,7 @@ class TestCheckSyntax:
         (bad_dir / 'Good.py').write_text('x = 1\n', encoding='Utf-8')
         monkeypatch.setattr('Core.Extension.Runtime.Loader.EXTENSIONS_DIR', bad_dir)
 
-        loader = ExtensionLoader(extension_manager)
+        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
         broken = loader.check_syntax()
 
         assert len(broken) == 1
@@ -350,6 +350,7 @@ types = ["template"]
 
 [template]
 entry = "Templates"
+support_renders = ["*"]
 
 [template.config_schema.title]
 type = "string"

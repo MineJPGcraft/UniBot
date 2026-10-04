@@ -10,8 +10,9 @@ from typing import override
 
 import pytest
 
-from Core.Extension import Command, CommandError, CommandManager, SubCommand, command_manager
+from Core.Extension import Command, CommandError, CommandManager, RendererManager, SubCommand, command_manager
 from Core.Extension.Runtime.Loader import ExtensionLoader
+from Core.Extension.Runtime.Registries import ExtensionRegistries
 
 
 def _make_extension(command_cls: type) -> 'object':
@@ -29,7 +30,7 @@ def _commit(commands: dict[str, 'object'], builtin: bool = True):
 
         Loader 将命令注册到全局 command_manager 单例（conftest 已按测试清空）。
     """
-    loader = ExtensionLoader(command_manager)
+    loader = ExtensionLoader(ExtensionRegistries(), RendererManager())
     for extension_id, extension in commands.items():
         loader._commit_commands(extension_id, extension, builtin=builtin)
     return command_manager
