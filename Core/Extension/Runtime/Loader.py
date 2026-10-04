@@ -341,8 +341,9 @@ class ExtensionLoader:
         if not info.enabled:
             self._register_display(extension_id, info, ExtensionState.disabled, '')
             return True
-        # 图片模式未开启：渲染扩展不加载，避免 html2pic 等依赖未安装时导入失败
-        if not config.image.mode and ExtensionType.renderer in info.manifest.extension.types:
+        # 图片模式未开启：仅「纯渲染器扩展」不加载（避免 html2pic 等原生依赖未安装时导入失败）；
+        # 混合扩展（renderer + api/command）仍正常加载，只跳过其渲染器声明（见 _try_commit_declarations）
+        if not config.image.mode and set(info.manifest.extension.types) == {ExtensionType.renderer}:
             self._register_display(extension_id, info, ExtensionState.disabled, '图片模式未开启，渲染扩展不加载')
             return True
         # 纯无代码扩展包（template/resources）：不导入入口、无 Extension 实例
@@ -375,12 +376,15 @@ class ExtensionLoader:
         extension = self._try_import(extension_id, info, blocked_reasons)
         if extension is None:
             return
-        if not self._try_bind(extension_id, extension, info, blocked_reasons):
+        # 已绑定实例（模块缓存未清理时的重复 load）：跳过重复绑定，复用实例并重新提交声明
+        if not extension.is_bound and not self._try_bind(extension_id, extension, info, blocked_reasons):
+            self._register_display(extension_id, info, ExtensionState.failed, blocked_reasons.get(extension_id, ''))
             return
         extension.state = ExtensionState.loaded
         # 注册扩展语言包（Extensions/<id>/Locales/{zh,en}.toml → ext.<id>.*，无需代码）
         self._register_locales(extension_id, info)
         if not self._try_commit_declarations(extension_id, extension, info, blocked_reasons):
+            self._register_display(extension_id, info, ExtensionState.failed, blocked_reasons.get(extension_id, ''))
             return
         self.extensions.append(extension)
         self._registries.extensions.register_extension(extension_id, extension)
@@ -413,19 +417,36 @@ class ExtensionLoader:
     def _try_commit_declarations(
         self, extension_id: str, extension: Extension, info: DiscoveredExtension, blocked_reasons: dict[str, str]
     ) -> bool:
-        """执行声明：实例化装饰器收集的能力类并统一提交。"""
+        """执行声明：实例化装饰器收集的能力类并统一提交；失败时按 owner 回滚已提交项。"""
         try:
             self._commit_services(extension)
             self._commit_commands(extension_id, extension, builtin=info.builtin)
-            self._commit_renderers(extension)
+            # 图片模式未开启时跳过渲染器声明提交：纯渲染器扩展已在 _skip_before_import 拦截，
+            # 混合扩展的 api/command 能力照常生效，仅其渲染器待图片模式开启后再注册
+            if config.image.mode:
+                self._commit_renderers(extension)
             # 混合扩展（代码 + template/resources）：代码部分提交成功后追加注册无代码部分
             if self._has_no_code_part(info.manifest):
                 self._commit_no_code_package(extension_id, info)
         except Exception as error:
+            self._rollback_declarations(extension_id)
             extension.mark_failed(f'Declaration stage failed: {error}')
             blocked_reasons[extension_id] = f'声明阶段失败：{error}'
             return False
         return True
+
+    def _rollback_declarations(self, extension_id: str) -> None:
+        """按 owner 注销某扩展的全部注册项（扩展实例/无代码包/服务/命令/渲染器/模板/资源）。
+
+        五个容器全部按 owner 对称清理；本方法幂等，未登记项静默忽略，
+        既用于声明阶段失败回滚，也可安全用作单扩展卸载的收尾。
+        """
+        self._registries.extensions.unregister_by_owner(extension_id)
+        self._registries.services.unregister_by_owner(extension_id)
+        command_manager.unregister_by_owner(extension_id)
+        self._renderer_manager.unregister_renderers_by_owner(extension_id)
+        self._renderer_manager.unregister_template(extension_id)
+        self._renderer_manager.unregister_resources(extension_id)
 
     def _bind(
         self,
@@ -584,9 +605,9 @@ class ExtensionLoader:
             extension.api.register(name, service, owner_id=extension.id)
 
     def _commit_renderers(self, extension: Extension) -> None:
-        """实例化并提交装饰器声明的渲染器到全局注册表。"""
+        """实例化并提交装饰器声明的渲染器到全局注册表（带归属扩展）。"""
         for renderer_cls in extension.renderers:
-            self._renderer_manager.register(renderer_cls())
+            self._renderer_manager.register(renderer_cls(), owner_id=extension.id)
 
     def _commit_commands(self, extension_id: str, extension: Extension, *, builtin: bool = False) -> None:
         for command_cls in extension.commands:

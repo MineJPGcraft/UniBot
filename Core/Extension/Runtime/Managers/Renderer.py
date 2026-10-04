@@ -75,9 +75,9 @@ class RendererManager:
 
     # ---------- 注册接口 ----------
 
-    def register(self, renderer: BaseRenderer) -> None:
+    def register(self, renderer: BaseRenderer, *, owner_id: str = '') -> None:
         """注册一个渲染引擎实例（无名称的渲染器忽略）。"""
-        self._renderers.register(renderer)
+        self._renderers.register(renderer, owner_id=owner_id)
 
     @property
     def renderers(self) -> dict[str, BaseRenderer]:
@@ -100,10 +100,18 @@ class RendererManager:
         self._templates.clear()
         self._resources.clear()
         self._environments.clear()
+        # 已 setup 的引擎实例与并发/超时配置一并清理，避免下次 setup 复用陈旧引擎
+        self._active.clear()
+        self._semaphores.clear()
+        self._timeouts.clear()
 
     def get_renderer(self, name: str) -> BaseRenderer | None:
         """按名称获取已注册的渲染引擎实例。"""
         return self._renderers.get(name)
+
+    def unregister_renderers_by_owner(self, owner_id: str) -> list[str]:
+        """注销某扩展登记的全部渲染引擎（供声明回滚使用）。"""
+        return self._renderers.unregister_by_owner(owner_id)
 
     def register_template(self, registration: TemplateRegistration) -> None:
         """注册 template 无代码扩展；重复注册覆盖并失效缓存。"""

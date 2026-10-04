@@ -34,7 +34,9 @@ class ServiceRegistry:
     def register(self, name: str, service: object, *, owner_id: str = '') -> None:
         """注册一个 API 服务，重名时以最新注册为准。"""
         if name in self._services:
-            logger.warning(f'API service {name} registered twice, the latest one wins.')
+            previous = self._owners.get(name, '') or 'unknown'
+            current = owner_id or 'unknown'
+            logger.warning(f'API service {name} registered twice (owner: {previous} -> {current}), the latest wins.')
         self._services[name] = service
         self._owners[name] = owner_id
 

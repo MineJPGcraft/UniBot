@@ -9,6 +9,7 @@ import tomlkit
 
 from Core.Extension import Extension, ExtensionState, Service, ServiceRegistry, extension_manager
 from Core.Extension.Manifest import parse_manifest
+from Core.Extension.Renderer import BaseRenderer
 from Core.Extension.Runtime.Loader import DiscoveredExtension, ExtensionLoader
 
 
@@ -184,6 +185,46 @@ class TestLifecycle:
         assert a.state is ExtensionState.disabled
         assert b.state is ExtensionState.disabled
 
+    def test_disable_keeps_registration(self):
+        # disable 只停用不注销：第三方扩展缓存的句柄必须保持有效（避免重新启用时新旧两个活实例）
+        service = _LifecycleService()
+        ext = _ServiceExt('Svc', service)
+        ext.state = ExtensionState.loaded
+        extension_manager.loader.extensions = [ext]
+        asyncio.run(extension_manager.start())
+        assert extension_manager.get_service('lifecycle') is service
+        asyncio.run(extension_manager.shutdown())
+        # 已停用但登记项仍在（句柄对象不变，不会变成 None）
+        assert extension_manager.get_service('lifecycle') is service
+        assert service.disabled is True
+
+    def test_reenable_reuses_same_service_instance(self):
+        # re-enable 必须复用同一实例（而非新建），否则缓存的句柄与实际服务分裂
+        service = _LifecycleService()
+        ext = _ServiceExt('Svc', service)
+        ext.state = ExtensionState.loaded
+        extension_manager.loader.extensions = [ext]
+
+        async def _cycle() -> None:
+            await extension_manager.start()
+            first = extension_manager.get_service('lifecycle')
+            await extension_manager.shutdown()
+            ext.state = ExtensionState.loaded
+            await extension_manager.start()
+            second = extension_manager.get_service('lifecycle')
+            assert first is second is service
+
+        asyncio.run(_cycle())
+        assert service.enabled is True
+
+    def test_rollback_declarations_unregisters_owned_capabilities(self):
+        # 声明阶段失败回滚：按 owner 注销服务/命令/渲染器
+        registry = extension_manager.service_manager.registry
+        registry.register('rollback_svc', object(), owner_id='RB')
+        loader = extension_manager.loader
+        loader._rollback_declarations('RB')
+        assert registry.get('rollback_svc') is None
+
     def test_service_lifecycle_follows_extension(self):
         service = _LifecycleService()
         ext = _ServiceExt('Svc', service)
@@ -344,3 +385,140 @@ unibot = "*"
         assert extension_manager.registry['Incompat'].state is ExtensionState.blocked
         assert extension_manager.registry['Depends'].state is ExtensionState.blocked
         assert 'Incompat' in (extension_manager.registry['Depends'].failure_reason or '')
+
+
+# ===== 图片模式关闭时的渲染扩展处理（#7） =====
+
+
+def _renderer_manifest(extension_id: str, types: str) -> str:
+    """构造渲染相关扩展清单，`types` 为 TOML 数组字面量（如 `["renderer"]`）。"""
+    return f"""
+[extension]
+id = "{extension_id}"
+name = "{extension_id}"
+version = "1.0.0"
+types = {types}
+
+[renderer]
+name = "engine_{extension_id}"
+"""
+
+
+class TestImageModeRendererSkip:
+    """图片模式关闭时：纯渲染器扩展整体跳过，混合扩展仅跳过渲染器声明。"""
+
+    @staticmethod
+    def _discovered(manifest: str) -> DiscoveredExtension:
+        return DiscoveredExtension(
+            manifest=parse_manifest(manifest),
+            directory=Path('unused'),
+            single_file=True,
+            enabled=True,
+        )
+
+    def test_pure_renderer_extension_skipped_when_image_mode_off(self, monkeypatch):
+        from Core.Config import config
+
+        monkeypatch.setattr(config.image, 'mode', False)
+        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
+        info = self._discovered(_renderer_manifest('PureRenderer', '["renderer"]'))
+        assert loader._skip_before_import('PureRenderer', info, {}) is True
+        assert extension_manager.registry['PureRenderer'].state is ExtensionState.disabled
+
+    def test_mixed_renderer_extension_not_skipped_when_image_mode_off(self, monkeypatch):
+        # renderer + api 的混合扩展：api 能力必须照常加载，不能因图片模式关闭被整体跳过
+        from Core.Config import config
+
+        monkeypatch.setattr(config.image, 'mode', False)
+        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
+        info = self._discovered(_renderer_manifest('MixedRenderer', '["renderer", "api"]'))
+        assert loader._skip_before_import('MixedRenderer', info, {}) is False
+
+    def test_mixed_renderer_declaration_skipped_when_image_mode_off(self, monkeypatch):
+        # 混合扩展的渲染器声明在图片模式关闭时跳过（渲染器注册表不应出现该引擎）
+        from Core.Config import config
+
+        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
+        info = self._discovered(_renderer_manifest('MixedRenderer', '["renderer", "api"]'))
+
+        class _Engine(BaseRenderer):
+            name = 'engine_MixedRenderer'
+
+            async def render(self, html: str, css: str, size=None) -> bytes:
+                return b''
+
+        def _make_extension() -> Extension:
+            extension = Extension()
+            extension._declared_id = 'MixedRenderer'
+            extension.renderers.append(_Engine)
+            return extension
+
+        monkeypatch.setattr(config.image, 'mode', False)
+        assert loader._try_commit_declarations('MixedRenderer', _make_extension(), info, {}) is True
+        assert 'engine_MixedRenderer' not in extension_manager.renderer_manager.renderers
+
+        # 图片模式开启时同一扩展的渲染器正常注册（证明差异只来自图片模式开关）
+        extension_manager.reset()
+        monkeypatch.setattr(config.image, 'mode', True)
+        assert loader._try_commit_declarations('MixedRenderer', _make_extension(), info, {}) is True
+        assert 'engine_MixedRenderer' in extension_manager.renderer_manager.renderers
+
+
+# ===== 扩展注册表按 owner 注销（#6：三处注册表对称） =====
+
+
+class TestExtensionRegistryOwnerCleanup:
+    def test_unregister_by_owner_clears_instance_and_no_code_info(self):
+        registry = extension_manager._registries.extensions
+        extension = Extension()
+        extension._declared_id = 'Mixed'
+        registry.register_extension('Mixed', extension)
+        registry.register_no_code_info('Mixed', {'id': 'Mixed'})
+        removed = registry.unregister_by_owner('Mixed')
+        assert removed == ['Mixed', 'Mixed']
+        assert registry.get_extension('Mixed') is None
+        assert 'Mixed' not in registry.no_code_info
+
+    def test_unregister_by_owner_is_idempotent(self):
+        registry = extension_manager._registries.extensions
+        assert registry.unregister_by_owner('Missing') == []
+
+
+# ===== 第三方扩展缓存服务句柄（#6 关键场景） =====
+
+
+class TestCachedServiceHandle:
+    """扩展在 on_load 中缓存 `api.get(...)` 句柄时，disable/re-enable 不得使其失效。"""
+
+    def test_cached_handle_survives_disable_and_reenable(self):
+        service = _LifecycleService()
+        provider = _ServiceExt('Provider', service)
+        provider.state = ExtensionState.loaded
+        extension_manager.loader.extensions = [provider]
+
+        async def _scenario() -> None:
+            await extension_manager.start()
+            # 模拟第三方扩展在 on_load 期间缓存句柄
+            cached = extension_manager.service_manager.registry.get(_LifecycleService)
+            assert cached is service
+            await extension_manager.shutdown()
+            # disable 后：缓存句柄必须仍是同一对象（仅停用，不销毁也不卸载登记）
+            assert extension_manager.service_manager.registry.get(_LifecycleService) is service
+            provider.state = ExtensionState.loaded
+            await extension_manager.start()
+            # re-enable 后仍是同一实例（不会新建第二个活实例）
+            assert extension_manager.service_manager.registry.get(_LifecycleService) is cached
+
+        asyncio.run(_scenario())
+        assert service.enabled is True
+
+    def test_rollback_unregisters_while_disable_does_not(self):
+        # 对照：声明失败回滚会真正注销；disable 不会
+        service = _LifecycleService()
+        provider = _ServiceExt('Provider', service)
+        provider.state = ExtensionState.loaded
+        extension_manager.loader.extensions = [provider]
+        asyncio.run(extension_manager.start())
+
+        extension_manager.loader._rollback_declarations('Provider')
+        assert extension_manager.service_manager.registry.get('lifecycle') is None

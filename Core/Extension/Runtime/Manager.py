@@ -83,7 +83,14 @@ class ExtensionManager:
         self.loader.reset()
 
     def load(self) -> None:
-        """发现、校验、排序并加载扩展（声明 + on_load），重复调用前自动重置状态。"""
+        """
+        发现、校验、排序并加载扩展（声明 + on_load）。
+
+            内部先 reset 状态；已绑定实例（模块缓存未清理时）会被复用并重新提交声明，
+            不会重复绑定。注意：本方法不清理已构建的命令 matcher——若此前调用过
+            `command_manager.build()`，重复 `load()` 会因命令管理器已构建而拒绝注册；
+            完整热重载请用 `reload()`（含 matcher 注销与模块缓存清理）。
+        """
         self.reset()
         self.loader.load()
 

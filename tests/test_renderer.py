@@ -147,6 +147,27 @@ class TestRendererManager:
         assert renderer.setup_called
         assert len([r for r in manager._active.values() if r is renderer]) == 1
 
+    def test_reset_clears_active_and_semaphores(self):
+        # reset() 必须清掉已激活引擎与并发/超时缓存，避免下次 setup 复用陈旧引擎
+        renderer = _FakeRenderer('fake')
+        manager = _make_manager(renderer)
+        asyncio.run(manager.setup('fake'))
+        manager.configure('fake', concurrency=2)
+        assert manager._active and manager._semaphores
+        manager.reset()
+        assert manager._active == {}
+        assert manager._semaphores == {}
+        assert manager._timeouts == {}
+
+    def test_unregister_renderers_by_owner(self):
+        first, second = _FakeRenderer('shared'), _FakeRenderer('owned')
+        manager = RendererManager()
+        manager.register(first, owner_id='ExtA')
+        manager.register(second, owner_id='ExtB')
+        assert manager.unregister_renderers_by_owner('ExtA') == ['shared']
+        assert manager.get_renderer('shared') is None
+        assert manager.get_renderer('owned') is second
+
     def test_render_delegates_to_active_engine(self):
         renderer = _FakeRenderer('fake')
         manager = _make_manager(renderer)

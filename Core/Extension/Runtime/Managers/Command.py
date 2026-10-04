@@ -83,6 +83,10 @@ class CommandManager:
             raise CommandError('Command manager already built, no more commands can be registered!')
         self._registry.register(command_id, command, owner_id=owner_id, override=override)
 
+    def unregister_by_owner(self, owner_id: str) -> list[str]:
+        """注销某扩展登记的全部命令（声明回滚用；不处理已构建 matcher）。"""
+        return self._registry.unregister_by_owner(owner_id)
+
     def get_command(self, command_id: str) -> Command | None:
         return self._registry.get(command_id)
 

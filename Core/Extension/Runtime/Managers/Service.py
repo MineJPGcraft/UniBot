@@ -42,7 +42,14 @@ class ServiceManager:
             raise
 
     async def disable(self, owner_id: str) -> None:
-        """按登记逆序关闭某扩展的全部服务。"""
+        """
+        按登记逆序关闭某扩展的全部服务。
+
+        只停用、**不注销**：注销（`ServiceRegistry.unregister_by_owner`）仅用于声明
+        失败回滚与整体 `reset()`。若在 disable 时注销，第三方扩展在 `on_load` 中缓存
+        的服务句柄（`self.xxx = api.get(X)`，文档允许的写法）会失效，且重新启用时会
+        注册出新实例造成新旧两个活实例并存。
+        """
         await self._disable_services(self._registry.get_by_owner(owner_id))
 
     @staticmethod

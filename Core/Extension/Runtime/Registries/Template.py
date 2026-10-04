@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from Core.Logging import logger
+
 if TYPE_CHECKING:
     from ...Renderer import TemplateRegistration
 
@@ -24,7 +26,9 @@ class TemplateRegistry:
         self._templates.clear()
 
     def register(self, registration: TemplateRegistration) -> None:
-        """注册一个 template 扩展包（重复注册覆盖）。"""
+        """注册一个 template 扩展包（重复注册覆盖并告警）。"""
+        if registration.extension_id in self._templates:
+            logger.warning(f'Template extension {registration.extension_id} registered twice, the latest one wins.')
         self._templates[registration.extension_id] = registration
 
     def unregister(self, extension_id: str) -> None:
