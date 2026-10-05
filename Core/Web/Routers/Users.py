@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, Query
 
 from Core.Constants import UserRole
-from Core.Web.Locale import text
-from Core.Web.Managers import data_manager
 
+from ..Locale import text
+from ..Managers import data_manager
+from ..Schemas import CreateUserRequest, ResetPasswordRequest, UpdateUserRequest
 from .Auth import require_role
-from .Schemas import CreateUserRequest, ResetPasswordRequest, UpdateUserRequest
 
 router = APIRouter(prefix='/api/users', tags=['Users'], dependencies=[Depends(require_role(UserRole.admin))])
 

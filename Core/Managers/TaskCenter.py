@@ -301,7 +301,7 @@ class TaskCenter:
         except RuntimeError:
             return
         # 函数内导入：Core.Web 聚合全部路由，顶层导入会拖入插件托管包
-        from Core.Web.WebSocket import broadcast_event
+        from Core.Web.Routers.WebSocket import broadcast_event
 
         loop.create_task(broadcast_event('task', record.snapshot()))
 

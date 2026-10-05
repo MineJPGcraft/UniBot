@@ -113,7 +113,7 @@ class WebUiManager:
         # 函数内导入：api_router 聚合全部路由，部分模块顶层依赖插件托管包，
         # 必须等 NoneBot 插件加载完成后才能导入，避免 uninfo 等被抢先注册为普通模块
         from Core.Web import api_router, setup_cors, setup_request_language
-        from Core.Web.WebSocket import log_sink
+        from Core.Web.Routers.WebSocket import log_sink
 
         self.app = app
         setup_cors(app)

@@ -9,8 +9,8 @@
 
 import pytest
 
-from Core.Web.Config import Driver
-from Core.Web.Config.Driver import BASE_DRIVER, driver_packages, get_driver_package, merge_driver, shrink_driver
+from Core.Web.Routers.Config import Driver
+from Core.Web.Routers.Config.Driver import BASE_DRIVER, driver_packages, get_driver_package, merge_driver, shrink_driver
 
 
 class FakeConfigManager:

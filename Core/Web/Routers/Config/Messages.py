@@ -19,7 +19,8 @@ from typing import Any
 from Core.I18n import i18n
 from Core.I18n.Engine import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from Core.I18n.Loader import write_override
-from Core.Web.Locale import text
+
+from ...Locale import text
 
 # 命名空间段 → 界面标签键（仅对常见的顶层/二层命名空间提供友好译名，其余回退原始段名）。
 _NAMESPACE_LABELS: dict[str, str] = {

@@ -6,8 +6,8 @@ from Core.Constants import TaskKind, UserRole
 from Core.Extension.Runtime.Dependencies import sync_extension_dependencies
 from Core.Managers import task_center
 from Core.Managers.TaskCenter import TaskContext
-from Core.Web.Locale import text
 
+from ..Locale import text
 from .Auth import get_current_user, require_role
 
 router = APIRouter(prefix='/api/tasks', tags=['Tasks'])

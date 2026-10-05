@@ -9,11 +9,11 @@ from fastapi.responses import JSONResponse
 
 from Core.Constants import UserRole
 from Core.Logging import logger
-from Core.Web.Locale import text
-from Core.Web.Managers import data_manager
 
-from .Limiter import rate_limiter
-from .Schemas import (
+from ..Limiter import rate_limiter
+from ..Locale import text
+from ..Managers import data_manager
+from ..Schemas import (
     ChangePasswordRequest,
     LoginRequest,
     LogoutRequest,

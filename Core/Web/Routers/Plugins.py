@@ -10,10 +10,10 @@ from Core.Constants import (
 from Core.Extension.Runtime.Dependencies import apply_main_dependency_changes
 from Core.Managers import config_manager, plugin_manager, plugin_registry, task_center
 from Core.Managers.TaskCenter import TaskContext
-from Core.Web.Locale import text
 
+from ..Locale import text
+from ..Schemas import InstallPluginRequest, UpgradePluginRequest
 from .Auth import get_current_user, require_role
-from .Schemas import InstallPluginRequest, UpgradePluginRequest
 
 router = APIRouter(prefix='/api/plugins', tags=['Plugins'])
 

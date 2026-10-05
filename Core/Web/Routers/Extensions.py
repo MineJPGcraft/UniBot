@@ -17,12 +17,12 @@ from Core.Extension import (
 from Core.Extension.Runtime.Dependencies import sync_extension_dependencies
 from Core.Managers import config_manager, task_center
 from Core.Managers.TaskCenter import TaskContext
-from Core.Web.Locale import text
-from Core.Web.Managers import studio_manager
 
+from ..Body import parse_json_object
+from ..Locale import text
+from ..Managers import studio_manager
+from ..Schemas import MarketInstallRequest, NameSwitchRequest
 from .Auth import get_current_user, require_role
-from .Body import parse_json_object
-from .Schemas import MarketInstallRequest, NameSwitchRequest
 
 router = APIRouter(prefix='/api/extensions', tags=['Extensions'])
 

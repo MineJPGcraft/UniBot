@@ -6,10 +6,10 @@ from Core.Constants import UserRole
 from Core.Managers import cache_manager
 from Core.Network import AVATAR_SIZE, fetch_player_avatar
 from Core.RuntimeState import runtime_state
-from Core.Web.Locale import text
 
+from ..Locale import text
+from ..Schemas import BindPlayerRequest
 from .Auth import get_current_user, require_role
-from .Schemas import BindPlayerRequest
 
 router = APIRouter(prefix='/api/players', tags=['Players'])
 

@@ -30,8 +30,8 @@ JSON Schema 的自定义扩展位，Pydantic 侧则用 `json_schema_extra` 等�
 from typing import Any
 
 from Core.Constants import QQ_INTENT_FIELDS
-from Core.Web.Locale import text
 
+from ...Locale import text
 from .Adapters import PLATFORM_OPTIONS
 
 

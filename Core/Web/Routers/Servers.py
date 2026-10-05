@@ -7,10 +7,10 @@ from Core.Constants import UserRole
 from Core.Logging import logger
 from Core.RuntimeState import runtime_state
 from Core.Utils import strip_minecraft_color
-from Core.Web.Locale import text
 
+from ..Locale import text
+from ..Schemas import BroadcastRequest, ExecuteCommandRequest
 from .Auth import get_current_user, require_role
-from .Schemas import BroadcastRequest, ExecuteCommandRequest
 
 router = APIRouter(prefix='/api/servers', tags=['Servers'])
 

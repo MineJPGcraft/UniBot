@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from Core.I18n import register_all
-from Core.Web.Config.Messages import build_message_tree, save_overrides
+from Core.Web.Routers.Config.Messages import build_message_tree, save_overrides
 
 
 def _iter_nodes(nodes):

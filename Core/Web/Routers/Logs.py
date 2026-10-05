@@ -3,8 +3,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends
 
-from Core.Web.Locale import text
-
+from ..Locale import text
 from .Auth import get_current_user
 
 router = APIRouter(prefix='/api/logs', tags=['Logs'])

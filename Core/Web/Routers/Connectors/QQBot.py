@@ -22,8 +22,8 @@ from Core.Platforms.Connectors.QQOfficial import (
     qr_login,
     start_qr_login,
 )
-from Core.Web.Locale import text
 
+from ...Locale import text
 from ..Auth import require_role
 
 router = APIRouter(prefix='/api/connectors/qq', tags=['Connectors/QQ'])

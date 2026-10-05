@@ -3,8 +3,8 @@ from fastapi import APIRouter, Depends, Query
 
 from Core.Constants import UserRole
 from Core.Managers import statistics_manager
-from Core.Web.Locale import text
 
+from ..Locale import text
 from .Auth import get_current_user, require_role
 
 router = APIRouter(prefix='/api/statistics', tags=['Statistics'])

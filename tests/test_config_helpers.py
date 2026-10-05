@@ -1,6 +1,6 @@
 """配置工具函数测试：deep_merge / sanitize_none。"""
 
-from Core.Web.Config.Helpers import deep_merge, sanitize_none
+from Core.Web.Routers.Config.Helpers import deep_merge, sanitize_none
 
 
 def test_deep_merge():

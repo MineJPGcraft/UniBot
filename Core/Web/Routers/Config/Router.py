@@ -14,17 +14,17 @@ from Core.Extension.Runtime.Dependencies import apply_main_dependency_changes
 from Core.I18n import register_all
 from Core.Managers import config_manager, plugin_registry, task_center
 from Core.Managers.TaskCenter import TaskContext
-from Core.Web.Locale import text
 
-from ..Auth import get_current_user, require_role
-from ..Body import parse_json_object
-from ..Schemas import (
+from ...Body import parse_json_object
+from ...Locale import text
+from ...Schemas import (
     InstallAdapterRequest,
     MessagesPatchRequest,
     NoneBotItemRequest,
     RawConfigPatchRequest,
     UninstallAdapterRequest,
 )
+from ..Auth import get_current_user, require_role
 from .Adapters import ADAPTER_CATALOG, PROTECTED_ADAPTER_MODULES
 from .Driver import compute_redundant_drivers, driver_packages, format_driver, merge_driver, shrink_driver
 from .Helpers import deep_merge, sanitize_none

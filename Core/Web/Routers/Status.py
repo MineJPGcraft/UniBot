@@ -11,8 +11,8 @@ from Core.Managers import task_center, version_manager
 from Core.Managers.TaskCenter import TaskContext
 from Core.Process import is_watchdog_process, request_restart
 from Core.RuntimeState import runtime_state
-from Core.Web.Locale import text
 
+from ..Locale import text
 from .Auth import get_current_user, require_role
 from .WebSocket import ws_clients
 
