@@ -238,7 +238,7 @@ sent = "已向服务器发送消息：{content}。"
 ::: tip Panel language and message language are independent
 The WebUI panel language (Chinese / English) is switched from the top-right corner of the panel and stored only in your browser;
 dynamic API messages follow the browser language automatically. Neither is related to the `language` field.
-In addition, the language selector at the top of the **Message Text** editor decides **which language's message overrides you are editing** (`zh` / `en`) and is likewise unrelated to the panel language.
+The **Message Text** editor edits overrides in the language that follows the **panel language** (a Chinese panel edits Chinese overrides, an English panel edits English overrides); no separate switch is needed.
 :::
 
 ---

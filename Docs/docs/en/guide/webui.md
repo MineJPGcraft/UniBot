@@ -162,7 +162,7 @@ See the "WebUI Management" section in [Extension System](/en/unibot/extension-sy
 
 - **`Config.toml`**: config items displayed in groups, with Schema validation; save after editing and (as needed) restart.
 - **`.env`**: environment variables displayed in groups (including **bot card** editing for bot list fields such as `QQ_BOTS`, `TELEGRAM_BOTS`, etc.); saving changes requires **restarting the bot to take effect**.
-- **Message Text**: a tree editor grouped by translation key for editing messages item by item; the language selector at the top switches between editing Chinese / English overrides, placeholders are inserted as draggable chips, and saving hot-applies immediately (overrides are written to `Config/Messages.{zh,en}.toml`).
+- **Message Text**: a tree editor grouped by translation key for editing messages item by item; the edited language follows the **panel language** (Chinese panel edits Chinese overrides, English panel edits English overrides), placeholders are inserted as draggable chips, and saving hot-applies immediately (overrides are written to `Config/Messages.{zh,en}.toml`).
 - **Extension settings**: edit every extension that declares configuration options (including no-code template packs) in one place; changes take effect immediately, and disabled or blocked extensions are read-only.
 - **Source mode** is also available, for editing TOML / env sources directly.
 
