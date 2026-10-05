@@ -435,6 +435,12 @@ uninstall_not_found = "Adapter is not in the built-in catalog; its dependencies 
 already_exists = "This plugin already exists"
 builtin_protected = "Built-in plugins cannot be deleted"
 
+[api.messages]
+group_commands = "Command texts"
+group_events = "Event broadcasts"
+group_core = "Core texts"
+group_extensions = "Extension messages"
+
 [api.task_center]
 not_found = "Task not found"
 cancelled = "Task cancelled"

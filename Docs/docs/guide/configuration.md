@@ -17,8 +17,9 @@ UniBot 采用 **双配置文件** 体系，分别管理框架层与业务层配�
 | `Config.toml` | 项目根目录 | 机器人自定义配置（指令、消息、图片等） | TOML |
 | `Config/Extensions.toml` | `Config/` 目录 | 扩展启停开关（每扩展一个键） | TOML |
 | `Config/Extensions/<id>.toml` | `Config/Extensions/` 目录 | 各扩展的独立配置（每扩展一个文件） | TOML |
-| `Core/Locales/System.{zh,en}.toml` | `Core/Locales/` 目录 | 系统内置文案（系统指令 + 扩展/插件名称），只读、不可改 | TOML |
-| `Core/Locales/Messages.{zh,en}.toml` | `Core/Locales/` 目录 | 机器人消息文案（可自由修改，保存即热生效） | TOML |
+| `Config/Messages.{zh,en}.toml` | `Config/` 目录 | 用户对消息文案的覆盖（仅保存改过的键），保存即热生效 | TOML |
+| `Core/Locales/System.{zh,en}.toml` | `Core/Locales/` 目录 | 系统内置文案（系统指令 + 扩展/插件名称 + `api.*` 界面文案），只读、不可覆盖 | TOML |
+| `Core/Locales/Messages.{zh,en}.toml` | `Core/Locales/` 目录 | 消息文案的默认译文（系统自带） | TOML |
 :::
 
 ==日常使用中，绝大多数配置都能在 WebUI 里可视化完成，无需手动编辑这些文件。== 本页面向需要深入调整或手动部署的场景。
@@ -210,38 +211,43 @@ enabled = true
 
 ---
 
-## `Core/Locales/` — 语言包
+## 语言包与用户覆盖
 
-机器人的所有文本由统一 I18n 引擎承载，支持 `{占位符}` 格式化，分为两层（语言包统一放在 `Core/Locales/` 下，置于 `Core/` 内以防止用户直接误改）：
+机器人的所有文本由统一 I18n 引擎承载，支持 `{占位符}` 格式化。**语言包默认值与用户覆盖相互分离**：语言包统一放在 `Core/Locales/` 下（置于 `Core/` 内以防止用户直接误改），用户改动则单独存放在 `Config/` 下。
 
-- **系统层 `Core/Locales/System.{zh,en}.toml`**（系统自带，**只读**）：包含**系统指令**（`/bot`）、**所有扩展/插件的名称、描述**，以及 **WebUI 后端 `api.*` 界面文案**。用户即便修改其中的键也会被忽略，以保护系统界面文案。
-- **消息层 `Core/Locales/Messages.{zh,en}.toml`**（用户可改）：除系统键以外的全部消息（事件播报、其余指令等）。在 WebUI 或直接编辑保存后立即热生效。
-- 扩展语言包位于 `Extensions/<id>/Locales/{zh,en}.toml`，命名空间 `ext.<id>.*`；`/bot` 与扩展/插件名称属系统层，不可被覆盖。
-- `language = "zh"` 时读取 `zh` 包，`language = "en"` 时读取 `en` 包；旧版 `Config/Messages.*.toml` 的用户改动会在首次启动时一次性迁入 `Core/Locales/Messages.*.toml`（幂等）。
+### 语言包默认值（系统自带）
+
+- **系统层 `Core/Locales/System.{zh,en}.toml`**（系统自带，**只读**且**不可覆盖**）：包含**系统指令**（`/bot`）、**所有扩展/插件的名称、描述**，以及 **WebUI 后端 `api.*` 界面文案**。
+- **消息层 `Core/Locales/Messages.{zh,en}.toml`**（系统自带，作为默认译文）：除系统键以外的全部消息（事件播报、其余指令等）。
+- 扩展语言包位于 `Extensions/<id>/Locales/{zh,en}.toml`，命名空间 `ext.<id>.*`。
+
+### 用户覆盖（`Config/Messages.{zh,en}.toml`）
+
+用户在 WebUI「消息文本」编辑器中的改动**不再直接改写语言包**，而是独立写入覆盖层文件：
+
+```
+Config/Messages.zh.toml     # 用户对中文消息的覆盖
+Config/Messages.en.toml     # 用户对英文消息的覆盖
+```
+
+- 覆盖文件**只保存用户改动过的键**，未改动的键不会写入；改动回退到默认译文时对应键会被自动移除。
+- 生效优先级为：**用户覆盖 → 默认消息层 → 系统层 / 扩展**。系统层键（系统指令、扩展/插件名称、`api.*` 界面文案）**受保护、不可覆盖**。
+- 覆盖性按**文件来源**判定：凡由 `System.*.toml` 提供的键即视为系统键（受保护）；由 `Messages.*.toml` 或扩展语言包提供的键均可被用户覆盖。
+- 保存后**立即热生效**，无需重启。`language = "zh"` 时读取 `zh` 包与其覆盖，`language = "en"` 时读取 `en` 包与其覆盖。
 
 ```toml
+# Config/Messages.zh.toml（仅含用户改过的键）
 [core.events]
-player_join = "玩家 {player} 加入了游戏。"        # en 包: "Player {player} joined the game."
+player_join = "玩家 {player} 上线啦！"
 
 [core.commands.send]
 sent = "已向服务器发送消息：{content}。"
-
-[core.commands.luck]
-result = "你今天的人品为 {point}，{tips}"
 ```
-
-*注意：请勿删除已有键。* 缺失必填项将导致机器人启动失败。
-
-::: tip 隐藏区块（# Hidden Start / # Hidden End）
-消息包中 `# Hidden Start` 与 `# Hidden End` 两行注释连同其之间的内容**完全不会出现**在 WebUI「消息文本」编辑器中：
-保存时自动按原位置并回（依据区块前方的可见内容定位）、机器人照常加载。
-若区块前的定位内容被删除，该区块会在保存时以完整标记对追加到文件末尾，数据不会丢失。
-请勿在 WebUI 编辑器中手动输入这两个标记（会被忽略）。
-:::
 
 ::: tip 界面语言与消息语言相互独立
 WebUI 管理面板的界面语言（中/英）在面板右上角切换、仅保存在浏览器本地；
 机器人 API 返回的动态提示会跟随浏览器语言自动切换，均与 `language` 字段无关。
+另：「消息文本」编辑器顶部的语言选择器决定**编辑哪种语言的消息覆盖**（`zh` / `en`），同样与面板界面语言无关。
 :::
 
 ---

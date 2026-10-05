@@ -1,12 +1,9 @@
 from contextlib import suppress
 from json import JSONDecodeError, dumps, loads
-from pathlib import Path
 
 import tomlkit
 
-from Core.Config import config
-from Core.Constants import CONFIG_TOML_PATH, ENV_PATH, MESSAGE_PATHS, PYPROJECT_PATH
-from Core.I18n import write_override
+from Core.Constants import CONFIG_TOML_PATH, ENV_PATH, PYPROJECT_PATH
 from Core.Logging import logger
 
 
@@ -187,22 +184,6 @@ class ConfigManager:
                 continue
             toml_document[key] = value
         self.config_path.write_text(tomlkit.dumps(toml_document), encoding='Utf-8')
-
-    # ===== 消息文本覆盖层操作 =====
-
-    def active_messages_path(self) -> Path:
-        """获取当前配置语言的用户可改消息文件路径（Core/Locales/Messages.<language>.toml）。"""
-        return MESSAGE_PATHS.get(config.language, MESSAGE_PATHS['zh'])
-
-    def read_messages_raw(self) -> str:
-        """读取当前语言覆盖层原始文本（供 WebUI 消息编辑器展示，缺失返回空串）。"""
-        path = self.active_messages_path()
-        return path.read_text('Utf-8') if path.exists() else ''
-
-    def write_messages_raw(self, content: str):
-        """校验并以原始文本写回当前语言覆盖层，写盘后热重载语言包。"""
-        write_override(config.language, content)
-        logger.success('Message texts saved and reloaded.')
 
 
 config_manager = ConfigManager()

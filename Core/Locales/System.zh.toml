@@ -435,6 +435,12 @@ uninstall_not_found = "该适配器不在内置目录中，无法安全卸载依
 already_exists = "该插件已存在"
 builtin_protected = "内置插件不允许删除"
 
+[api.messages]
+group_commands = "指令文案"
+group_events = "事件播报"
+group_core = "核心文案"
+group_extensions = "扩展消息"
+
 [api.task_center]
 not_found = "任务不存在"
 cancelled = "任务已取消"

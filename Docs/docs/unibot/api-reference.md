@@ -90,6 +90,56 @@ Content-Type: application/json
 
 修改后需重启机器人才生效（由 Watchdog 处理）。
 
+### 读取消息文本
+
+```
+GET /api/config/messages?language=zh
+```
+
+按翻译键的**命名空间**返回嵌套树。每个命名空间节点含 `name` / `path` / `label` / `count`（子树消息数）/ `modified_count` / `children` / `items`；叶子消息项含 `key` / `value`（生效值）/ `base_value`（默认译文）/ `placeholders` / `is_list` / `modified`。
+
+```jsonc
+{
+  "language": "zh",
+  "tree": [
+    {
+      "name": "core", "path": "core", "label": "核心文案",
+      "count": 123, "modified_count": 0,
+      "children": [
+        { "name": "events", "path": "core.events", "label": "事件播报", "count": 26,
+          "items": [{ "key": "core.events.player_join", "value": "玩家 {player} 加入了游戏。", "...": "..." }] }
+      ],
+      "items": []
+    }
+  ],
+  "total_count": 123,
+  "modified_count": 0
+}
+```
+
+系统键（系统指令、内置扩展/插件名称、`api.*` 界面文案）受保护，不下发。
+
+### 保存消息覆盖
+
+```
+PATCH /api/config/messages
+Content-Type: application/json
+
+{
+  "language": "zh",
+  "overrides": { "core.events.player_join": "玩家 {player} 上线啦！" }
+}
+```
+
+`overrides` 为「点路径 → 新值」映射；受保护键与等于默认译文的项会被剔除，写入 `Config/Messages.{zh,en}.toml`（仅保留用户改过的键）并立即热生效。
+
+### 读取原始源码 / .env
+
+```
+GET  /api/config/raw                # Config.toml 源码
+GET  /api/config/env                # .env 源码（源码模式）
+```
+
 ## 状态接口
 
 ```

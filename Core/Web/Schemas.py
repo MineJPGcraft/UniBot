@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 from Core.Constants import UserRole
 
@@ -100,7 +102,10 @@ class NameSwitchRequest(BaseModel):
 
 
 class MessagesPatchRequest(BaseModel):
-    messages_toml: str
+    """消息文本保存请求：language 为目标语言，overrides 为「点路径 → 新值」改动映射。"""
+
+    language: str | None = None
+    overrides: dict[str, Any] = Field(default_factory=dict)
 
 
 class RawConfigPatchRequest(BaseModel):

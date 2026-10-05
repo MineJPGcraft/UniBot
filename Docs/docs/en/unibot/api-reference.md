@@ -89,6 +89,56 @@ Content-Type: application/json
 
 A bot restart is required for the change to take effect (handled by the Watchdog).
 
+### Read Message Texts
+
+```
+GET /api/config/messages?language=zh
+```
+
+Returns a nested tree grouped by the **namespace** of translation keys. Each namespace node carries `name` / `path` / `label` / `count` (messages in the subtree) / `modified_count` / `children` / `items`; each leaf message item carries `key` / `value` (effective value) / `base_value` (default translation) / `placeholders` / `is_list` / `modified`.
+
+```jsonc
+{
+  "language": "zh",
+  "tree": [
+    {
+      "name": "core", "path": "core", "label": "Core texts",
+      "count": 123, "modified_count": 0,
+      "children": [
+        { "name": "events", "path": "core.events", "label": "Event broadcasts", "count": 26,
+          "items": [{ "key": "core.events.player_join", "value": "玩家 {player} 加入了游戏。", "...": "..." }] }
+      ],
+      "items": []
+    }
+  ],
+  "total_count": 123,
+  "modified_count": 0
+}
+```
+
+System keys (system commands, built-in extension/plugin names, `api.*` UI text) are protected and not returned.
+
+### Save Message Overrides
+
+```
+PATCH /api/config/messages
+Content-Type: application/json
+
+{
+  "language": "zh",
+  "overrides": { "core.events.player_join": "玩家 {player} 上线啦！" }
+}
+```
+
+`overrides` is a `key → new value` map; protected keys and entries equal to the default translation are pruned, then written to `Config/Messages.{zh,en}.toml` (only changed keys are kept) and hot-applied immediately.
+
+### Read Raw Sources
+
+```
+GET  /api/config/raw                # Config.toml source
+GET  /api/config/env                # .env source (source mode)
+```
+
 ## Status API
 
 ```

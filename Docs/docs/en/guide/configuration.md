@@ -17,8 +17,9 @@ UniBot uses a **dual-config-file** system, separately managing the framework lay
 | `Config.toml` | Project root | Bot custom config (commands, messages, images, etc.) | TOML |
 | `Config/Extensions.toml` | `Config/` directory | Extension toggle switch (one key per extension) | TOML |
 | `Config/Extensions/<id>.toml` | `Config/Extensions/` directory | Independent config for each extension (one file per extension) | TOML |
-| `Core/Locales/System.{zh,en}.toml` | `Core/Locales/` directory | System built-in text (system commands + extension/plugin names), read-only | TOML |
-| `Core/Locales/Messages.{zh,en}.toml` | `Core/Locales/` directory | Bot message text (freely editable, hot-applies on save) | TOML |
+| `Config/Messages.{zh,en}.toml` | `Config/` directory | User overrides of message text (only changed keys), hot-applies on save | TOML |
+| `Core/Locales/System.{zh,en}.toml` | `Core/Locales/` directory | System built-in text (system commands + extension/plugin names + `api.*` UI text), read-only and not overridable | TOML |
+| `Core/Locales/Messages.{zh,en}.toml` | `Core/Locales/` directory | Default translations of message text (shipped with the system) | TOML |
 :::
 
 ==In daily use, the vast majority of configuration can be done visually in the WebUI without manually editing these files.== This page is for scenarios that require deep tuning or manual deployment.
@@ -201,38 +202,43 @@ After modification, the extension validates and applies the config immediately; 
 
 ---
 
-## `Core/Locales/` — Language Packs
+## Language Packs & User Overrides
 
-All of the bot's text is carried by a unified I18n engine with `{placeholder}` formatting, split into two layers (language packs live under `Core/Locales/`, placed inside `Core/` to prevent accidental edits):
+All of the bot's text is carried by a unified I18n engine with `{placeholder}` formatting. **Default translations and user overrides are kept separate**: language packs live under `Core/Locales/` (placed inside `Core/` to prevent accidental edits), while user changes are stored separately under `Config/`.
 
-- **System layer `Core/Locales/System.{zh,en}.toml`** (shipped with the system, **read-only**): contains the **system command** (`/bot`), the **names/descriptions of every extension/plugin**, and the **WebUI backend `api.*` interface text**. Edits to these keys are ignored to protect system-facing text.
-- **Messages layer `Core/Locales/Messages.{zh,en}.toml`** (user-editable): every message outside the system keys (event broadcasts, other commands, etc.). Saving in the WebUI or editing directly applies instantly.
-- Extension packs live in `Extensions/<id>/Locales/{zh,en}.toml` under the `ext.<id>.*` namespace; the `/bot` command and extension/plugin names belong to the system layer and cannot be overridden.
-- With `language = "zh"`, the `zh` pack is read; with `language = "en"`, the `en` pack is read; legacy `Config/Messages.*.toml` user changes are migrated into `Core/Locales/Messages.*.toml` once on first start (idempotent).
+### Default translations (shipped with the system)
 
-```toml
-[core.events]
-player_join = "Player {player} joined the game."
+- **System layer `Core/Locales/System.{zh,en}.toml`** (shipped with the system, **read-only** and **not overridable**): contains the **system command** (`/bot`), the **names/descriptions of every extension/plugin**, and the **WebUI backend `api.*` interface text**.
+- **Messages layer `Core/Locales/Messages.{zh,en}.toml`** (shipped with the system, used as the default translation): every message outside the system keys (event broadcasts, other commands, etc.).
+- Extension packs live in `Extensions/<id>/Locales/{zh,en}.toml` under the `ext.<id>.*` namespace.
 
-[core.commands.send]
-sent = "Message sent to the server: {content}."
+### User overrides (`Config/Messages.{zh,en}.toml`)
 
-[core.commands.luck]
-result = "Your luck today is {point}, {tips}"
+Changes made in the WebUI **Message Text** editor no longer rewrite the language packs; instead they are written to dedicated override files:
+
+```
+Config/Messages.zh.toml     # user overrides for Chinese messages
+Config/Messages.en.toml     # user overrides for English messages
 ```
 
-*Note: do not delete existing keys.* Missing required items will cause the bot to fail to start.
+- Override files **store only the keys you changed**; unchanged keys are never written, and a key is removed automatically when it is reverted to the default translation.
+- The effective priority is: **user override → default messages layer → system layer / extensions**. System-layer keys (system commands, extension/plugin names, `api.*` UI text) are **protected and cannot be overridden**.
+- Overridability is decided by **file origin**: any key provided by `System.*.toml` is treated as a system key (protected); keys from `Messages.*.toml` or extension packs are user-overridable.
+- Saving applies instantly with **no restart**. With `language = "zh"` the `zh` pack and its overrides are read; with `language = "en"` the `en` pack and its overrides are read.
 
-::: tip Hidden blocks (# Hidden Start / # Hidden End)
-The `# Hidden Start` / `# Hidden End` comment lines and everything between them are **completely hidden** from the WebUI message editor:
-on save they are re-inserted at their original position (located by the visible content preceding each block) and are still loaded by the bot.
-If the locating content is deleted, the block is appended to the end of the file with full markers on save — data is never lost.
-Do not type these markers manually in the WebUI editor (they are ignored).
-:::
+```toml
+# Config/Messages.zh.toml (contains only the keys you changed)
+[core.events]
+player_join = "玩家 {player} 上线啦！"
+
+[core.commands.send]
+sent = "已向服务器发送消息：{content}。"
+```
 
 ::: tip Panel language and message language are independent
 The WebUI panel language (Chinese / English) is switched from the top-right corner of the panel and stored only in your browser;
 dynamic API messages follow the browser language automatically. Neither is related to the `language` field.
+In addition, the language selector at the top of the **Message Text** editor decides **which language's message overrides you are editing** (`zh` / `en`) and is likewise unrelated to the panel language.
 :::
 
 ---

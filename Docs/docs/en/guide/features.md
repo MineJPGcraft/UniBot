@@ -58,7 +58,7 @@ Image rendering is a fairly independent feature — see [Image Rendering](/en/gu
 UniBot ships with a web admin panel built on **Vue 3 + Vite**, interacting with the backend through a REST API. It provides real-time dashboard monitoring, server / player management, visual configuration, extension management, log viewing, and more — **with WebUI, you'll basically never need to manually edit configuration files**.
 
 - **Dashboard**: real-time running status + "Quick Start" guide card
-- **Visual configuration**: grouped editing of `Config.toml` / `.env` / `Messages.toml` with Schema validation
+- **Visual configuration**: grouped editing of `Config.toml` / `.env` / message text with Schema validation
 - **Server / Player / Adapter / Plugin / Extension**: one-stop management
 - **Log viewing**: real-time WebSocket streaming + level filtering
 - **Login authentication**: JWT + HttpOnly Cookie, admin account system

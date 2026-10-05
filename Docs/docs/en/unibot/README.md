@@ -80,7 +80,7 @@ UniBot/
 ├── Config/
 │   ├── Extensions.toml    # Extension toggle
 │   ├── Extensions/        # Extension config (one file per extension)
-│   └── Messages.toml      # Message text
+│   └── Messages.{zh,en}.toml  # User message overrides (only changed keys)
 ├── Data/                  # Data persistence (JSON)
 │   ├── Extension/         # Extension management state
 │   └── Exs/               # Extension business data

@@ -28,6 +28,7 @@ from ..Schemas import (
 from .Adapters import ADAPTER_CATALOG, PROTECTED_ADAPTER_MODULES
 from .Driver import compute_redundant_drivers, driver_packages, format_driver, merge_driver, shrink_driver
 from .Helpers import deep_merge, sanitize_none
+from .Messages import build_message_tree, save_overrides
 from .Schema import build_config_groups, build_config_schema, build_env_groups, build_env_schema
 
 router = APIRouter(prefix='/api/config', tags=['Config'])
@@ -151,26 +152,24 @@ async def patch_config(request: Request, current_user: dict = Depends(require_ro
 # ===== Messages.toml 消息文本 =====
 
 
-@router.get('/messages', summary='获取消息文本配置')
-async def get_messages(current_user: dict = Depends(get_current_user)):
-    """获取 Messages.toml 的原始文本内容。"""
+@router.get('/messages', summary='获取消息文本分组树')
+async def get_messages(language: str | None = None, current_user: dict = Depends(get_current_user)):
+    """获取某语言的消息分组树（默认/生效值、占位符、是否已修改）。"""
     return {
         'code': 0,
-        'data': {
-            'messages_toml': config_manager.read_messages_raw(),
-        },
+        'data': build_message_tree(language),
         'message': 'ok',
     }
 
 
-@router.patch('/messages', summary='保存消息文本配置')
+@router.patch('/messages', summary='保存消息文本覆盖层')
 async def patch_messages(body: MessagesPatchRequest, current_user: dict = Depends(require_role(UserRole.admin))):
-    """以原始文本方式保存 Messages.toml 并热更新。"""
+    """保存用户改动到覆盖层（仅存改动键）并热更新。"""
     try:
-        config_manager.write_messages_raw(body.messages_toml)
+        count = save_overrides(body.language, body.overrides)
     except Exception as error:
         return {'code': 1, 'data': None, 'message': text('config.messages.write_failed', error=error)}
-    return {'code': 0, 'data': None, 'message': text('config.messages.saved')}
+    return {'code': 0, 'data': {'modified_count': count}, 'message': text('config.messages.saved')}
 
 
 # ===== .env 环境变量配置 =====

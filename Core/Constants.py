@@ -11,16 +11,20 @@ CONFIG_TOML_PATH = Path('Config.toml')
 ENV_PATH = Path('.env')
 PYPROJECT_PATH = Path('pyproject.toml')
 # 语言包根目录（Core/Locales/，zh/en 双语；置于 Core 内防止用户误改）
-# - System.*.toml：系统内置文案（系统指令 + 扩展/插件名称 + WebUI 界面 api.*），只读，用户覆盖被忽略
-# - Messages.*.toml：机器人消息文案，可自由修改，保存后热生效
+# - System.*.toml：系统内置文案（系统指令 + 扩展/插件名称 + WebUI 界面 api.*），随核心分发
+# - Messages.*.toml：机器人消息默认文案（事件播报、其余指令、扩展消息等）
 LOCALES_DIR = Path('Core') / 'Locales'
 SYSTEM_ZH_PATH = LOCALES_DIR / 'System.zh.toml'
 SYSTEM_EN_PATH = LOCALES_DIR / 'System.en.toml'
 MESSAGES_ZH_PATH = LOCALES_DIR / 'Messages.zh.toml'
 MESSAGES_EN_PATH = LOCALES_DIR / 'Messages.en.toml'
-# 语言 -> 系统/消息文件映射（供加载器复用，避免散落各处）
+# 语言 -> 系统/消息默认文件映射（供加载器复用，避免散落各处）
 SYSTEM_PATHS = {'zh': SYSTEM_ZH_PATH, 'en': SYSTEM_EN_PATH}
 MESSAGE_PATHS = {'zh': MESSAGES_ZH_PATH, 'en': MESSAGES_EN_PATH}
+# 用户消息覆盖层（仅保存用户改过的键，可覆盖任意命名空间含 api.* / ext.*，缺失即视为无覆盖）
+CONFIG_MESSAGES_ZH_PATH = Path('Config') / 'Messages.zh.toml'
+CONFIG_MESSAGES_EN_PATH = Path('Config') / 'Messages.en.toml'
+OVERRIDE_MESSAGE_PATHS = {'zh': CONFIG_MESSAGES_ZH_PATH, 'en': CONFIG_MESSAGES_EN_PATH}
 # 注：旧消息包路径与迁移标记已随迁移逻辑迁出到独立脚本 `Scripts/migrate_messages.py`
 
 # ===== 运行时数据 =====

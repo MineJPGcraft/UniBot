@@ -14,6 +14,8 @@ Logs/
 # Extensions/Example/
 Config/Extensions/
 Config/Plugins.toml
+# 用户消息覆盖层（Config/Messages.*.toml）：仅保存用户在 WebUI 改过的消息键，属运行时数据
+Config/Messages.*.toml
 # I18n 语言包（Core/Locales/）：System.* 系统只读、Messages.* 用户可改，均随包分发纳入版本控制
 # 迁移完成标记 Data/.locales_migrated 随 Data/ 目录一并忽略
 /WebUi/

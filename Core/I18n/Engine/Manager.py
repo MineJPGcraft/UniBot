@@ -1,10 +1,15 @@
-"""I18n 管理器：System / Messages 双源语言包、扁平点路径表查找与命名空间隔离。
+"""I18n 管理器：默认语言包 + 用户逐键覆盖、扁平点路径表查找与命名空间隔离。
 
-三层模型（Refactor §5）：
-- **System 层**（系统自带，只读）：系统指令、扩展/插件名称与 WebUI 界面文案（`api.*`），
-  注册后**不可被覆盖层覆盖**；用户即便在 `Core/Locales/Messages.*.toml` 写入同名键也会被忽略。
-- **Messages 层**（用户可改）：其余全部消息文案，会并入覆盖层结果。
-- **覆盖层**（用户 `Core/Locales/Messages.*.toml`，可编辑）：只对非 System 键生效，优先级最高。
+两层模型（Refactor §5）：
+- **默认层**：System 层（`Core/Locales/System.*.toml`：系统指令 `/bot`、内置扩展/插件名称、
+  面板界面 `api.*`）与 Messages 层（`Core/Locales/Messages.*.toml`：事件播报、其余指令）
+  以及扩展语言包（`Extensions/<id>/Locales/*`：`ext.<id>.*`），均为**默认值**来源。
+- **覆盖层**（用户 `Config/Messages.{zh,en}.toml`，可编辑）：**只保存用户改过的键**。
+
+**可覆盖性以文件来源判定**（`is_protected`）：
+- System 文件注册的键（系统指令 + 内置扩展/插件名称 + 面板界面文案）**受保护**，用户覆盖被忽略；
+- Messages 文件与扩展语言包注册的键**可被用户覆盖**——注意同一 `core.*` / `ext.*` 命名空间
+  在 System 与 Messages 中均可能出现，因此判定按「该键是否由 System 文件提供」而非命名空间前缀。
 
 各层注册时统一展平为「点路径 → 叶子值」扁平表，合并即按优先级 `update`、查找即 `dict.get`；
 命名空间按键前缀隔离：`core.*` / `api.*` / `builtin.*` / `ext.<id>.*`。
@@ -13,6 +18,7 @@
 
 from __future__ import annotations
 
+from string import Formatter
 from typing import Any
 
 from Core.Logging import logger
@@ -21,19 +27,19 @@ from .Context import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 
 
 class I18nManager:
-    """System / Messages 双源语言包的注册与渲染编排。"""
+    """默认语言包与用户逐键覆盖的注册、合并、查找与渲染编排。"""
 
     def __init__(self) -> None:
         # 各层均为「语言 -> 扁平点路径表」（叶子值为 str 或 list[str]）
-        # System 层：系统自带，只读，受保护不可被覆盖
+        # System 层：系统自带，受保护不可被覆盖
         self._system: dict[str, dict[str, Any]] = {language: {} for language in SUPPORTED_LANGUAGES}
-        # Messages 层：用户可改的默认文案
+        # Messages 层：机器人消息默认文案
         self._messages: dict[str, dict[str, Any]] = {language: {} for language in SUPPORTED_LANGUAGES}
         # 扩展语言包：语言 -> {命名空间: 扁平表}（`ext.<id>`）
         self._extensions: dict[str, dict[str, dict[str, Any]]] = {language: {} for language in SUPPORTED_LANGUAGES}
-        # 覆盖层：用户编辑，仅对非系统键生效
+        # 覆盖层：用户编辑（仅存改过的键）；与 System 键同名者在合并时被忽略
         self._override: dict[str, dict[str, Any]] = {language: {} for language in SUPPORTED_LANGUAGES}
-        # 生效目录：语言 -> 合并后的扁平表（System 优先，覆盖层最后）
+        # 生效目录：语言 -> 合并后的扁平表（System → Messages → 扩展 → 覆盖层）
         self._catalog: dict[str, dict[str, Any]] = {language: {} for language in SUPPORTED_LANGUAGES}
 
     # ===== 注册 =====
@@ -63,20 +69,20 @@ class I18nManager:
         self._rebuild()
 
     def _rebuild(self) -> None:
-        """重建生效目录：System → Messages → 扩展 → 覆盖层；System 键不可被覆盖。"""
+        """重建生效目录：System → Messages → 扩展 → 覆盖层；System 文件提供的键不可被覆盖。"""
         for language in SUPPORTED_LANGUAGES:
-            system = self._system[language]
-            merged = dict(system)
+            merged = dict(self._system[language])
+            system_keys = tuple(self._system[language])
             for source in (self._messages[language], *self._extensions[language].values(), self._override[language]):
                 for key, value in source.items():
-                    if key not in system:
+                    if key not in system_keys:
                         merged[key] = value
             self._catalog[language] = merged
 
     # ===== 覆盖层 =====
 
     def load_override(self, language: str, data: dict[str, Any]) -> None:
-        """加载覆盖层语言包（`Core/Locales/Messages.<language>.toml` 解析结果）。"""
+        """加载用户覆盖层（`Config/Messages.<language>.toml` 解析结果），System 键被剔除。"""
         if language not in SUPPORTED_LANGUAGES:
             return
         self._override[language] = _flatten(data)
@@ -126,8 +132,45 @@ class I18nManager:
         return key in self._catalog[language]
 
     def is_protected(self, key: str) -> bool:
-        """判断点路径键是否属于 System 层（受保护，用户覆盖无效）。"""
-        return key in self._system[DEFAULT_LANGUAGE]
+        """判断点路径键是否受保护（由 System 文件提供，用户覆盖无效）。"""
+        return any(key in self._system[language] for language in SUPPORTED_LANGUAGES)
+
+    # ===== 目录访问（供 WebUI 消息编辑器构建树 / 校验）=====
+
+    def catalog_keys(self, language: str, prefix: str | None = None) -> list[str]:
+        """返回生效目录的点路径键列表，可按命名空间前缀过滤（如 `core.commands.`）。"""
+        target = language if language in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
+        keys = self._catalog[target].keys()
+        if prefix is None:
+            return list(keys)
+        return [key for key in keys if key.startswith(prefix)]
+
+    def raw_value(self, language: str, key: str) -> Any:
+        """按语言取生效目录的原始叶子值（str 或 list），缺失返回 None。"""
+        target = language if language in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
+        return self._catalog[target].get(key)
+
+    def base_value(self, language: str, key: str) -> Any:
+        """按语言取**未叠加用户覆盖**的默认叶子值（System → Messages → 扩展），缺失返回 None。"""
+        target = language if language in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
+        if key in self._system[target]:
+            return self._system[target][key]
+        if key in self._messages[target]:
+            return self._messages[target][key]
+        for table in self._extensions[target].values():
+            if key in table:
+                return table[key]
+        return None
+
+    def find_placeholders(self, template: str) -> list[str]:
+        """解析模板中的命名占位符（`{name}`），按首次出现去重，供前端插入参考。"""
+        names: list[str] = []
+        formatter = Formatter()
+        for _, field_name, _, _ in formatter.parse(template):
+            if field_name is None or field_name in names:
+                continue
+            names.append(field_name)
+        return names
 
 
 def _flatten(data: dict[str, Any], prefix: str = '') -> dict[str, Any]:

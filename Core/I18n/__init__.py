@@ -36,6 +36,8 @@ from .Engine import (
     set_system_locale,
 )
 from .Loader import (
+    overrides_path,
+    read_override,
     register_all,
     register_extension_locales,
     unregister_extension_locales,
@@ -64,6 +66,8 @@ __all__ = [
     'i18n',
     'i18n_deferred',
     'normalize_language',
+    'overrides_path',
+    'read_override',
     'register_all',
     'register_extension_locales',
     'resolve_locale',

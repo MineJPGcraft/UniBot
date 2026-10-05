@@ -98,6 +98,7 @@ def test_messages_layer_can_be_overridden() -> None:
 
 
 def test_is_protected_flags_system_keys() -> None:
+    # 受保护性由「键是否由 System 文件提供」判定
     assert i18n.is_protected('builtin.list.name')
     assert i18n.is_protected('core.commands.bot.description')
     assert i18n.is_protected('api.auth.token_expired')
@@ -156,3 +157,33 @@ def test_locale_context_roundtrip() -> None:
     finally:
         set_messages_locale('zh')
         set_system_locale('zh')
+
+
+def test_is_protected_is_source_based() -> None:
+    # 受保护性由「键是否由 System 文件提供」判定：api.* / builtin.* / core.commands.bot.* 受保护
+    assert i18n.is_protected('api.auth.token_expired')
+    assert i18n.is_protected('builtin.list.name')
+    assert i18n.is_protected('core.commands.bot.description')
+    # Messages 文件提供的键可覆盖
+    assert not i18n.is_protected('core.events.player_join')
+    assert not i18n.is_protected('core.commands.list.description')
+
+
+def test_find_placeholders_dedup_and_order() -> None:
+    names = i18n.find_placeholders('玩家 {player} 加入 [{server}]，{player} 加油')
+    assert names == ['player', 'server']
+
+
+def test_catalog_keys_filter_by_prefix() -> None:
+    keys = i18n.catalog_keys('zh', 'core.events.')
+    assert 'core.events.player_join' in keys
+    assert all(key.startswith('core.events.') for key in keys)
+
+
+def test_base_value_ignores_user_override() -> None:
+    i18n.load_override('zh', {'core': {'events': {'player_join': '覆盖：{player}'}}})
+    try:
+        assert i18n.raw_value('zh', 'core.events.player_join') == '覆盖：{player}'
+        assert i18n.base_value('zh', 'core.events.player_join') == '玩家 {player} 加入了游戏。'
+    finally:
+        register_all()

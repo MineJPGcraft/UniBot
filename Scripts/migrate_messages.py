@@ -26,25 +26,26 @@ import tomlkit
 # 脚本位于 UniBot/Scripts/，项目根为其父目录
 _ROOT = Path(__file__).resolve().parent.parent
 LOCALES_DIR = _ROOT / 'Core' / 'Locales'
+CONFIG_DIR = _ROOT / 'Config'
 SYSTEM_PATHS = {
     'zh': LOCALES_DIR / 'System.zh.toml',
     'en': LOCALES_DIR / 'System.en.toml',
 }
-MESSAGE_PATHS = {
+# 默认机器人消息层（Core/Locales，随核心分发）与用户覆盖层（Config/，仅存改动键）
+DEFAULT_MESSAGE_PATHS = {
     'zh': LOCALES_DIR / 'Messages.zh.toml',
     'en': LOCALES_DIR / 'Messages.en.toml',
 }
-LEGACY_MESSAGE_PATHS = {
-    'zh': _ROOT / 'Config' / 'Messages.zh.toml',
-    'en': _ROOT / 'Config' / 'Messages.en.toml',
+OVERRIDE_MESSAGE_PATHS = {
+    'zh': CONFIG_DIR / 'Messages.zh.toml',
+    'en': CONFIG_DIR / 'Messages.en.toml',
 }
+# 旧消息包与新版覆盖层同路径（旧格式 → 新格式的一次性转换）
+LEGACY_MESSAGE_PATHS = dict(OVERRIDE_MESSAGE_PATHS)
 MIGRATION_MARKER_PATH = _ROOT / 'Data' / '.locales_migrated'
 
 # 支持语言（与 Core/I18n/Engine/Context.SUPPORTED_LANGUAGES 一致）
 SUPPORTED_LANGUAGES = ('zh', 'en')
-
-# System 层受保护键（系统指令 + 扩展/插件名称 + WebUI 界面文案），用户改动一律忽略
-_PROTECTED_PREFIXES = ('core.commands.bot', 'builtin', 'api')
 
 
 def run_startup_migrations() -> None:
@@ -54,10 +55,11 @@ def run_startup_migrations() -> None:
 
 def migrate_legacy_messages() -> None:
     """
-    把旧 `Config/Messages.*.toml` 的用户改动迁移到 `Core/Locales/Messages.*.toml`（幂等）。
+    把旧 `Config/Messages.*.toml` 的用户改动转换为新覆盖层格式（幂等）。
 
-    旧格式为「点路径表」（`[events]` / `[commands.*]` / `[builtin_extensions]` / `[plugins.*]`），
-    迁移时折算为新命名空间键，只写入与当前默认层不同的**非系统**键，避免污染。
+    旧格式为「点路径表」（`[events]` / `[commands.*]` / `[builtin_extensions]` / `[plugins.*]`）；
+    新格式为「默认键命名空间 + **仅存用户改动键**」。迁移时把旧表折算为新命名空间键，
+    只保留与当前默认层不同、且非系统保护的键，整文件重写为新格式。
     迁移完成后写标记文件；无旧文件或已迁移时跳过。
     """
     if MIGRATION_MARKER_PATH.exists():
@@ -67,29 +69,48 @@ def migrate_legacy_messages() -> None:
         legacy_path = LEGACY_MESSAGE_PATHS.get(language)
         if legacy_path is None or not legacy_path.exists():
             continue
-        diff = _diff_legacy(language, _read_toml(legacy_path))
-        if not diff:
+        legacy = _read_toml(legacy_path)
+        # 已是新格式（顶层含命名空间表）则不转换，仅确保标记写盘
+        if _looks_like_new_format(legacy):
+            changed = True
             continue
-        target_path = MESSAGE_PATHS.get(language)
+        diff = _diff_legacy(language, legacy)
+        target_path = OVERRIDE_MESSAGE_PATHS.get(language)
         if target_path is None:
             continue
-        merged = _deep_merge(_read_toml(target_path), diff)
-        LOCALES_DIR.mkdir(parents=True, exist_ok=True)
-        target_path.write_text(tomlkit.dumps(_to_tomlkit(merged)), encoding='Utf-8')
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text(_render_override(diff), encoding='Utf-8')
         changed = True
-        print(f'[migrate] Merged legacy message overrides for [{language}] into Core/Locales/Messages.')
+        print(f'[migrate] Converted legacy message overrides for [{language}] into Config/Messages.')
     MIGRATION_MARKER_PATH.parent.mkdir(parents=True, exist_ok=True)
     MIGRATION_MARKER_PATH.write_text('migrated', encoding='Utf-8')
     if changed:
         print('[migrate] Legacy message migration done.')
 
 
+def _looks_like_new_format(raw: dict[str, Any]) -> bool:
+    """粗判文件是否已是新覆盖层格式（顶层为 `core` / `api` / `ext` 等命名空间表）。"""
+    namespaces = {'core', 'api', 'ext'}
+    return any(key in namespaces and isinstance(value, dict) for key, value in raw.items())
+
+
+def _render_override(data: dict[str, Any]) -> str:
+    """把嵌套命名空间字典渲染为新覆盖层 TOML 文本。"""
+    header = '# 仅保存你在 WebUI 中修改过的消息键；可覆盖默认语言包中的任意文案（系统键：系统指令、内置扩展/插件名称、面板界面文案除外）。'
+    if not data:
+        return f'{header}\n'
+    return f'{header}\n\n{tomlkit.dumps(data)}'
+
+
 # ===== 内部实现（纯文件级，不依赖 Core）=====
 
 
-def _is_protected(path: str) -> bool:
-    """判定点路径键是否属于 System 层（受保护，用户覆盖无效）。"""
-    return any(path == prefix or path.startswith(f'{prefix}.') for prefix in _PROTECTED_PREFIXES)
+def _system_keys(language: str) -> set[str]:
+    """读取 System 文件并展平为点路径键集合（系统键：用户覆盖无效）。"""
+    path = SYSTEM_PATHS.get(language)
+    if path is None or not path.exists():
+        return set()
+    return set(_flatten_namespace(_read_toml(path)))
 
 
 def _read_toml(path: Path) -> dict[str, Any]:
@@ -99,9 +120,9 @@ def _read_toml(path: Path) -> dict[str, Any]:
 
 
 def _default_keys(language: str) -> dict[str, Any]:
-    """读取 System + Messages 默认层，展平为「点路径 → 叶子值」（供迁移比对）。"""
+    """读取 System + 默认 Messages 层，展平为「点路径 → 叶子值」（供迁移比对）。"""
     known: dict[str, Any] = {}
-    for path in (SYSTEM_PATHS.get(language), MESSAGE_PATHS.get(language)):
+    for path in (SYSTEM_PATHS.get(language), DEFAULT_MESSAGE_PATHS.get(language)):
         if path is None or not path.exists():
             continue
         known.update(_flatten_namespace(_read_toml(path)))
@@ -124,10 +145,11 @@ def _diff_legacy(language: str, legacy: dict[str, Any]) -> dict[str, Any]:
     """把旧消息包折算成命名空间键，并剔除与默认层相同或受系统保护的项。"""
     legacy_core, legacy_builtin = _split_legacy(legacy)
     known = _default_keys(language)
+    system_keys = _system_keys(language)
     diff: dict[str, Any] = {}
     for namespace, table in (('core', legacy_core), ('builtin', legacy_builtin)):
         for path, value in _flatten_named(namespace, table).items():
-            if _is_protected(path):
+            if path in system_keys:
                 continue
             if known.get(path) != value:
                 _assign(diff, path, value)
@@ -170,44 +192,6 @@ def _assign(table: dict[str, Any], dotted: str, value: Any) -> None:
     for part in parts[:-1]:
         node = node.setdefault(part, {})
     node[parts[-1]] = value
-
-
-def _deep_merge(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
-    result = dict(base)
-    for key, value in overlay.items():
-        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-            result[key] = _deep_merge(result[key], value)
-            continue
-        result[key] = value
-    return result
-
-
-def _to_tomlkit(data: dict[str, Any]) -> tomlkit.TOMLDocument:
-    """把嵌套命名空间字典转换为 tomlkit 文档（顶层为超表，输出分段表）。"""
-    document = tomlkit.document()
-    document.add(tomlkit.comment('机器人消息文案：可自由修改，保存后热生效（系统键写入将被忽略）。'))
-    for namespace, table in data.items():
-        if not isinstance(table, dict):
-            continue
-        node = tomlkit.table(is_super_table=True)
-        for key, value in table.items():
-            section = tomlkit.table()
-            _fill_section(section, value if isinstance(value, dict) else {'value': value})
-            node[key] = section
-        document[namespace] = node
-    return document
-
-
-def _fill_section(section: Any, data: dict[str, Any]) -> None:
-    for key, value in data.items():
-        if isinstance(value, dict):
-            sub = tomlkit.table()
-            _fill_section(sub, value)
-            section[key] = sub
-        elif isinstance(value, list):
-            section[key] = value
-        else:
-            section[key] = value
 
 
 def main() -> int:

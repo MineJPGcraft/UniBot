@@ -80,7 +80,7 @@ UniBot/
 ├── Config/
 │   ├── Extensions.toml    # 扩展启停
 │   ├── Extensions/        # 扩展配置（每扩展一个文件）
-│   └── Messages.toml      # 消息文本
+│   └── Messages.{zh,en}.toml  # 用户消息覆盖（仅保存改过的键）
 ├── Data/                  # 数据持久化（JSON）
 │   ├── Extension/         # 扩展管理状态
 │   └── Exs/               # 扩展业务数据

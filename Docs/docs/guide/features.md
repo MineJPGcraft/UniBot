@@ -58,7 +58,7 @@ UniBot 的核心能力，是让 Minecraft 与聊天平台 *实时互通*：
 UniBot 内置了基于 **Vue 3 + Vite** 构建的 Web 管理面板，通过 REST API 与后端交互。提供仪表盘实时监控、服务器 / 玩家管理、可视化配置、扩展管理、日志查看等能力，**使用 WebUI 后基本无需手动修改配置文件**。
 
 - **仪表盘**：实时运行状态 + 「快速开始」引导卡片
-- **可视化配置**：`Config.toml` / `.env` / `Messages.toml` 分组编辑，Schema 校验
+- **可视化配置**：`Config.toml` / `.env` / 消息文本 分组编辑，Schema 校验
 - **服务器 / 玩家 / 适配器 / 插件 / 扩展**：一站式管理
 - **日志查看**：WebSocket 实时滚动 + 级别筛选
 - **登录认证**：JWT + HttpOnly Cookie，管理员账户体系
