@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Any
 
 from Core.I18n import i18n
-from Core.I18n.Engine.Context import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
+from Core.I18n.Engine import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from Core.I18n.Loader import write_override
 from Core.Web.Locale import text
 

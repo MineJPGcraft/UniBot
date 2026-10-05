@@ -44,7 +44,7 @@ OVERRIDE_MESSAGE_PATHS = {
 LEGACY_MESSAGE_PATHS = dict(OVERRIDE_MESSAGE_PATHS)
 MIGRATION_MARKER_PATH = _ROOT / 'Data' / '.locales_migrated'
 
-# 支持语言（与 Core/I18n/Engine/Context.SUPPORTED_LANGUAGES 一致）
+# 支持语言（与 Core/I18n/Engine/Manager.SUPPORTED_LANGUAGES 一致）
 SUPPORTED_LANGUAGES = ('zh', 'en')
 
 

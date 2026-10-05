@@ -1,8 +1,9 @@
 """WebUI 后端 API 多语言薄封装：委托统一 I18n 引擎（Core/I18n）。
 
-按每次请求的 `Accept-Language` 头解析语言（zh / en），写入 I18n 的**系统语言**上下文
-（`api.*` 界面文案专用，与机器人消息语言互不影响）；译文位于
-`Core/Locales/System.{zh,en}.toml` 的 `api.*` 段（只读，随核心分发）。
+按每次请求的 `Accept-Language` 头解析语言（zh / en），写入 I18n 的**系统语言**上下文。
+WebUI 后端文案（`api.*`）由 `Core/Locales/System.{zh,en}.toml` 提供，键来源为 System 文件，
+因此自然跟随系统语言（与机器人消息语言互不影响）；即使这些键未显式设置系统语言，
+`get_system_locale` 也会回退消息语言，行为与旧版一致。译文只读、随核心分发。
 静态界面文案由前端 vue-i18n 处理，不经过本模块。
 """
 

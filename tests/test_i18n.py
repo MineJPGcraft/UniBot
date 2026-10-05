@@ -1,5 +1,6 @@
-"""统一 I18n 引擎、System/Messages 双源保护、命名空间与延迟求值测试。"""
+"""统一 I18n 引擎、System/Messages 双源保护、按键来源选语言与延迟求值测试。"""
 
+import contextvars
 from pathlib import Path
 
 from Core.I18n import (
@@ -56,7 +57,7 @@ def test_system_and_messages_locales_are_independent() -> None:
 
 
 def test_api_namespace_follows_system_locale() -> None:
-    # 界面文案（api.*）跟随系统语言，与消息语言无关
+    # 界面文案（api.*，System 文件键）跟随系统语言，与消息语言无关
     set_messages_locale('zh')
     set_system_locale('en')
     try:
@@ -65,6 +66,33 @@ def test_api_namespace_follows_system_locale() -> None:
         assert i18n.render('api.auth.token_expired', locale='zh') == 'Token 已过期'
     finally:
         set_system_locale('zh')
+
+
+def test_locale_is_routed_by_source_layer() -> None:
+    # 语言按「键来自 System 文件还是 Messages 文件」路由，而非命名空间前缀
+    set_messages_locale('en')
+    set_system_locale('zh')
+    try:
+        # System 文件键（扩展名 / 系统指令 / api.*）跟随系统语言
+        assert text('builtin.list.name') == '在线玩家'
+        assert text('core.commands.bot.description') == '管理机器人。'
+        assert text('api.auth.token_expired') == 'Token 已过期'
+        # Messages 文件键跟随消息语言
+        assert text('core.events.player_join', player='Steve') == 'Player Steve joined the game.'
+    finally:
+        set_messages_locale('zh')
+        set_system_locale('zh')
+
+
+def test_system_keys_fall_back_to_messages_when_system_unset() -> None:
+    # 未显式设置系统语言时（QQ 等机器人场景），System 键回退消息语言，行为与旧版一致
+    def _render() -> tuple[str, str]:
+        set_messages_locale('en')
+        return get_system_locale(), str(i18n_deferred('builtin.list.name'))
+
+    system_locale, name = contextvars.Context().run(_render)
+    assert system_locale == 'en'
+    assert name == 'Online Players'
 
 
 def test_normalize_language_parses_accept_header() -> None:
@@ -108,24 +136,38 @@ def test_is_protected_flags_system_keys() -> None:
 def test_deferred_text_resolves_on_str() -> None:
     reference = i18n_deferred('builtin.list.name')
     assert isinstance(reference, DeferredText)
-    set_messages_locale('zh')
+    set_system_locale('zh')
     try:
         assert str(reference) == '在线玩家'
     finally:
-        set_messages_locale('zh')
+        set_system_locale('zh')
 
 
-def test_deferred_text_follows_messages_locale() -> None:
+def test_deferred_messages_text_follows_messages_locale() -> None:
+    # Messages 来源的键跟随消息语言，不受系统语言影响
+    reference = i18n_deferred('core.commands.help.description')
+    set_system_locale('en')
+    set_messages_locale('zh')
+    assert str(reference) == '查看所有可用命令的帮助信息。'
+    set_messages_locale('en')
+    assert str(reference) == 'Show help for all available commands.'
+    set_system_locale('zh')
+    set_messages_locale('zh')
+
+
+def test_deferred_system_name_follows_system_locale() -> None:
+    # System 来源的键（如扩展/插件显示名）跟随系统语言
     reference = i18n_deferred('builtin.list.name')
     set_messages_locale('zh')
+    set_system_locale('zh')
     assert str(reference) == '在线玩家'
-    set_messages_locale('en')
+    set_system_locale('en')
     assert str(reference) == 'Online Players'
-    set_messages_locale('zh')
+    set_system_locale('zh')
 
 
 def test_deferred_api_text_follows_system_locale() -> None:
-    # api.* 延迟求值应按系统语言解析，且不受消息语言影响
+    # api.* 由 System 文件提供，延迟求值应按系统语言解析，且不受消息语言影响
     reference = i18n_deferred('api.auth.token_expired')
     set_messages_locale('en')
     set_system_locale('zh')

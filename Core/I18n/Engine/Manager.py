@@ -1,4 +1,4 @@
-"""I18n 管理器：默认语言包 + 用户逐键覆盖、扁平点路径表查找与命名空间隔离。
+"""I18n 管理器：默认语言包 + 用户逐键覆盖、扁平点路径表查找，以及按来源选语言的上下文。
 
 两层模型（Refactor §5）：
 - **默认层**：System 层（`Core/Locales/System.*.toml`：系统指令 `/bot`、内置扩展/插件名称、
@@ -6,24 +6,69 @@
   以及扩展语言包（`Extensions/<id>/Locales/*`：`ext.<id>.*`），均为**默认值**来源。
 - **覆盖层**（用户 `Config/Messages.{zh,en}.toml`，可编辑）：**只保存用户改过的键**。
 
-**可覆盖性以文件来源判定**（`is_protected`）：
-- System 文件注册的键（系统指令 + 内置扩展/插件名称 + 面板界面文案）**受保护**，用户覆盖被忽略；
-- Messages 文件与扩展语言包注册的键**可被用户覆盖**——注意同一 `core.*` / `ext.*` 命名空间
-  在 System 与 Messages 中均可能出现，因此判定按「该键是否由 System 文件提供」而非命名空间前缀。
+**可覆盖性与语言选择均以文件来源判定**（同一份 `is_system_key` 依据）：
+- System 文件注册的键**受保护**（用户覆盖被忽略）且跟随**系统语言**（WebUI 每请求
+  `Accept-Language`）；未显式设置系统语言时（QQ 等机器人场景）回退**消息语言**；
+- Messages 文件与扩展语言包注册的键**可被用户覆盖**且跟随**消息语言**（`Config.toml` 的
+  `language`）——注意同一 `core.*` / `ext.*` 命名空间在 System 与 Messages 中均可能出现，
+  因此判定按「该键是否由 System 文件提供」而非命名空间前缀。
 
-各层注册时统一展平为「点路径 → 叶子值」扁平表，合并即按优先级 `update`、查找即 `dict.get`；
-命名空间按键前缀隔离：`core.*` / `api.*` / `builtin.*` / `ext.<id>.*`。
-（语言上下文由 `Context.resolve_locale` 按键命名空间选择：`api.*` 用系统语言，其余用消息语言。）
+各层注册时统一展平为「点路径 → 叶子值」扁平表，合并即按优先级 `update`、查找即 `dict.get`。
+系统语言与消息语言各由独立 ContextVar 承载（见本模块顶部），**不再按命名空间路由**。
 """
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from string import Formatter
 from typing import Any
 
 from Core.Logging import logger
 
-from .Context import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
+# 支持的语言与默认语言
+SUPPORTED_LANGUAGES: tuple[str, ...] = ('zh', 'en')
+DEFAULT_LANGUAGE = 'zh'
+
+# 系统语言（WebUI 界面 / 系统键文案）：中间件按每请求 Accept-Language 设置；
+# 未显式设置时（QQ 等机器人场景）由 get_system_locale 回退消息语言。
+_system_language: ContextVar[str | None] = ContextVar('system_language', default=None)
+# 消息语言（机器人消息）：启动时按 Config.toml 的 language 对齐
+_messages_language: ContextVar[str] = ContextVar('messages_language', default=DEFAULT_LANGUAGE)
+
+
+def _normalize(language: str) -> str:
+    """未支持的语言回退默认语言。"""
+    return language if language in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
+
+
+def get_system_locale() -> str:
+    """获取当前上下文的系统语言；未显式设置时回退消息语言（QQ 场景与机器人消息保持一致）。"""
+    return _system_language.get() or _messages_language.get()
+
+
+def set_system_locale(language: str) -> None:
+    """设置当前上下文的系统语言（WebUI 界面语言），未支持的语言回退默认语言。"""
+    _system_language.set(_normalize(language))
+
+
+def get_messages_locale() -> str:
+    """获取当前上下文的消息语言（机器人对外文案语言）。"""
+    return _messages_language.get()
+
+
+def set_messages_locale(language: str) -> None:
+    """设置当前上下文的消息语言（机器人对外文案语言），未支持的语言回退默认语言。"""
+    _messages_language.set(_normalize(language))
+
+
+def normalize_language(accept_language: str | None) -> str:
+    """从 Accept-Language 头解析语言（如 zh-CN → zh），无法识别时回退默认语言。"""
+    for part in (accept_language or '').split(','):
+        tag = part.split(';')[0].strip().lower()
+        language = next((item for item in SUPPORTED_LANGUAGES if tag.startswith(item)), None)
+        if language is not None:
+            return language
+    return DEFAULT_LANGUAGE
 
 
 class I18nManager:
@@ -91,8 +136,8 @@ class I18nManager:
     # ===== 查询 / 渲染 =====
 
     def render(self, key: str, locale: str | None = None, **kwargs: Any) -> str:
-        """按点路径取值并格式化占位符；语言缺失回退默认语言，键缺失返回原文并告警。"""
-        language = locale if locale in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
+        """按点路径取值并格式化占位符；`locale` 为空时按键来源选语言，键缺失返回原文并告警。"""
+        language = self.resolve_locale(key, locale)
         template = self._lookup(language, key)
         if template is None and language != DEFAULT_LANGUAGE:
             template = self._lookup(DEFAULT_LANGUAGE, key)
@@ -108,8 +153,8 @@ class I18nManager:
             return template
 
     def render_value(self, key: str, locale: str | None = None) -> Any:
-        """按点路径取原始叶子值（字符串或字符串列表），供消息包兼容层使用。"""
-        language = locale if locale in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
+        """按点路径取原始叶子值（字符串或字符串列表）；`locale` 为空时按键来源选语言。"""
+        language = self.resolve_locale(key, locale)
         value = self._lookup_value(language, key)
         if value is None and language != DEFAULT_LANGUAGE:
             value = self._lookup_value(DEFAULT_LANGUAGE, key)
@@ -133,7 +178,22 @@ class I18nManager:
 
     def is_protected(self, key: str) -> bool:
         """判断点路径键是否受保护（由 System 文件提供，用户覆盖无效）。"""
+        return self.is_system_key(key)
+
+    def is_system_key(self, key: str) -> bool:
+        """判断点路径键是否由 System 文件提供（决定其受保护性与语言来源）。"""
         return any(key in self._system[language] for language in SUPPORTED_LANGUAGES)
+
+    def resolve_locale(self, key: str, locale: str | None = None) -> str:
+        """
+        选择渲染语言：显式 `locale` 优先（非法值回退默认语言）；否则按键来源——
+        System 文件键用系统语言（未显式设置时回退消息语言），Messages／扩展键用消息语言。
+        """
+        if locale is not None:
+            return _normalize(locale)
+        if self.is_system_key(key):
+            return get_system_locale()
+        return get_messages_locale()
 
     # ===== 目录访问（供 WebUI 消息编辑器构建树 / 校验）=====
 

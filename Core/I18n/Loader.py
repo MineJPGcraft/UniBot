@@ -9,8 +9,8 @@
 - 扩展语言包：`Extensions/<id>/Locales/{zh,en}.toml` → `ext.<id>.*`。
 
 热切换语言或保存消息文案后重新调用 `register_all()` 即可（引擎整体重建）。
-`register_all()` 末尾把**消息语言**对齐 `Config.toml` 的 `language`（界面语言 `api.*` 由
-WebUI 每请求 `Accept-Language` 单独控制，见 `Core/Web/Locale.py`）。
+`register_all()` 末尾把**消息语言**对齐 `Config.toml` 的 `language`（System 文件键的系统语言
+由 WebUI 每请求 `Accept-Language` 单独控制，见 `Core/Web/Locale.py`）。
 """
 
 from __future__ import annotations
@@ -24,8 +24,7 @@ from Core.Config import config
 from Core.Constants import MESSAGE_PATHS, OVERRIDE_MESSAGE_PATHS, SYSTEM_PATHS
 from Core.Logging import logger
 
-from .Engine import i18n
-from .Engine.Context import SUPPORTED_LANGUAGES, set_messages_locale
+from .Engine import SUPPORTED_LANGUAGES, i18n, set_messages_locale
 
 _OVERRIDE_HEADER = '# 仅保存你在 WebUI 中修改过的消息键；可覆盖默认语言包中的任意文案（系统键：系统指令、内置扩展/插件名称、面板界面文案除外）。'
 

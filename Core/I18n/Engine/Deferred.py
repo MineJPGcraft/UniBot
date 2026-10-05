@@ -2,11 +2,11 @@
 
 用途：扩展 / 插件的**名称与描述**等「注册期拿不到上下文、展示期才需要语言」的文本。
 注册时构造 `DeferredText`（不会解析），真正拼接到消息或序列化为 JSON 时才 `str()`
-按键命名空间解析语言（`api.*` 跟随系统语言，其余跟随消息语言），因此同一实例在不同
-语言请求下得到各自语言的译文。
+按键来源解析语言（System 文件键跟随系统语言，Messages／扩展键跟随消息语言），因此同一
+实例在不同语言请求下得到各自语言的译文。
 
-    name = i18n_deferred('system.builtin.list')   # 构造期不求值
-    str(name)                                  # → 当前语言下的「在线玩家」
+    name = i18n_deferred('builtin.list.name')   # 构造期不求值
+    str(name)                                   # → 当前语言下的「在线玩家」
 
 只需普通字符串的场景（渲染、拼接）请直接用 `Core.I18n.text()`，它立即返回 `str`。
 """
@@ -15,7 +15,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from .Context import resolve_locale
 from .Manager import i18n
 
 
@@ -34,8 +33,8 @@ class DeferredText:
         return self._key
 
     def resolve(self, locale: str | None = None) -> str:
-        """在指定（或按键命名空间自动选定的）语言下解析为字符串。"""
-        return i18n.render(self._key, locale=locale or resolve_locale(self._key), **self._kwargs)
+        """在指定（或按键来源自动选定的）语言下解析为字符串。"""
+        return i18n.render(self._key, locale=locale, **self._kwargs)
 
     def __str__(self) -> str:
         return self.resolve()
