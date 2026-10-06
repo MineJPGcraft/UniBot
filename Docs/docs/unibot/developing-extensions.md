@@ -409,7 +409,7 @@ UniBot 随框架内置三个 `api` 类型扩展，开箱即用，通过 `extensi
 |------|--------|--------|------|
 | `Players` | `PlayerService` | `player` | 玩家绑定数据管理 |
 | `Servers` | `ServerService` | `server` | Minecraft 服务器交互 |
-| `Task` | `TaskService` | `task` | 定时任务管理 |
+| `Background` | `BackgroundService` | `background` | 后台事务调度管理 |
 :::
 
 获取方式支持按**服务类**或**注册名**两种写法，按类获取会额外校验实际类型：
@@ -417,11 +417,11 @@ UniBot 随框架内置三个 `api` 类型扩展，开箱即用，通过 `extensi
 ```python
 from Core.Builtin.Services.Players import PlayerService
 from Core.Builtin.Services.Servers import ServerService
-from Core.Builtin.Services.Task import TaskService
+from Core.Builtin.Services.Background import BackgroundService
 
 player_service = extension.api.get(PlayerService)  # 按类获取，类型不匹配抛 TypeError
 server_service = extension.api.get('server')  # 按注册名获取
-task_service = extension.api.get(TaskService)
+background_service = extension.api.get(BackgroundService)
 if player_service is None:
     # 服务未注册或所在扩展被禁用，使用前应判空
     ...
@@ -458,22 +458,24 @@ if player_service is None:
 | `broadcast(message, except_server='') -> dict[str, None]` | 向所有服务器广播消息，可排除指定服务器 |
 :::
 
-### TaskService — 定时任务服务
+### BackgroundService — 后台事务调度服务
 
-扩展 id `Task`，封装全局 `TaskManager` 的定时任务调度能力，代理 `Core.Managers.task_manager` 单例，不复制调度状态。
+扩展 id `Background`，封装全局 `BackgroundManager` 的周期/延迟调度能力，代理 `Core.Managers.background_manager` 单例，不复制调度状态。
 
-::: table title="TaskService 方法" copy="all"
+> 与「任务中心」（`TaskCenter`，见接口文档）职责不同：本服务只负责**周期性/延迟事务**，任务中心负责任务提交、进度与取消。
+
+::: table title="BackgroundService 方法" copy="all"
 | 方法 | 说明 |
 |------|------|
-| `started`（属性） | 任务管理器是否已启动调度 |
-| `task_names`（属性） | 全部已注册任务的名称列表 |
-| `add(name, runner, interval, *, immediate=False) -> bool` | 注册按固定间隔循环执行的任务，`immediate` 为 `True` 时先执行再等待 |
+| `started`（属性） | 调度器是否已启动 |
+| `job_names`（属性） | 全部已注册事务的名称列表 |
+| `add(name, runner, interval, *, immediate=False) -> bool` | 注册按固定间隔循环执行的事务，`immediate` 为 `True` 时先执行再等待 |
 | `add_once(name, runner, delay) -> bool` | 注册延迟指定秒数后仅执行一次的事务，执行完毕自动注销 |
-| `remove(name) -> bool` | 注销并停止指定任务，未注册返回 `False` |
-| `get(name) -> ScheduledTask \| None` | 按名称获取任务对象 |
-| `status() -> dict` | 全部任务的配置与运行状态快照，供调试与 WebUI 展示 |
-| `start_task(name) -> bool` | 启动单个已注册任务的调度，已在运行时跳过 |
-| `stop_task(name) -> bool` | 停止单个任务的调度，不影响其注册信息 |
+| `remove(name) -> bool` | 注销并停止指定事务，未注册返回 `False` |
+| `get(name) -> BackgroundJob \| None` | 按名称获取事务对象 |
+| `status() -> dict` | 全部事务的配置与运行状态快照，供调试与 WebUI 展示 |
+| `start_job(name) -> bool` | 启动单个已注册事务的调度，已在运行时跳过 |
+| `stop_job(name) -> bool` | 停止单个事务的调度，不影响其注册信息 |
 :::
 
 ### 示例：广播扩展

@@ -8,7 +8,7 @@ import uuid
 from pathlib import Path
 
 from Core.Logging import logger
-from Core.Managers import config_manager, statistics_manager, task_manager
+from Core.Managers import background_manager, config_manager, statistics_manager
 from Core.Network import post_request
 
 TELEMETRY_SERVER_URL = 'https://bot-api.mcjpg.dev'
@@ -25,8 +25,8 @@ class Telemetry:
     def init(self) -> None:
         """初始化机器 ID 并登记首报与心跳定时事务。"""
         self.machine_id = self.generate_machine_id()
-        task_manager.add_once('telemetry-first-report', self.report, INITIAL_REPORT_DELAY_SECONDS)
-        task_manager.add('telemetry-heartbeat', self.report, REPORT_INTERVAL_SECONDS)
+        background_manager.add_once('telemetry-first-report', self.report, INITIAL_REPORT_DELAY_SECONDS)
+        background_manager.add('telemetry-heartbeat', self.report, REPORT_INTERVAL_SECONDS)
         logger.info('Telemetry identifier initialized.')
 
     def generate_machine_id(self) -> str:

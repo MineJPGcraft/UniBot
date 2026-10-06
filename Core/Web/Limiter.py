@@ -4,11 +4,11 @@ from collections import defaultdict
 from fastapi import HTTPException, Request
 
 from Core.Logging import logger
-from Core.Managers import task_manager
+from Core.Managers import background_manager
 from Core.Web.Locale import text
 
-# 任务管理器中的清理任务名称
-CLEANUP_TASK_NAME = 'rate-limiter-cleanup'
+# 后台调度器中的清理事务名称
+CLEANUP_JOB_NAME = 'rate-limiter-cleanup'
 
 
 class RateLimiter:
@@ -132,15 +132,15 @@ class RateLimiter:
             logger.debug(f'Rate limiter cleaned up {len(expired_ips)} expired IP records.')
 
     def start(self):
-        """向任务管理器登记后台清理任务。"""
-        if task_manager.get(CLEANUP_TASK_NAME) is None:
-            task_manager.add(CLEANUP_TASK_NAME, self.cleanup_expired, self.cleanup_interval)
-            logger.debug('Rate limiter background cleanup task registered.')
+        """向后台调度器登记清理事务。"""
+        if background_manager.get(CLEANUP_JOB_NAME) is None:
+            background_manager.add(CLEANUP_JOB_NAME, self.cleanup_expired, self.cleanup_interval)
+            logger.debug('Rate limiter background cleanup job registered.')
 
     def stop(self):
-        """从任务管理器注销后台清理任务。"""
-        if task_manager.remove(CLEANUP_TASK_NAME):
-            logger.debug('Rate limiter background cleanup task removed.')
+        """从后台调度器注销清理事务。"""
+        if background_manager.remove(CLEANUP_JOB_NAME):
+            logger.debug('Rate limiter background cleanup job removed.')
 
 
 rate_limiter = RateLimiter()

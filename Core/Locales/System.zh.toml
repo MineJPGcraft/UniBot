@@ -66,8 +66,8 @@ name = "Minecraft 服务器服务"
 [builtin.players]
 name = "玩家账号服务"
 
-[builtin.task]
-name = "定时任务服务"
+[builtin.background]
+name = "后台事务服务"
 
 [builtin.events]
 name = "消息互通"

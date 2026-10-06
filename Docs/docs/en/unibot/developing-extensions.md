@@ -405,7 +405,7 @@ UniBot ships three `api` type extensions with the framework, ready to use out of
 |------|--------|--------|------|
 | `Players` | `PlayerService` | `player` | Player binding data management |
 | `Servers` | `ServerService` | `server` | Minecraft server interaction |
-| `Task` | `TaskService` | `task` | Scheduled task management |
+| `Background` | `BackgroundService` | `background` | Background job scheduling |
 :::
 
 Lookup supports both **service class** and **registered name** forms; looking up by class additionally validates the actual type:
@@ -413,11 +413,11 @@ Lookup supports both **service class** and **registered name** forms; looking up
 ```python
 from Core.Builtin.Services.Players import PlayerService
 from Core.Builtin.Services.Servers import ServerService
-from Core.Builtin.Services.Task import TaskService
+from Core.Builtin.Services.Background import BackgroundService
 
 player_service = extension.api.get(PlayerService)  # by class; raises TypeError on type mismatch
 server_service = extension.api.get('server')  # by registered name
-task_service = extension.api.get(TaskService)
+background_service = extension.api.get(BackgroundService)
 if player_service is None:
     # Service not registered or its extension is disabled; check for None before use
     ...
@@ -454,22 +454,24 @@ Extension id `Servers`; encapsulates server query, command execution, and messag
 | `broadcast(message, except_server='') -> dict[str, None]` | Broadcast a message to all servers, optionally excluding a specific server |
 :::
 
-### TaskService — Scheduled Task Service
+### BackgroundService — Background Job Service
 
-Extension id `Task`; wraps the global `TaskManager` scheduling capability, proxying the `Core.Managers.task_manager` singleton without duplicating scheduling state.
+Extension id `Background`; wraps the global `BackgroundManager` periodic/delayed scheduling capability, proxying the `Core.Managers.background_manager` singleton without duplicating scheduling state.
 
-::: table title="TaskService Methods" copy="all"
+> Different from the Task Center (`TaskCenter`, see the API reference): this service only handles **periodic/delayed jobs**, while the Task Center handles submission, progress, and cancellation.
+
+::: table title="BackgroundService Methods" copy="all"
 | Method | Description |
 |------|------|
-| `started` (property) | Whether the task manager has started scheduling |
-| `task_names` (property) | Names of all registered tasks |
-| `add(name, runner, interval, *, immediate=False) -> bool` | Register a task that runs at a fixed interval; with `immediate=True` it runs once first, then waits |
-| `add_once(name, runner, delay) -> bool` | Register a one-shot task that runs once after the given delay and auto-unregisters |
-| `remove(name) -> bool` | Unregister and stop a task; returns `False` if not registered |
-| `get(name) -> ScheduledTask \| None` | Get a task object by name |
-| `status() -> dict` | Snapshot of all tasks' config and running state, for debugging and WebUI display |
-| `start_task(name) -> bool` | Start scheduling a single registered task; skips if already running |
-| `stop_task(name) -> bool` | Stop scheduling a single task without affecting its registration |
+| `started` (property) | Whether the scheduler has started |
+| `job_names` (property) | Names of all registered jobs |
+| `add(name, runner, interval, *, immediate=False) -> bool` | Register a job that runs at a fixed interval; with `immediate=True` it runs once first, then waits |
+| `add_once(name, runner, delay) -> bool` | Register a one-shot job that runs once after the given delay and auto-unregisters |
+| `remove(name) -> bool` | Unregister and stop a job; returns `False` if not registered |
+| `get(name) -> BackgroundJob \| None` | Get a job object by name |
+| `status() -> dict` | Snapshot of all jobs' config and running state, for debugging and WebUI display |
+| `start_job(name) -> bool` | Start scheduling a single registered job; skips if already running |
+| `stop_job(name) -> bool` | Stop scheduling a single job without affecting its registration |
 :::
 
 ### Example: Broadcast Extension

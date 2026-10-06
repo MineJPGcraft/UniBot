@@ -8,7 +8,7 @@ from nonebot.plugin import PluginMetadata
 from nonebot_plugin_uninfo import SceneType, SupportScope, Uninfo
 
 from Core.Logging import logger
-from Core.Managers import statistics_manager, task_manager
+from Core.Managers import background_manager, statistics_manager
 from Core.Utils import get_platform_name
 
 __plugin_meta__ = PluginMetadata(
@@ -75,7 +75,7 @@ async def count_sent_message(
 async def load_statistics_on_startup() -> None:
     """启动时加载历史统计数据并登记定时落盘任务。"""
     statistics_manager.load()
-    task_manager.add('statistics-autosave', save_dirty_statistics, SAVE_INTERVAL_SECONDS)
+    background_manager.add('statistics-autosave', save_dirty_statistics, SAVE_INTERVAL_SECONDS)
 
 
 async def save_dirty_statistics() -> None:

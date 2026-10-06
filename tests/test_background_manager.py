@@ -1,9 +1,9 @@
-"""TaskManager 测试：注册校验、周期调度、异常隔离、一次性任务与停止恢复。"""
+"""BackgroundManager 测试：注册校验、周期调度、异常隔离、一次性事务与停止恢复。"""
 
 import asyncio
 
-from Core.Managers import task_manager as global_task_manager
-from Core.Managers.Task import TaskManager
+from Core.Managers import background_manager as global_background_manager
+from Core.Managers.Background import BackgroundManager
 
 
 def test_registration_validation():
@@ -12,18 +12,18 @@ def test_registration_validation():
     async def noop():
         return None
 
-    manager = TaskManager()
+    manager = BackgroundManager()
     assert manager.add('job', noop, 10)
     assert not manager.add('job', noop, 10)
     assert not manager.add('bad', noop, 0)
     assert not manager.add('bad', noop, -1)
-    assert manager.task_names == ['job']
+    assert manager.job_names == ['job']
     assert not manager.started
 
 
 def test_periodic_execution_with_immediate():
-    """immediate 任务应先执行一次，随后按间隔重复调度。"""
-    manager = TaskManager()
+    """immediate 事务应先执行一次，随后按间隔重复调度。"""
+    manager = BackgroundManager()
     ticks = []
 
     async def job():
@@ -43,8 +43,8 @@ def test_periodic_execution_with_immediate():
 
 
 def test_exception_isolation_keeps_loop_alive():
-    """任务体抛出异常时仅记录告警，后续调度继续进行。"""
-    manager = TaskManager()
+    """事务体抛出异常时仅记录告警，后续调度继续进行。"""
+    manager = BackgroundManager()
     calls = []
 
     async def flaky():
@@ -64,9 +64,9 @@ def test_exception_isolation_keeps_loop_alive():
     assert len(calls) >= 2
 
 
-def test_once_task_runs_exactly_and_unregisters():
-    """一次性任务延迟后仅执行一次并自动注销。"""
-    manager = TaskManager()
+def test_once_job_runs_exactly_and_unregisters():
+    """一次性事务延迟后仅执行一次并自动注销。"""
+    manager = BackgroundManager()
     calls = []
 
     async def delayed():
@@ -81,13 +81,13 @@ def test_once_task_runs_exactly_and_unregisters():
 
     asyncio.run(run())
     assert calls == [1]
-    assert 'delayed' not in manager.task_names
+    assert 'delayed' not in manager.job_names
     assert manager.get('delayed') is None
 
 
 def test_stop_cancels_and_restart_resumes():
-    """停止后任务不再执行，注册信息保留且可重启恢复。"""
-    manager = TaskManager()
+    """停止后事务不再执行，注册信息保留且可重启恢复。"""
+    manager = BackgroundManager()
     calls = []
 
     async def job():
@@ -102,7 +102,7 @@ def test_stop_cancels_and_restart_resumes():
         frozen = len(calls)
         await asyncio.sleep(0.08)
         assert len(calls) == frozen
-        assert 'job' in manager.task_names
+        assert 'job' in manager.job_names
         await manager.start()
         await asyncio.sleep(0.06)
         await manager.stop()
@@ -111,9 +111,9 @@ def test_stop_cancels_and_restart_resumes():
     assert len(calls) > 3
 
 
-def test_remove_stops_running_task():
-    """注销运行中的任务应立即停止其调度。"""
-    manager = TaskManager()
+def test_remove_stops_running_job():
+    """注销运行中的事务应立即停止其调度。"""
+    manager = BackgroundManager()
     calls = []
 
     async def job():
@@ -131,12 +131,12 @@ def test_remove_stops_running_task():
         assert len(calls) == frozen
 
     asyncio.run(run())
-    assert manager.task_names == []
+    assert manager.job_names == []
 
 
-def test_individual_start_and_stop_task():
-    """单个任务的独立启停不影响其他任务与整体状态。"""
-    manager = TaskManager()
+def test_individual_start_and_stop_job():
+    """单个事务的独立启停不影响其他事务与整体状态。"""
+    manager = BackgroundManager()
     calls = []
 
     async def job():
@@ -145,22 +145,22 @@ def test_individual_start_and_stop_task():
     manager.add('job', job, 10, immediate=True)
 
     async def run():
-        assert manager.start_task('job')
-        assert not manager.start_task('job')
-        assert not manager.start_task('missing')
+        assert manager.start_job('job')
+        assert not manager.start_job('job')
+        assert not manager.start_job('missing')
         await asyncio.sleep(0.01)
-        assert manager.stop_task('job')
-        assert not manager.stop_task('job')
+        assert manager.stop_job('job')
+        assert not manager.stop_job('job')
 
     asyncio.run(run())
     assert calls == [1]
-    assert 'job' in manager.task_names
+    assert 'job' in manager.job_names
     assert manager.status()['job']['running'] is False
 
 
 def test_register_after_start_auto_schedules():
-    """管理器启动后新注册的任务应立即进入调度。"""
-    manager = TaskManager()
+    """调度器启动后新注册的事务应立即进入调度。"""
+    manager = BackgroundManager()
 
     async def noop():
         return None
@@ -175,6 +175,6 @@ def test_register_after_start_auto_schedules():
 
 
 def test_global_singleton_registered_type():
-    """全局单例应为 TaskManager 实例且初始未启动。"""
-    assert isinstance(global_task_manager, TaskManager)
-    assert global_task_manager.started is False
+    """全局单例应为 BackgroundManager 实例且初始未启动。"""
+    assert isinstance(global_background_manager, BackgroundManager)
+    assert global_background_manager.started is False

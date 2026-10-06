@@ -13,9 +13,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from Core.Builtin.Services.Background import BackgroundService
     from Core.Builtin.Services.Players import PlayerService
     from Core.Builtin.Services.Servers import ServerService
-    from Core.Builtin.Services.Task import TaskService
 
 
 class RuntimeState:
@@ -30,8 +30,8 @@ class RuntimeState:
         self.player_service: PlayerService | None = None
         # Minecraft 服务器服务，由 Servers 内置扩展在启停时维护
         self.server_service: ServerService | None = None
-        # 定时任务服务，由 Task 内置扩展在启停时维护
-        self.task_service: TaskService | None = None
+        # 后台事务调度服务，由 Background 内置扩展在启停时维护
+        self.background_service: BackgroundService | None = None
 
 
 runtime_state = RuntimeState()

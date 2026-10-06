@@ -66,8 +66,8 @@ name = "Minecraft Server Service"
 [builtin.players]
 name = "Player Account Service"
 
-[builtin.task]
-name = "Scheduled Task Service"
+[builtin.background]
+name = "Background Job Service"
 
 [builtin.events]
 name = "Message Sync"

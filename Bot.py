@@ -21,7 +21,7 @@ driver = nonebot.get_driver()
 async def startup() -> None:
     from Core.Config import config
     from Core.Extension import extension_manager
-    from Core.Managers import task_manager, version_manager
+    from Core.Managers import background_manager, version_manager
     from Core.Telemetry import telemetry
 
     if config.telemetry.enabled:
@@ -29,7 +29,7 @@ async def startup() -> None:
 
     asyncio.create_task(version_manager.init())
 
-    await task_manager.start()
+    await background_manager.start()
     await extension_manager.start()
 
     if config.webui.enabled:
@@ -46,13 +46,13 @@ async def startup() -> None:
 async def shutdown() -> None:
     from Core.Config import config
     from Core.Extension import extension_manager
-    from Core.Managers import task_manager
+    from Core.Managers import background_manager
     from Core.Telemetry import telemetry
 
     if config.telemetry.enabled:
         await telemetry.stop()
     await extension_manager.shutdown()
-    await task_manager.stop()
+    await background_manager.stop()
 
     if config.webui.enabled:
         from Core.Web.Limiter import rate_limiter
