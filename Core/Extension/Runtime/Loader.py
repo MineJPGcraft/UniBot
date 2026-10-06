@@ -42,7 +42,7 @@ from ..Storage import (
 )
 from ..TemplateConfig import build_template_config_model
 from .Dependencies import is_extension_enabled, load_enabled_config
-from .Managers.Command import command_manager
+from .Managers.Command import CommandManager
 from .Managers.Renderer import RendererManager
 from .Registries import ExtensionRegistries
 
@@ -70,10 +70,16 @@ class DiscoveredExtension:
 class ExtensionLoader:
     """扫描、校验、排序并加载扩展。"""
 
-    def __init__(self, registries: ExtensionRegistries, renderer_manager: RendererManager) -> None:
-        # 注册容器与渲染管理器按引用共享（由 ExtensionManager 创建并持有）
+    def __init__(
+        self,
+        registries: ExtensionRegistries,
+        renderer_manager: RendererManager,
+        command_manager: CommandManager,
+    ) -> None:
+        # 注册容器与渲染/命令管理器按引用共享（由 ExtensionManager 创建并持有）
         self._registries = registries
         self._renderer_manager = renderer_manager
+        self._command_manager = command_manager
         # 发现的扩展元信息：id -> DiscoveredExtension
         self._discovered: dict[str, DiscoveredExtension] = {}
         # 已加载的扩展实例（按拓扑顺序）
@@ -436,12 +442,12 @@ class ExtensionLoader:
     def _rollback_declarations(self, extension_id: str) -> None:
         """按 owner 注销某扩展的全部注册项（扩展实例/无代码包/服务/命令/渲染器/模板/资源）。
 
-        五个容器全部按 owner 对称清理；本方法幂等，未登记项静默忽略，
+        六类容器全部按 owner 对称清理；本方法幂等，未登记项静默忽略，
         既用于声明阶段失败回滚，也可安全用作单扩展卸载的收尾。
         """
         self._registries.extensions.unregister_by_owner(extension_id)
         self._registries.services.unregister_by_owner(extension_id)
-        command_manager.unregister_by_owner(extension_id)
+        self._command_manager.unregister_by_owner(extension_id)
         self._renderer_manager.unregister_renderers_by_owner(extension_id)
         self._renderer_manager.unregister_template(extension_id)
         self._renderer_manager.unregister_resources(extension_id)
@@ -613,19 +619,19 @@ class ExtensionLoader:
             if builtin:
                 # 记录内置命令类，供后续扩展判定是否覆盖内置
                 self._builtin_command_classes.add(command_cls)
-                command_manager.register_command(command, f'{BUILTIN_PREFIX}:{command.name}', owner_id='builtin')
+                self._command_manager.register_command(command, f'{BUILTIN_PREFIX}:{command.name}', owner_id='builtin')
                 continue
             # 扩展命令：若继承自某个内置命令类，则判定为覆盖内置，以同名
             # command_id 取代内置定义；否则作为新增命令以 extension: 前缀注册
             if builtin_cls := self._find_builtin_override(command_cls):
                 command_id = f'{BUILTIN_PREFIX}:{command.name}'
-                command_manager.register_command(command, command_id, override=True, owner_id=extension_id)
+                self._command_manager.register_command(command, command_id, override=True, owner_id=extension_id)
                 logger.info(
                     f'扩展 {extension_id} 用 {command_cls.__name__} 覆盖内置命令 {builtin_cls.__name__}（{command_id}）！'
                 )
                 continue
             command_id = f'extension:{extension_id}:{command.name}'
-            command_manager.register_command(command, command_id, owner_id=extension_id)
+            self._command_manager.register_command(command, command_id, owner_id=extension_id)
 
     def _find_builtin_override(self, command_cls: type) -> type | None:
         """若命令类继承自某内置命令类，返回该内置类；否则返回 None。"""

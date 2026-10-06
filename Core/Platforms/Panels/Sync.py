@@ -19,7 +19,7 @@ from __future__ import annotations
 from nonebot.log import logger
 
 from Core.Config import config
-from Core.Extension import command_manager
+from Core.Extension import extension_manager
 from Core.Managers import config_manager
 from Core.Platforms.Panels.Base import MAX_ITEMS_PER_PANEL, PanelError
 from Core.Platforms.Panels.QQ import MAX_PANELS_PER_BOT, QQPanelClient
@@ -40,7 +40,7 @@ PANEL_SCOPES = ('c2c', 'group', 'channel', 'dm')
 def _build_panel_items() -> list[dict]:
     """从命令注册表构建面板元素列表，超出面板上限时截断并告警。"""
     items: list[dict] = []
-    for command in command_manager.get_command_nodes().values():
+    for command in extension_manager.command_manager.get_command_nodes().values():
         name = command.name[:MAX_ITEM_NAME_LENGTH]
         desc = (command.description or '')[:MAX_ITEM_DESC_LENGTH]
         items.append({'type': 'command', 'name': name, 'desc': desc})

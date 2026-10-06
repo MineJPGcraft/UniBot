@@ -4,7 +4,7 @@
 - 根（`Core/Extension/`）：定义与基类——`Extension`（Extension 基类/状态机）、
   `Command`、`Service`、`Renderer`、`Errors`、`Manifest`、`Storage`、`TemplateConfig`
 - `Runtime/`：运行时引擎——`Loader`、`Dependencies`，另含两个组件子包：
-  `Registries/`（五类扩展的纯注册容器）与 `Managers/`（对应管理器与编排）
+  `Registries/`（扩展本体与五类能力的纯注册容器）与 `Managers/`（对应管理器与编排）
 - `Market/`：扩展市场——`Models.py`（数据形状）+ `Manager.py`（缓存、解压与安装/卸载事务 + `market_manager`）
 
 依赖方向严格单向：根 → `Runtime/` → `Market/`（由 `tests/test_architecture.py` 锁定）。
@@ -76,7 +76,7 @@ from .Runtime.Loader import (
     ExtensionLoader,
 )
 from .Runtime.Manager import ExtensionManager, extension_manager
-from .Runtime.Managers import CommandManager, RendererManager, ServiceManager, command_manager
+from .Runtime.Managers import CommandManager, RendererManager, ServiceManager
 from .Runtime.Registries import ExtensionRegistries, ServiceRegistry
 from .Service import Service
 from .Storage import (
@@ -117,7 +117,6 @@ __all__ = [
     'ImageHandler',
     'SubCommand',
     'UNSET',
-    'command_manager',
     # Constants
     'CONFIG_EXTENSIONS_FILE',
     'EXTENSIONS_DIR',

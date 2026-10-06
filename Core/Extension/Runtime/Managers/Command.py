@@ -264,7 +264,3 @@ class CommandManager:
             self._build_matcher(command)
         self._built = True
         return self._matchers
-
-
-# 全局单例
-command_manager = CommandManager()

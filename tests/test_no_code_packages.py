@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from Core.Extension import ExtensionState, ExtensionType, command_manager, extension_manager
+from Core.Extension import ExtensionState, ExtensionType, extension_manager
 from Core.Extension.Errors import ExtensionError, ManifestError
 from Core.Extension.Manifest import TemplateFieldConfig, parse_manifest
 from Core.Extension.Runtime.Loader import ExtensionLoader
@@ -273,7 +273,7 @@ class TestHybridExtension:
         for name in list(sys.modules):
             if name.startswith('Extensions.'):
                 sys.modules.pop(name, None)
-        command_manager.cleanup_matchers()
+        extension_manager.command_manager.cleanup_matchers()
 
     def test_hybrid_loads_code_and_template_parts(self, hybrid_extension_dir):
         extension_manager.load()
@@ -282,7 +282,7 @@ class TestHybridExtension:
         extension = extension_manager.registry['Hybrid']
         assert extension.state is ExtensionState.loaded
         assert set(extension.metadata.types) == {ExtensionType.template, ExtensionType.command}
-        assert 'extension:Hybrid:ping' in command_manager.get_command_nodes()
+        assert 'extension:Hybrid:ping' in extension_manager.command_manager.get_command_nodes()
         # 无代码部分：模板包已静态注册（配置 schema 编译自清单）
         registration = extension_manager.templates['Hybrid']
         assert registration.templates_dir == hybrid_extension_dir / 'Hybrid' / 'Templates'

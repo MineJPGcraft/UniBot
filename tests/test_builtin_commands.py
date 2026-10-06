@@ -10,7 +10,7 @@ from typing import override
 
 import pytest
 
-from Core.Extension import Command, CommandError, CommandManager, RendererManager, SubCommand, command_manager
+from Core.Extension import Command, CommandError, CommandManager, RendererManager, SubCommand
 from Core.Extension.Runtime.Loader import ExtensionLoader
 from Core.Extension.Runtime.Registries import ExtensionRegistries
 
@@ -28,12 +28,13 @@ def _commit(commands: dict[str, 'object'], builtin: bool = True):
     """
     用假扩展实例驱动 Loader._commit_commands，模拟扩展声明阶段。
 
-        Loader 将命令注册到全局 command_manager 单例（conftest 已按测试清空）。
+        Loader 把命令登记到底层 CommandRegistry；命令管理器经 `loader._command_manager`
+        取回（每个 Loader 独立，测试天然隔离）。
     """
     loader = ExtensionLoader(ExtensionRegistries(), RendererManager())
     for extension_id, extension in commands.items():
         loader._commit_commands(extension_id, extension, builtin=builtin)
-    return command_manager
+    return loader._command_manager
 
 
 def _build_all(manager: CommandManager):

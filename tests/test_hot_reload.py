@@ -6,11 +6,14 @@ import types
 
 import pytest
 
-from Core.Extension import Command, command_manager, extension_manager
+from Core.Extension import Command, extension_manager
 from Core.Extension.Runtime.Loader import ExtensionLoader
 
 # 单个内置命令的 NoneBot 优先级（Command.py 固定 priority=0）
 _MATCHER_PRIORITY = 0
+
+# 命令管理器（单例）：由 ExtensionManager 持有，测试统一经此访问
+command_manager = extension_manager.command_manager
 
 
 class _ReloadCommand(Command):

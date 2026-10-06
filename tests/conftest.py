@@ -30,10 +30,8 @@ def _init_nonebot():
 @pytest.fixture(autouse=True)
 def _isolate_extension_manager():
     """每个测试前清空扩展管理器状态，避免测试间相互污染。"""
-    from Core.Extension import command_manager, extension_manager
+    from Core.Extension import extension_manager
 
     extension_manager.reset()
-    command_manager.clear()
     yield
     extension_manager.reset()
-    command_manager.clear()

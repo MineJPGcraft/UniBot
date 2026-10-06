@@ -4,7 +4,7 @@ from typing import override
 
 from nonebot_plugin_alconna import Match
 
-from Core.Extension import Command, Extension, command_manager
+from Core.Extension import Command, Extension, extension_manager
 from Core.I18n import i18n_deferred, text
 from Core.Utils import turn_message_text
 
@@ -14,7 +14,7 @@ extension = Extension(id='Help', name=i18n_deferred('builtin.help.name'), versio
 
 def get_enabled_nodes() -> list[Command]:
     """获取全部已登记的命令节点（内置 builtin: 与扩展 extension: 前缀）。"""
-    return list(command_manager.get_command_nodes().values())
+    return list(extension_manager.command_manager.get_command_nodes().values())
 
 
 def get_node(name: str) -> Command | None:

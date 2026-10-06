@@ -6,8 +6,8 @@
 根（而非 `Managers/` 子包）——否则会与 `Loader.py` 形成循环导入。
 
 注册状态全部委托给 `Registries/` 容器：扩展本体与无代码包展示信息在
-`ExtensionRegistry`，服务在 `ServiceRegistry`，渲染器/模板/资源在
-`RendererManager` 持有的三个容器中；命令注册表由全局 `command_manager` 自持。
+`ExtensionRegistry`，服务、命令、渲染器、模板与资源分别在各自的纯容器中，
+由 `ServiceManager` / `CommandManager` / `RendererManager` 按引用持有。
 """
 
 import asyncio
@@ -26,7 +26,7 @@ from Core.Logging import exception_logger, logger
 from ..Extension import Extension, ExtensionState
 from ..Renderer import BaseRenderer, TemplateRegistration
 from .Loader import ExtensionLoader
-from .Managers import RendererManager, ServiceManager, command_manager
+from .Managers import CommandManager, RendererManager, ServiceManager
 from .Registries import ExtensionRegistries
 
 
@@ -47,13 +47,14 @@ class ExtensionManager:
         # 注册容器与加载状态必须实例私有，避免多实例共享与热重载脏状态
         self._registries = ExtensionRegistries()
         self.service_manager = ServiceManager(self._registries.services)
+        self.command_manager = CommandManager(self._registries.commands)
         self.renderer_manager = RendererManager(
             self._registries.renderers,
             self._registries.templates,
             self._registries.resources,
         )
-        # 注册容器与渲染管理器按引用交给 Loader，避免回调注入
-        self.loader = ExtensionLoader(self._registries, self.renderer_manager)
+        # 注册容器与渲染/命令管理器按引用交给 Loader，避免回调注入
+        self.loader = ExtensionLoader(self._registries, self.renderer_manager, self.command_manager)
         # 串行化热重载，防止 WebUI 与指令并发触发
         self._reload_lock = asyncio.Lock()
 
@@ -93,6 +94,7 @@ class ExtensionManager:
         """清空全部注册与加载状态（重新加载前调用，测试也用它做隔离）。"""
         self._registries.extensions.clear()
         self._registries.services.clear()
+        self.command_manager.clear()
         self.renderer_manager.reset()
         self.loader.reset()
 
@@ -102,7 +104,7 @@ class ExtensionManager:
 
             内部先 reset 状态；已绑定实例（模块缓存未清理时）会被复用并重新提交声明，
             不会重复绑定。注意：本方法不清理已构建的命令 matcher——若此前调用过
-            `command_manager.build()`，重复 `load()` 会因命令管理器已构建而拒绝注册；
+            `self.command_manager.build()`，重复 `load()` 会因命令管理器已构建而拒绝注册；
             完整热重载请用 `reload()`（含 matcher 注销与模块缓存清理）。
         """
         self.reset()
@@ -125,7 +127,7 @@ class ExtensionManager:
             logger.info('Reloading all extensions...')
             old_modules = self._snapshot_modules()
             await self.shutdown()
-            command_manager.cleanup_matchers()
+            self.command_manager.cleanup_matchers()
             self.loader.purge_modules()
             return await self._switch_to_candidate(old_modules)
 
@@ -133,7 +135,7 @@ class ExtensionManager:
         """加载候选状态并启用；失败时恢复旧模块并尝试回到旧状态。"""
         try:
             self.load()
-            command_manager.build()
+            self.command_manager.build()
             await self.start()
         except Exception as error:
             exception_logger.error(f'Extension reload failed during load/build/start: {error}')
@@ -161,11 +163,11 @@ class ExtensionManager:
         """
         try:
             await self.shutdown()
-            command_manager.cleanup_matchers()
+            self.command_manager.cleanup_matchers()
             self.loader.purge_modules()
             sys.modules.update(old_modules)
             self.load()
-            command_manager.build()
+            self.command_manager.build()
             await self.start()
         except Exception as error:
             exception_logger.error(f'Failed to recover previous extension state: {error}')

@@ -11,10 +11,10 @@
 > `Loader`），位于上一级 `Runtime/Manager.py`，不在本子包内。
 
 子包之外统一 `from .Runtime.Managers import X`（本包即时导出）；`Runtime/Loader.py`
-与子包内模块间引用走**直接子模块导入**（如 `from .Command import command_manager`）。
+与子包内模块间引用走**直接子模块导入**（如 `from .Command import CommandManager`）。
 """
 
-from .Command import CommandManager, command_manager
+from .Command import CommandManager
 from .Renderer import RendererManager
 from .Service import ServiceManager
 
@@ -22,5 +22,4 @@ __all__ = [
     'CommandManager',
     'RendererManager',
     'ServiceManager',
-    'command_manager',
 ]
