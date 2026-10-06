@@ -319,7 +319,7 @@ WS /api/ws
 
 实时推送运行状态、日志增量、服务器事件等，供前端仪表盘实时更新。
 
-认证仅接受同源 HttpOnly cookie（浏览器 WebSocket 自动携带）；**默认不接受 URL query 中的 token**
-（会泄露到浏览器历史、代理与访问日志）。确有跨源受限客户端需求时，可在后端显式开启 query token 兼容。
+认证仅接受同源 HttpOnly cookie（浏览器 WebSocket 自动携带）；**不接受 URL query 中的 token**
+（URL 会泄露到浏览器历史、代理与访问日志）。
 
 *如需完整的接口定义，可直接查阅后端源码 `Core/Web/` 目录下的各路由文件。*

@@ -1,4 +1,4 @@
-"""WebSocket 认证与广播测试：默认拒绝 query token、广播遍历使用快照。"""
+"""WebSocket 认证与广播测试：仅接受 cookie、拒绝 query token、广播遍历使用快照。"""
 
 import asyncio
 
@@ -41,20 +41,12 @@ def test_cookie_token_authenticates():
     assert websocket.closed is False
 
 
-def test_query_token_rejected_by_default():
-    """默认不接受 URL query 中的 token，即使其本身合法。"""
+def test_query_token_rejected():
+    """不接受 URL query 中的 token，即使其本身合法。"""
     websocket = _FakeWebSocket(query={'token': _valid_token()})
-    assert ws_module.ALLOW_QUERY_TOKEN is False
     assert asyncio.run(ws_module._authenticate_websocket(websocket)) is False
     assert websocket.closed is True
     assert websocket.close_code == 4001
-
-
-def test_query_token_opt_in(monkeypatch):
-    """显式开启兼容后，query token 才被接受。"""
-    monkeypatch.setattr(ws_module, 'ALLOW_QUERY_TOKEN', True)
-    websocket = _FakeWebSocket(query={'token': _valid_token()})
-    assert asyncio.run(ws_module._authenticate_websocket(websocket)) is True
 
 
 def test_broadcast_uses_snapshot_and_prunes_failures():

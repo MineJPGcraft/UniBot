@@ -299,7 +299,6 @@ WS /api/ws
 Pushes runtime status, log increments, server events, etc. in real time for the frontend dashboard to update live.
 
 Authentication only accepts same-origin HttpOnly cookies (automatically sent by browser WebSockets); **tokens in the URL
-query are rejected by default** (they leak into browser history, proxies and access logs). Query-token compatibility can be
-explicitly enabled in the backend if a cross-origin constrained client truly requires it.
+query are not accepted** (URLs leak into browser history, proxies and access logs).
 
 *For the complete API definitions, refer directly to the route files under the backend source `Core/Web/` directory.*
