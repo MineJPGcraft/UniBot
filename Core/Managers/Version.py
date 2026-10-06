@@ -7,6 +7,7 @@ import tomlkit
 from packaging.version import InvalidVersion, Version
 
 from Core.Config import config
+from Core.Files import atomic_write
 from Core.Logging import exception_logger, logger
 from Core.Network import github_download, request
 
@@ -169,7 +170,7 @@ class VersionManager:
             if new_webui_version:
                 unibot_data = local_data.setdefault('tool', {}).setdefault('unibot', {})
                 unibot_data['webui_version'] = new_webui_version
-            local_path.write_text(tomlkit.dumps(local_data), encoding='Utf-8')
+            atomic_write(local_path, tomlkit.dumps(local_data))
             self.version = str(new_version)
             config_manager.webui_version = str(new_webui_version)
             logger.info(f'Project version synced to {new_version}, WebUI version synced to {new_webui_version}.')

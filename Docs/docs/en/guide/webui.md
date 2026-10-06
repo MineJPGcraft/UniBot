@@ -118,8 +118,8 @@ In the "Add a superuser" step of the guide card, click **Token Authorization**; 
 - The bot completes the authorization automatically: it adds the **current group** to the message groups and command groups (`message_groups` / `command_groups`), and sets the **sender** as a superuser (`SUPERUSERS`);
 - The token is **one-time-use and auto-refreshing**: it refreshes immediately after a single use, and the old token is invalidated.
 
-::: note Authorization without WebUI is also possible
-Every time the bot starts, it prints the current token in the console (in the form `认证令牌：A1B2C3D4E5`), and sending it in a group chat on any platform completes the same authorization.
+::: note Getting the token from the console when WebUI is disabled
+When WebUI is disabled, the bot prints the current token in the console on every startup (in the form `认证令牌：A1B2C3D4E5`); sending it in a group chat on any platform completes the same authorization. When WebUI is enabled, the token is **no longer printed** — get it from the guide card above.
 
 Afterwards, you can also add superusers manually in the [Config Center](#config-center) of WebUI.
 :::

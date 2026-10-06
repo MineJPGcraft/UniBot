@@ -11,12 +11,16 @@
 """
 
 import asyncio
+import sys
+from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
 
 import tomlkit
 
 from Core.Config import config
 from Core.Constants import CONFIG_EXTENSIONS_FILE
+from Core.Files import atomic_write
 from Core.Logging import exception_logger, logger
 
 from ..Extension import Extension, ExtensionState
@@ -24,6 +28,16 @@ from ..Renderer import BaseRenderer, TemplateRegistration
 from .Loader import ExtensionLoader
 from .Managers import RendererManager, ServiceManager, command_manager
 from .Registries import ExtensionRegistries
+
+
+@dataclass
+class ReloadResult:
+    """热重载结果：失败阶段、失败扩展与是否已恢复旧状态。"""
+
+    success: bool
+    failed_stage: str = ''
+    error: str = ''
+    recovered: bool = False
 
 
 class ExtensionManager:
@@ -94,19 +108,70 @@ class ExtensionManager:
         self.reset()
         self.loader.load()
 
-    async def reload(self) -> None:
-        """热重载全部扩展：停用 → 注销命令 → 清理模块缓存 → 重新加载 → 重建命令 → 重新启用。"""
+    async def reload(self) -> ReloadResult:
+        """
+        热重载全部扩展：停用 → 注销命令 → 清理模块缓存 → 重新加载 → 重建命令 → 重新启用。
+
+            语法预检失败时早退、保持旧状态（不破坏现场）。切换到候选状态的过程中
+            任一阶段（加载 / 命令构建 / 启用）失败，会尝试恢复旧扩展模块缓存并重新加载，
+            返回结构化 `ReloadResult`（失败阶段、错误、是否已恢复），而不是直接抛异常。
+        """
         async with self._reload_lock:
             if failed := self.loader.check_syntax():
-                raise RuntimeError(f'Extension syntax check failed: {", ".join(failed)}')
+                # 语法错误文本含 `(<unknown>, line N)`，须转义尖括号避免被 loguru 当作颜色标签
+                detail = f'Extension syntax check failed: {", ".join(failed)}'
+                logger.error(detail.replace('<', '\\<'))
+                return ReloadResult(success=False, failed_stage='syntax', error=detail, recovered=True)
             logger.info('Reloading all extensions...')
+            old_modules = self._snapshot_modules()
             await self.shutdown()
             command_manager.cleanup_matchers()
             self.loader.purge_modules()
+            return await self._switch_to_candidate(old_modules)
+
+    async def _switch_to_candidate(self, old_modules: dict[str, ModuleType]) -> ReloadResult:
+        """加载候选状态并启用；失败时恢复旧模块并尝试回到旧状态。"""
+        try:
             self.load()
             command_manager.build()
             await self.start()
-            logger.success('All extensions reloaded.')
+        except Exception as error:
+            exception_logger.error(f'Extension reload failed during load/build/start: {error}')
+            recovered = await self._recover(old_modules)
+            return ReloadResult(success=False, failed_stage='load', error=str(error), recovered=recovered)
+        logger.success('All extensions reloaded.')
+        return ReloadResult(success=True)
+
+    def _snapshot_modules(self) -> dict[str, ModuleType]:
+        """快照扩展相关模块对象，供切换失败时恢复旧代码。"""
+        return {
+            name: module
+            for name, module in sys.modules.items()
+            if name.startswith('Extensions.')
+            or name == 'Core.Builtin'
+            or name.startswith('Core.Builtin.')
+        }
+
+    async def _recover(self, old_modules: dict[str, ModuleType]) -> bool:
+        """
+        恢复旧扩展状态：还原模块缓存 → 清理候选模块 → 重新加载 → 重建命令 → 重新启用。
+
+            尽力而为：受 NoneBot/Alconna 全局注册限制，恢复过程本身也可能失败，
+            失败时返回 False，调用方据此提示需要手动处理。
+        """
+        try:
+            await self.shutdown()
+            command_manager.cleanup_matchers()
+            self.loader.purge_modules()
+            sys.modules.update(old_modules)
+            self.load()
+            command_manager.build()
+            await self.start()
+        except Exception as error:
+            exception_logger.error(f'Failed to recover previous extension state: {error}')
+            return False
+        logger.warning('Reload failed; the previous extension state has been restored.')
+        return True
 
     async def start(self) -> None:
         """按拓扑顺序调用 on_load 与 on_enable，失败时回滚已启用扩展；渲染引擎失败仅降级图片功能。"""
@@ -218,7 +283,7 @@ class ExtensionManager:
         extension_config = dict(data.get(extension_id, {}))
         extension_config['enabled'] = enabled
         data[extension_id] = extension_config
-        config_path.write_text(tomlkit.dumps(data), encoding='Utf-8')
+        atomic_write(config_path, tomlkit.dumps(data))
         logger.info(
             f'Extension {extension_id} set to {"enabled" if enabled else "disabled"}, takes effect after restart.'
         )

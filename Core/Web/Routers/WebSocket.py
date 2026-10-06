@@ -12,6 +12,10 @@ router = APIRouter(tags=['WebSocket'])
 # 已连接的 WebSocket 客户端及其订阅的事件
 ws_clients: dict[WebSocket, set[str]] = {}
 
+# 是否允许通过 URL query 参数携带 token 认证（默认禁用）。
+# URL 会进入浏览器历史、代理与访问日志，仅在确有跨源受限客户端需求时才启用。
+ALLOW_QUERY_TOKEN = False
+
 # 运行状态推送间隔（秒）
 STATUS_PUSH_INTERVAL = 3
 
@@ -25,7 +29,8 @@ async def broadcast_event(event_type: str, data: dict):
     """向所有订阅了该事件的 WebSocket 客户端推送消息。"""
     message = {'type': event_type, 'data': data}
     disconnected = []
-    for websocket, subscribed_events in ws_clients.items():
+    # 快照连接表：await 期间允许其它连接增删成员，避免字典迭代期变更
+    for websocket, subscribed_events in tuple(ws_clients.items()):
         if event_type in subscribed_events:
             try:
                 await websocket.send_json(message)
@@ -86,8 +91,13 @@ async def websocket_endpoint(websocket: WebSocket):
 
 async def _authenticate_websocket(websocket: WebSocket) -> bool:
     """校验 WebSocket 身份，失败即关闭连接并返回 `False`。"""
-    # 通过 cookie 中的 access_token 验证身份（fallback 到 query 参数兼容旧版）
-    token = websocket.cookies.get(COOKIE_ACCESS_KEY, '') or websocket.query_params.get('token', '')
+    # 仅接受同源 HttpOnly cookie（浏览器 WebSocket 自动携带）。
+    # query 参数中的 token 会进入浏览器历史、代理与访问日志，默认禁用；
+    # 仅当部署确有跨源受限客户端需求时，才将 ALLOW_QUERY_TOKEN 显式置为 True。
+    token = websocket.cookies.get(COOKIE_ACCESS_KEY, '')
+    if not token and ALLOW_QUERY_TOKEN:
+        logger.warning('WebSocket query token fallback is enabled; tokens may leak via logs.')
+        token = websocket.query_params.get('token', '')
     if decode_access_token_payload(token):
         return True
     await websocket.close(code=4001, reason='Unauthorized')

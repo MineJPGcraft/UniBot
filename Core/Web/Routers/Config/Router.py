@@ -4,6 +4,7 @@
 负责 `Config.toml`、`.env`、`pyproject.toml`（NoneBot 适配器/插件）的读写接口。
 """
 
+import asyncio
 from copy import deepcopy
 
 from fastapi import APIRouter, Depends, Request
@@ -11,6 +12,7 @@ from fastapi import APIRouter, Depends, Request
 from Core.Config import CONFIG_TOML_PATH, Config, config, reload_config, validate_config_content
 from Core.Constants import BUILTIN_PLUGIN_PREFIX, TaskKind, UserRole
 from Core.Extension.Runtime.Dependencies import apply_main_dependency_changes
+from Core.Files import atomic_write
 from Core.I18n import register_all
 from Core.Managers import config_manager, plugin_registry, task_center
 from Core.Managers.TaskCenter import TaskContext
@@ -200,17 +202,24 @@ async def patch_env_config(request: Request, current_user: dict = Depends(requir
 # ===== 原始文件直接编辑 =====
 
 
+def _read_raw_files() -> dict:
+    """读取 Config.toml 与 .env 原始文本（同步阻塞 IO，调用方放入线程执行）。"""
+    return {
+        'config_toml': CONFIG_TOML_PATH.read_text('Utf-8'),
+        'env': config_manager.env_path.read_text('Utf-8'),
+    }
+
+
+def _save_raw_config_toml(content: str) -> None:
+    """写入 Config.toml 并热更新内存配置（同步阻塞 IO，调用方放入线程执行）。"""
+    atomic_write(CONFIG_TOML_PATH, content)
+    reload_config()
+
+
 @router.get('/raw', summary='获取原始配置文件内容')
 async def get_raw_config(current_user: dict = Depends(get_current_user)):
     """获取 Config.toml 与 .env 的原始文本内容。"""
-    return {
-        'code': 0,
-        'data': {
-            'config_toml': CONFIG_TOML_PATH.read_text('Utf-8'),
-            'env': config_manager.env_path.read_text('Utf-8'),
-        },
-        'message': 'ok',
-    }
+    return {'code': 0, 'data': await asyncio.to_thread(_read_raw_files), 'message': 'ok'}
 
 
 @router.patch('/raw', summary='保存原始配置文件内容')
@@ -221,8 +230,7 @@ async def patch_raw_config(body: RawConfigPatchRequest, current_user: dict = Dep
     if body.config_toml is not None:
         if error_message := validate_config_content(body.config_toml):
             return {'code': 1, 'data': None, 'message': error_message}
-        CONFIG_TOML_PATH.write_text(body.config_toml, encoding='Utf-8')
-        reload_config()
+        await asyncio.to_thread(_save_raw_config_toml, body.config_toml)
         if error_message := _apply_language_change(previous_language):
             return {'code': 1, 'data': None, 'message': error_message}
         hints.append(text('config.hint.config_toml_reloaded'))

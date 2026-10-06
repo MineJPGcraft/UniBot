@@ -20,6 +20,7 @@ from pathlib import Path
 import tomlkit
 
 from Core.Constants import MARKET_CACHE_TTL, STATES_PATH
+from Core.Files import atomic_write
 from Core.Logging import exception_logger, logger
 from Core.Network import github_download, request
 from Core.Utils import ArchiveError, safe_extract_zip
@@ -79,6 +80,16 @@ class ExtensionMarketManager:
     def __init__(self) -> None:
         self.market_cache: dict[str, MarketExtension] = {}
         self.market_cache_time: float = 0
+        # 以扩展 id 为粒度的操作锁：安装 / 升级 / 卸载串行化，避免状态快照互相覆盖
+        self._locks: dict[str, asyncio.Lock] = {}
+
+    def _lock_for(self, extension_id: str) -> asyncio.Lock:
+        """获取（或懒创建）指定扩展的操作锁。"""
+        lock = self._locks.get(extension_id)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._locks[extension_id] = lock
+        return lock
 
     # ===== 注册表：拉取 / 缓存 / 视图 =====
 
@@ -170,7 +181,10 @@ class ExtensionMarketManager:
         try:
             data = tomlkit.parse(path.read_text('Utf-8'))
         except Exception as error:
-            logger.warning(f'Failed to read extension install states: {error}, treated as empty.')
+            # 损坏时先备份原文件，避免后续写入直接覆盖导致不可恢复
+            backup = path.with_name(f'{path.name}.corrupt.{int(time.time())}')
+            path.replace(backup)
+            logger.error(f'Failed to read extension install states ({error}); backed up to {backup}.')
             return {}
         states: dict[str, ExtensionInstallState] = {}
         for extension_id, raw in data.items():
@@ -183,11 +197,9 @@ class ExtensionMarketManager:
         return states
 
     def _write_states(self, states: dict[str, ExtensionInstallState]) -> None:
-        """原子写入全部扩展安装状态。"""
+        """原子写入全部扩展安装状态（临时文件 + 替换，失败保留旧状态）。"""
         data = {extension_id: state.model_dump() for extension_id, state in states.items()}
-        path = STATES_PATH
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(tomlkit.dumps(data), encoding='Utf-8')
+        atomic_write(STATES_PATH, tomlkit.dumps(data))
 
     def get_install_state(self, extension_id: str) -> ExtensionInstallState | None:
         """获取指定扩展的安装状态，未安装返回 None。"""
@@ -216,6 +228,11 @@ class ExtensionMarketManager:
 
     async def install(self, extension_id: str, version: str = '') -> MarketOperationResult:
         """从市场安装/升级扩展（可回滚事务），重启后由 Loader 加载生效。"""
+        async with self._lock_for(extension_id):
+            return await self._install_locked(extension_id, version)
+
+    async def _install_locked(self, extension_id: str, version: str) -> MarketOperationResult:
+        """安装事务主体：以扩展 id 为粒度串行执行（调用方须持有该扩展的锁）。"""
         extension_entry = self.market_cache.get(extension_id)
         if extension_entry is None:
             return MarketOperationResult(False, 'extensions.market_not_found_in_cache', {'id': extension_id})
@@ -346,6 +363,11 @@ class ExtensionMarketManager:
 
     async def uninstall(self, extension_id: str) -> MarketOperationResult:
         """卸载市场扩展：删除目录并清理安装状态，重启后由 Loader 不再加载。"""
+        async with self._lock_for(extension_id):
+            return await self._uninstall_locked(extension_id)
+
+    async def _uninstall_locked(self, extension_id: str) -> MarketOperationResult:
+        """卸载事务主体：以扩展 id 为粒度串行执行（调用方须持有该扩展的锁）。"""
         target_dir = EXTENSIONS_DIR / extension_id
         if not target_dir.exists() and extension_id not in self.market_cache:
             return MarketOperationResult(False, 'extensions.not_found', {'extension_id': extension_id})

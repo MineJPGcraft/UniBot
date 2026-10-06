@@ -217,11 +217,10 @@ class BotCommand(Command):
         async def handler(self, session: Uninfo):
             if not get_permission(session):
                 return text('core.commands.bot.no_permission')
-            try:
-                await extension_manager.reload()
-            except Exception as error:
-                exception_logger.error(f'Extension reload failed: {error}')
-                return text('core.commands.bot.reload_failed', error=error)
+            result = await extension_manager.reload()
+            if not result.success:
+                exception_logger.error(f'Extension reload failed: {result.error}')
+                return text('core.commands.bot.reload_failed', error=result.error)
             return text('core.commands.bot.reload_success')
 
 

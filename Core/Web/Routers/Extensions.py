@@ -27,6 +27,14 @@ from .Auth import get_current_user, require_role
 router = APIRouter(prefix='/api/extensions', tags=['Extensions'])
 
 
+def _raise_on_reload_failure(result) -> None:
+    """热重载失败时抛出异常（附带恢复状态说明），成功则记录恢复提示。"""
+    if result.success:
+        return
+    hint = 'previous state restored' if result.recovered else 'previous state could NOT be restored'
+    raise RuntimeError(f'{result.error} ({hint})')
+
+
 async def run_extension_install_task(context: TaskContext, extension_id: str, version: str, name: str) -> str:
     """任务体：下载安装扩展 → 同步依赖 → 热重载使其立即生效。"""
     context.set_message('task_center.msg_downloading_extension', name=name)
@@ -41,7 +49,7 @@ async def run_extension_install_task(context: TaskContext, extension_id: str, ve
     await sync_extension_dependencies(context.log)
 
     context.log('Reloading extensions...')
-    await extension_manager.reload()
+    _raise_on_reload_failure(await extension_manager.reload())
     return 'task_center.msg_extension_installed'
 
 
@@ -57,14 +65,14 @@ async def run_extension_uninstall_task(context: TaskContext, extension_id: str, 
     await sync_extension_dependencies(context.log)
 
     context.log('Reloading extensions...')
-    await extension_manager.reload()
+    _raise_on_reload_failure(await extension_manager.reload())
     return 'task_center.msg_extension_uninstalled'
 
 
 async def run_extension_reload_task(context: TaskContext) -> str:
     """任务体：热重载全部扩展。"""
     context.log('Reloading all extensions...')
-    await extension_manager.reload()
+    _raise_on_reload_failure(await extension_manager.reload())
     return 'task_center.msg_extensions_reloaded'
 
 

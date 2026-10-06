@@ -62,9 +62,9 @@ async def get_status(current_user: dict = Depends(get_current_user)):
     return {'code': 0, 'data': get_status_data(), 'message': 'ok'}
 
 
-@router.get('/token', summary='获取认证令牌')
-async def get_auth_token(current_user: dict = Depends(get_current_user)):
-    """获取当前认证令牌，用于在群聊中发送以完成快速授权。"""
+@router.get('/token', summary='获取认证令牌', dependencies=[Depends(require_role(UserRole.admin))])
+async def get_auth_token():
+    """获取当前认证令牌（仅管理员），用于在群聊中发送以完成快速授权。"""
     return {'code': 0, 'data': {'token': runtime_state.auth_token}, 'message': 'ok'}
 
 

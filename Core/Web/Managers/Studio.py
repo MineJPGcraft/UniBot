@@ -16,6 +16,7 @@ from pathlib import Path
 
 import psutil
 
+from Core.Files import atomic_write
 from Core.Logging import exception_logger, logger
 from Core.Network import github_download, request
 from Core.Web.Locale import text
@@ -195,9 +196,9 @@ class StudioManager:
             return False, text('studio.checksum_mismatch')
         self.studio_dir.mkdir(parents=True, exist_ok=True)
         executable = self.executable_path()
-        executable.write_bytes(archive_data)
+        atomic_write(executable, archive_data)
         executable.chmod(0o755)
-        (self.studio_dir / VERSION_FILE_NAME).write_text(release_tag, encoding='Utf-8')
+        atomic_write(self.studio_dir / VERSION_FILE_NAME, release_tag)
         logger.success(f'Extension Studio downloaded ({release_tag}).')
         return True, text('studio.download_completed', release_tag=release_tag)
 
@@ -232,7 +233,7 @@ class StudioManager:
                     stderr=subprocess.STDOUT,
                     start_new_session=True,
                 )
-            (self.studio_dir / PID_FILE_NAME).write_text(str(process.pid), encoding='Utf-8')
+            atomic_write(self.studio_dir / PID_FILE_NAME, str(process.pid))
             logger.success(f'Extension Studio launched (pid={process.pid}).')
             ready_url = await self.wait_ready()
             if ready_url:

@@ -205,10 +205,12 @@ class TestReloadCycle:
 
         # 写入语法错误的代码
         (greet_extension_dir / 'Greet.py').write_text('def broken(:\n', encoding='Utf-8')
-        with pytest.raises(RuntimeError, match='syntax check failed'):
-            asyncio.run(extension_manager.reload())
+        result = asyncio.run(extension_manager.reload())
 
-        # 旧状态完整保留：扩展实例、命令、matcher 均未受影响
+        # 语法预检失败早退：返回结构化结果且旧状态完整保留
+        assert result.success is False
+        assert result.failed_stage == 'syntax'
+        assert result.recovered is True
         assert extension_manager.registry['Greet'] is old_extension
         assert command_manager.get_command('extension:Greet:greet').description == 'v1 description'
         assert old_matcher in nonebot_matchers[_MATCHER_PRIORITY]

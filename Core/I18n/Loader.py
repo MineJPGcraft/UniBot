@@ -22,6 +22,7 @@ import tomlkit
 
 from Core.Config import config
 from Core.Constants import MESSAGE_PATHS, OVERRIDE_MESSAGE_PATHS, SYSTEM_PATHS
+from Core.Files import atomic_write
 from Core.Logging import logger
 
 from .Engine import SUPPORTED_LANGUAGES, i18n, set_messages_locale
@@ -79,9 +80,8 @@ def _sync_locale() -> None:
 def write_override(language: str, data: dict[str, Any]) -> None:
     """以结构化字典写回用户覆盖层（仅存改动键），写盘后热重载全部语言包。"""
     path = overrides_path(language)
-    path.parent.mkdir(parents=True, exist_ok=True)
     body = tomlkit.dumps(_prune(data)) if data else ''
-    path.write_text(f'{_OVERRIDE_HEADER}\n\n{body}', encoding='Utf-8')
+    atomic_write(path, f'{_OVERRIDE_HEADER}\n\n{body}')
     register_all()
     logger.success('Message texts saved and reloaded.')
 

@@ -7,11 +7,13 @@ NoneBot 插件登记与启停的运行时存储（Config/Plugins.toml）。
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import tomlkit
 
 from Core.Constants import BUILTIN_PLUGIN_PREFIX, CONFIG_PLUGINS_FILE
+from Core.Files import atomic_write
 from Core.Logging import logger
 
 
@@ -22,17 +24,19 @@ class PluginRegistry:
         self.path = path
 
     def _load(self) -> dict:
-        """读取登记文件，缺失或损坏时返回空 dict。"""
+        """读取登记文件，缺失返回空 dict；损坏时先备份再以空数据继续。"""
         if not self.path.exists():
             return {}
         try:
             return dict(tomlkit.parse(self.path.read_text('Utf-8')).get('Plugins', {}))
         except Exception as error:
-            logger.warning(f'Failed to read plugin registry: {error}, treated as empty.')
+            backup = self.path.with_name(f'{self.path.name}.corrupt.{int(time.time())}')
+            self.path.replace(backup)
+            logger.error(f'Failed to read plugin registry ({error}); backed up to {backup}. Treated as empty.')
             return {}
 
     def _save(self, plugins: dict) -> None:
-        """把登记表写回文件（保留可读格式）。"""
+        """原子写回登记表，避免中断留下截断文件（保留可读格式）。"""
         document = tomlkit.document()
         section = tomlkit.table(is_super_table=True)
         for module_name, config in plugins.items():
@@ -41,8 +45,7 @@ class PluginRegistry:
                 entry[key] = value
             section[module_name] = entry
         document['Plugins'] = section
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(tomlkit.dumps(document), encoding='Utf-8')
+        atomic_write(self.path, tomlkit.dumps(document))
 
     def list_plugins(self) -> list[dict]:
         """列出全部已登记插件（含框架内置项的规整结果）。"""

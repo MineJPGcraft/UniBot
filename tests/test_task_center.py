@@ -46,6 +46,16 @@ async def _runner_cancellable(context) -> str:
     return 'task_center.msg_finished'
 
 
+async def _runner_swallows_cancel(context) -> str:
+    """捕获取消异常后继续收尾的任务体（模拟清理阶段不可立即中断）。"""
+    try:
+        await asyncio.sleep(5)
+    except asyncio.CancelledError:
+        # 吞掉取消异常后正常返回，任务中心仍应以取消为终态
+        await asyncio.sleep(0.02)
+    return 'task_center.msg_finished'
+
+
 # ===== 提交与执行 =====
 
 
@@ -196,6 +206,68 @@ class TestCancelAndRetry:
             success, message = center.retry(snapshot['id'])
             assert success is False
             assert message == 'task_center.not_retryable'
+
+        asyncio.run(run())
+
+    def test_cancel_is_idempotent_and_finishes_once(self):
+        """重复取消只受理一次，终态收尾幂等（不重复改写时间戳）。"""
+
+        async def run():
+            center = TaskCenter()
+            snapshot = center.submit(DEMO_KIND, _runner_cancellable)
+            await asyncio.sleep(0.05)
+
+            first, _ = center.cancel(snapshot['id'])
+            second, message = center.cancel(snapshot['id'])
+            assert first is True
+            assert second is False
+            assert message == 'task_center.not_cancellable'
+
+            await asyncio.sleep(0.05)
+            record = center.get(snapshot['id'])
+            assert record is not None
+            assert record.status == TaskStatus.cancelled
+            finished_at = record.finished_at
+            assert finished_at > 0
+            # worker 收尾不会二次改写终态时间戳
+            await asyncio.sleep(0.03)
+            assert record.finished_at == finished_at
+
+        asyncio.run(run())
+
+    def test_swallowed_cancel_still_ends_cancelled(self):
+        """任务体吞掉取消异常后继续执行，终态仍为 cancelled 而非 succeeded。"""
+
+        async def run():
+            center = TaskCenter()
+            snapshot = center.submit(DEMO_KIND, _runner_swallows_cancel)
+            await asyncio.sleep(0.05)
+
+            success, _ = center.cancel(snapshot['id'])
+            assert success is True
+            assert center.get(snapshot['id']).cancel_requested is True
+            await asyncio.sleep(0.1)
+
+            record = center.get(snapshot['id'])
+            assert record is not None
+            assert record.status == TaskStatus.cancelled
+
+        asyncio.run(run())
+
+    def test_retry_clears_cancel_request(self):
+        """重试会清除取消请求标记，避免残留状态影响新一次执行。"""
+
+        async def run():
+            center = TaskCenter()
+            snapshot = center.submit(DEMO_KIND, _runner_cancellable)
+            await asyncio.sleep(0.05)
+            center.cancel(snapshot['id'])
+            await asyncio.sleep(0.05)
+
+            success, _ = center.retry(snapshot['id'])
+            assert success is True
+            record = center.get(snapshot['id'])
+            assert record.cancel_requested is False
 
         asyncio.run(run())
 

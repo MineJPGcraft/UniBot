@@ -260,8 +260,12 @@ When auto-selecting: the latest release is used if compatible; if the latest is 
 ## Log API
 
 ```
-GET /api/logs?level=INFO&limit=100  # Fetch logs
+GET /api/logs                 # List log files
+GET /api/logs/{name}?lines=N  # Fetch the last N lines (default 2000, max 10000)
 ```
+
+To avoid loading an entire file into memory and blocking the event loop, the content endpoint returns
+only the tail by default; use `lines` to control how many trailing lines are returned.
 
 ## Task APIs
 
@@ -281,7 +285,8 @@ POST /api/tasks/dependency-sync     # Trigger dependency sync manually
 
 Task snapshot fields: `id`, `kind`, `title_params`, `status` (`pending` / `running` / `succeeded` / `failed` / `cancelled`),
 `message_key` + `message_params` (stage description, translated by the frontend into the UI language), `progress`, `error`,
-`result`, `created_at` / `started_at` / `finished_at`, `retryable`, `log_count` (the detail endpoint additionally returns `logs`).
+`result`, `created_at` / `started_at` / `finished_at`, `retryable`, `cancel_requested` (cancellation requested but not yet
+finalized), `log_count` (the detail endpoint additionally returns `logs`).
 
 Task status changes are pushed in real time through the WebSocket `task` event.
 
@@ -292,5 +297,9 @@ WS /api/ws
 ```
 
 Pushes runtime status, log increments, server events, etc. in real time for the frontend dashboard to update live.
+
+Authentication only accepts same-origin HttpOnly cookies (automatically sent by browser WebSockets); **tokens in the URL
+query are rejected by default** (they leak into browser history, proxies and access logs). Query-token compatibility can be
+explicitly enabled in the backend if a cross-origin constrained client truly requires it.
 
 *For the complete API definitions, refer directly to the route files under the backend source `Core/Web/` directory.*

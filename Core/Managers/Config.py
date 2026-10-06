@@ -4,6 +4,7 @@ from json import JSONDecodeError, dumps, loads
 import tomlkit
 
 from Core.Constants import CONFIG_TOML_PATH, ENV_PATH, PYPROJECT_PATH
+from Core.Files import atomic_write
 from Core.Logging import logger
 
 
@@ -110,12 +111,12 @@ class ConfigManager:
                 lines.append(line)
                 continue
             lines.append(f'{line}={dumps(self.environment[line], ensure_ascii=False)}')
-        self.env_path.write_text('\n'.join(lines), encoding='Utf-8')
+        atomic_write(self.env_path, '\n'.join(lines))
         logger.success('Configuration saved. Restart the bot manually for changes to take effect.')
 
     def write_env_raw(self, content: str):
         """以原始文本内容写回 .env 文件，并同步内存缓存。"""
-        self.env_path.write_text(content, encoding='Utf-8')
+        atomic_write(self.env_path, content)
         self.load_env()
         logger.success('Configuration saved. Restart the bot manually for changes to take effect.')
 
@@ -127,7 +128,7 @@ class ConfigManager:
 
     def write_pyproject(self, data: dict):
         """更新缓存并写回 pyproject.toml（保留注释和格式）。"""
-        self.pyproject_path.write_text(tomlkit.dumps(data), encoding='Utf-8')
+        atomic_write(self.pyproject_path, tomlkit.dumps(data))
         self.pyproject_data = data
         self.update_pyproject_cache()
 
@@ -183,7 +184,7 @@ class ConfigManager:
                     toml_document[key][sub_key] = sub_value
                 continue
             toml_document[key] = value
-        self.config_path.write_text(tomlkit.dumps(toml_document), encoding='Utf-8')
+        atomic_write(self.config_path, tomlkit.dumps(toml_document))
 
 
 config_manager = ConfigManager()

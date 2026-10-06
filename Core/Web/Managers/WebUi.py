@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from Core.Files import atomic_write
 from Core.Logging import exception_logger, logger
 from Core.Managers import config_manager
 from Core.Network import github_download
@@ -79,11 +80,6 @@ class WebUiManager:
 
     async def ensure_downloaded(self) -> bool:
         """确保 WebUI 静态资源已下载且版本匹配，否则重新下载。"""
-        # 函数内导入：Core.Utils 顶层依赖 nonebot_plugin_uninfo / alconna，
-        # 这些包必须经 NoneBot 插件机制加载；本模块在 Bot.main() 早期导入，
-        # 顶层导入会把 uninfo 抢先变成普通模块，导致后续 require() 失败
-        from Core.Utils import safe_extract_zip
-
         if not self.version:
             logger.warning('No WebUI version configured, skipping download.')
             return False
@@ -96,17 +92,38 @@ class WebUiManager:
             logger.warning(f'Failed to download WebUI ({self.version}), check your network and retry later.')
             return False
         try:
-            # 清理旧目录与解压属于重 IO，放入线程执行避免阻塞事件循环
-            if self.webui_dir.exists():
-                await asyncio.to_thread(shutil.rmtree, self.webui_dir)
-            self.webui_dir.mkdir(parents=True, exist_ok=True)
-            await asyncio.to_thread(safe_extract_zip, response.getvalue(), self.webui_dir)
-            self.version_file.write_text(self.version, encoding='Utf-8')
+            # 解压与目录替换属于重 IO，放入线程执行避免阻塞事件循环
+            await asyncio.to_thread(self._install_assets, response.getvalue())
+            atomic_write(self.version_file, self.version)
         except Exception as error:
             logger.warning(f'Failed to extract WebUI static assets: {error}')
             return False
         logger.success(f'WebUI static assets downloaded ({self.version}).')
         return True
+
+    def _install_assets(self, archive_data: bytes) -> None:
+        """先解压到同目录 staging，再原子替换 WebUi 目录，失败时回滚旧版本（同步阻塞）。"""
+        # 函数内导入：同 ensure_downloaded 的延迟导入原因（避免抢先注册插件托管包）
+        from Core.Utils import safe_extract_zip
+
+        staging_dir = self.webui_dir.with_name(f'{self.webui_dir.name}.staging')
+        backup_dir = self.webui_dir.with_name(f'{self.webui_dir.name}.backup')
+        for path in (staging_dir, backup_dir):
+            if path.exists():
+                shutil.rmtree(path)
+        staging_dir.mkdir(parents=True, exist_ok=True)
+        safe_extract_zip(archive_data, staging_dir)
+        # 旧目录先改名备份，再切换 staging；切换失败则恢复备份
+        if self.webui_dir.exists():
+            self.webui_dir.rename(backup_dir)
+        try:
+            staging_dir.rename(self.webui_dir)
+        except Exception:
+            if backup_dir.exists():
+                backup_dir.rename(self.webui_dir)
+            raise
+        if backup_dir.exists():
+            shutil.rmtree(backup_dir)
 
     def mount(self, app: FastAPI):
         """挂载 WebUI API 路由到 /webui 前缀下（需在 nonebot.init() 之后、nonebot.run() 之前调用）。"""

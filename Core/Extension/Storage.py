@@ -10,7 +10,6 @@
 """
 
 import json
-import tempfile
 import threading
 import tomllib
 from pathlib import Path
@@ -19,6 +18,7 @@ from typing import Any, Generic, TypeVar
 import tomlkit
 from pydantic import BaseModel
 
+from Core.Files import atomic_write
 from Core.Logging import logger
 
 from .Errors import StorageError
@@ -37,20 +37,9 @@ def _check_relative(relative: str) -> Path:
 
 
 def _atomic_write(file_path: Path, content: str | bytes) -> None:
-    """使用临时文件与原子替换写入内容，失败时保留旧文件。"""
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    mode = 'wb' if isinstance(content, bytes) else 'w'
+    """使用临时文件与原子替换写入内容，失败时保留旧文件（异常包装为 StorageError）。"""
     try:
-        with tempfile.NamedTemporaryFile(
-            mode,
-            encoding=None if isinstance(content, bytes) else 'Utf-8',
-            dir=file_path.parent,
-            suffix='.tmp',
-            delete=False,
-        ) as temp_file:
-            temp_file.write(content)
-            temp_path = Path(temp_file.name)
-        temp_path.replace(file_path)
+        atomic_write(file_path, content)
     except Exception as error:
         logger.error(f'Failed to write file: {file_path}! Error: {error}')
         raise StorageError(f'Failed to write file: {error}') from error

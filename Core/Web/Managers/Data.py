@@ -3,10 +3,12 @@ import uuid
 from asyncio import Lock
 from datetime import UTC, datetime
 from json import dumps, loads
+from pathlib import Path
 
 import bcrypt
 
 from Core.Constants import DATA_DIR, UserRole
+from Core.Files import atomic_write
 from Core.Logging import logger
 
 
@@ -35,8 +37,10 @@ class DataManager:
                 stored_data = loads(self.users_file.read_text('Utf-8'))
                 # 新版结构为 {'users': ..., 'revoked_tokens': ...}；旧版顶层即用户表，直接嘎调
                 assert 'users' in stored_data
-            except Exception:
-                logger.warning('User data file is corrupted, falling back to empty data.')
+            except Exception as error:
+                # 损坏时先备份再以空数据继续，避免下次保存直接覆盖原文件导致不可恢复
+                backup = self._backup_corrupt_file(self.users_file)
+                logger.error(f'User data file is corrupted ({error}); backed up to {backup}. Starting with empty data.')
                 stored_data = {}
         self.users = stored_data.get('users') or {}
         self.revoked_tokens = stored_data.get('revoked_tokens') or {}
@@ -44,28 +48,41 @@ class DataManager:
         self.secret_key = self.load_secret_key()
         logger.success('Data files loaded successfully.')
 
+    @staticmethod
+    def _backup_corrupt_file(file_path: Path) -> Path:
+        """把损坏文件重命名为带时间戳的备份，返回备份路径。"""
+        timestamp = datetime.now(UTC).strftime('%Y%m%d%H%M%S')
+        backup = file_path.with_name(f'{file_path.name}.corrupt.{timestamp}')
+        file_path.replace(backup)
+        return backup
+
     def load_secret_key(self) -> str:
         """生成或加载 JWT 签名密钥。"""
         if self.secret_file.exists():
             return self.secret_file.read_text('Utf-8').strip()
         secret_key = uuid.uuid4().hex + uuid.uuid4().hex
-        self.secret_file.write_text(secret_key, encoding='Utf-8')
+        atomic_write(self.secret_file, secret_key)
         return secret_key
+
+    def _write_snapshot(self) -> None:
+        """原子持久化当前内存快照（调用方须持有 self.lock）。"""
+        content = {'users': self.users, 'revoked_tokens': self.revoked_tokens}
+        atomic_write(self.users_file, dumps(content, ensure_ascii=False, indent=2))
 
     async def save(self):
         """持久化 WebUI 用户数据。"""
         async with self.lock:
-            content = {'users': self.users, 'revoked_tokens': self.revoked_tokens}
-            self.users_file.write_text(dumps(content, ensure_ascii=False, indent=2), encoding='Utf-8')
+            self._write_snapshot()
             logger.success('Data files saved successfully.')
 
     # ── 已注销 refresh_token ──────────────────────────────────
 
     async def revoke_refresh_token(self, token: str, expire_at: float) -> None:
         """记录已注销的 refresh_token 并持久化，进程重启后仍保持失效。"""
-        self._purge_expired_revocations()
-        self.revoked_tokens[token] = expire_at
-        await self.save()
+        async with self.lock:
+            self._purge_expired_revocations()
+            self.revoked_tokens[token] = expire_at
+            self._write_snapshot()
 
     def is_refresh_token_revoked(self, token: str) -> bool:
         """检查 refresh_token 是否已被注销。"""
@@ -99,6 +116,8 @@ class DataManager:
         """创建用户，返回用户信息（不含密码哈希）。"""
         if self.get_user_by_username(username):
             return None
+        # 哈希属 CPU 密集操作，放在锁外执行，避免长时间占用写锁
+        password_hash = await self.hash_password(password)
         user_id = f'u_{uuid.uuid4().hex[:12]}'
         now = datetime.now(UTC).isoformat()
         user_data = {
@@ -106,12 +125,16 @@ class DataManager:
             'username': username,
             'nickname': nickname,
             'role': role,
-            'password_hash': await self.hash_password(password),
+            'password_hash': password_hash,
             'created_at': now,
             'last_login_at': None,
         }
-        self.users[user_id] = user_data
-        await self.save()
+        async with self.lock:
+            # 锁内二次校验，避免并发创建同名用户
+            if self.get_user_by_username(username):
+                return None
+            self.users[user_id] = user_data
+            self._write_snapshot()
         return self.public_user_info(user_data)
 
     def get_user_by_username(self, username: str) -> dict | None:
@@ -138,38 +161,45 @@ class DataManager:
 
     async def update_last_login(self, user_id: str):
         """更新最后登录时间。"""
-        if user_data := self.users.get(user_id):
+        async with self.lock:
+            user_data = self.users.get(user_id)
+            if not user_data:
+                return
             user_data['last_login_at'] = datetime.now(UTC).isoformat()
-            await self.save()
+            self._write_snapshot()
 
     async def update_user(self, user_id: str, nickname: str | None = None, role: UserRole | None = None) -> bool:
         """更新用户昵称或角色。"""
-        user_data = self.users.get(user_id)
-        if not user_data:
-            return False
-        if nickname is not None:
-            user_data['nickname'] = nickname
-        if role is not None:
-            user_data['role'] = role
-        await self.save()
-        return True
+        async with self.lock:
+            user_data = self.users.get(user_id)
+            if not user_data:
+                return False
+            if nickname is not None:
+                user_data['nickname'] = nickname
+            if role is not None:
+                user_data['role'] = role
+            self._write_snapshot()
+            return True
 
     async def reset_password(self, user_id: str, password: str) -> bool:
         """重置用户密码。"""
-        user_data = self.users.get(user_id)
-        if not user_data:
-            return False
-        user_data['password_hash'] = await self.hash_password(password)
-        await self.save()
-        return True
+        password_hash = await self.hash_password(password)
+        async with self.lock:
+            user_data = self.users.get(user_id)
+            if not user_data:
+                return False
+            user_data['password_hash'] = password_hash
+            self._write_snapshot()
+            return True
 
     async def delete_user(self, user_id: str) -> bool:
         """删除用户。"""
-        if user_id not in self.users:
-            return False
-        self.users.pop(user_id)
-        await self.save()
-        return True
+        async with self.lock:
+            if user_id not in self.users:
+                return False
+            self.users.pop(user_id)
+            self._write_snapshot()
+            return True
 
 
 data_manager = DataManager()

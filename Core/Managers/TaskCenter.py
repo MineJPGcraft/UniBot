@@ -67,6 +67,8 @@ class TaskRecord:
     started_at: float = 0.0
     finished_at: float = 0.0
     retryable: bool = False
+    # 已请求取消但尚未落定终态（任务体可能仍在校验/收尾），据此区分「请求取消」与「已取消」
+    cancel_requested: bool = False
     # 运行句柄与重试工厂仅内存持有，不对外序列化
     handle: asyncio.Task | None = field(default=None, repr=False)
     # create_task 需要协程对象，故工厂声明为协程而非更宽的 Awaitable
@@ -93,6 +95,7 @@ class TaskRecord:
             'started_at': self.started_at,
             'finished_at': self.finished_at,
             'retryable': self.retryable and not self.active,
+            'cancel_requested': self.cancel_requested,
             'log_count': len(self.logs),
         }
         if with_logs:
@@ -110,7 +113,7 @@ class TaskContext:
     @property
     def cancelled(self) -> bool:
         """判断任务是否已被请求取消，任务体应在长流程中主动检查。"""
-        return self._record.status == TaskStatus.cancelled
+        return self._record.cancel_requested
 
     def log(self, message: str) -> None:
         """追加一行任务日志并广播（超出上限时丢弃最旧行）。"""
@@ -212,6 +215,8 @@ class TaskCenter:
         try:
             message_key = await resolve_runner_result(runner(TaskContext(self, record)))
         except asyncio.CancelledError:
+            # 唯一终态收尾点：取消由本 worker 落定，cancel() 只负责请求
+            record.cancel_requested = True
             self._finish(record, TaskStatus.cancelled, 'task_center.msg_cancelled')
             logger.info(f'Task {record.id} ({record.kind}) cancelled.')
             return None
@@ -221,6 +226,10 @@ class TaskCenter:
         except Exception as error:
             self._finish(record, TaskStatus.failed, 'task_center.msg_failed', error=str(error))
             exception_logger.error(f'Task {record.id} ({record.kind}) failed: {error}')
+            return None
+        # 任务体若吞掉取消异常后继续执行，仍以取消为终态，避免「已取消」被改写为成功
+        if record.cancel_requested:
+            self._finish(record, TaskStatus.cancelled, 'task_center.msg_cancelled')
             return None
         self._finish(record, TaskStatus.succeeded, message_key or 'task_center.msg_finished', progress=100.0)
         logger.success(f'Task {record.id} ({record.kind}) finished.')
@@ -235,7 +244,9 @@ class TaskCenter:
         error: str = '',
         progress: float | None = None,
     ) -> None:
-        """落定任务终态：写状态/时间戳 → 广播 → 淘汰超额历史。"""
+        """落定任务终态：写状态/时间戳 → 广播 → 淘汰超额历史（已处于终态时幂等返回）。"""
+        if record.finished_at:
+            return
         record.status = status
         record.message_key = message_key
         if error:
@@ -248,15 +259,23 @@ class TaskCenter:
 
     # ===== 取消与重试 =====
     def cancel(self, task_id: str) -> tuple[bool, str]:
-        """请求取消指定任务，返回 (是否受理, 消息键)。"""
+        """
+        请求取消指定任务，返回 (是否受理, 消息键)。
+
+            只标记取消请求并取消执行句柄；终态收尾由任务体所在 worker 唯一负责，
+            避免「请求取消」与「进入终态」双重收尾，也便于区分 cancelling 与 cancelled。
+        """
         record = self._records.get(task_id)
         if record is None:
             return False, 'task_center.not_found'
         if not record.active:
             return False, 'task_center.not_cancellable'
+        if record.cancel_requested:
+            return False, 'task_center.not_cancellable'
+        record.cancel_requested = True
         if record.handle is not None:
             record.handle.cancel()
-        self._finish(record, TaskStatus.cancelled, 'task_center.msg_cancelled')
+        self.notify(record)
         return True, 'task_center.cancelled'
 
     def retry(self, task_id: str) -> tuple[bool, str]:
@@ -276,6 +295,7 @@ class TaskCenter:
         record.created_at = time.time()
         record.started_at = 0.0
         record.finished_at = 0.0
+        record.cancel_requested = False
         record.message_key = 'task_center.msg_queued'
         record.handle = asyncio.create_task(record.factory(), name=f'task-center:{record.kind}')
         self.notify(record)

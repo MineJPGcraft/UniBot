@@ -281,8 +281,12 @@ GET  /api/extensions/market/{id}/releases
 ## 日志接口
 
 ```
-GET /api/logs?level=INFO&limit=100  # 获取日志
+GET /api/logs                 # 日志文件列表
+GET /api/logs/{name}?lines=N  # 获取指定日志末尾 N 行（默认 2000，上限 10000）
 ```
+
+为避免整文件读入内存、阻塞事件循环，日志内容接口默认只返回末尾若干行；大文件请配合
+`lines` 参数取尾部。
 
 ## 任务接口
 
@@ -302,7 +306,8 @@ POST /api/tasks/dependency-sync     # 手动触发依赖同步
 
 任务快照字段：`id`、`kind`、`title_params`、`status`（`pending` / `running` / `succeeded` / `failed` / `cancelled`）、
 `message_key` + `message_params`（阶段说明，由前端按界面语言翻译）、`progress`、`error`、`result`、
-`created_at` / `started_at` / `finished_at`、`retryable`、`log_count`（详情接口额外返回 `logs`）。
+`created_at` / `started_at` / `finished_at`、`retryable`、`cancel_requested`（已请求取消但尚未落定终态）、
+`log_count`（详情接口额外返回 `logs`）。
 
 任务状态变更会通过 WebSocket 的 `task` 事件实时推送。
 
@@ -313,5 +318,8 @@ WS /api/ws
 ```
 
 实时推送运行状态、日志增量、服务器事件等，供前端仪表盘实时更新。
+
+认证仅接受同源 HttpOnly cookie（浏览器 WebSocket 自动携带）；**默认不接受 URL query 中的 token**
+（会泄露到浏览器历史、代理与访问日志）。确有跨源受限客户端需求时，可在后端显式开启 query token 兼容。
 
 *如需完整的接口定义，可直接查阅后端源码 `Core/Web/` 目录下的各路由文件。*

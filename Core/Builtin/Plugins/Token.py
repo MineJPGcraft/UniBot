@@ -31,7 +31,7 @@ _group_scenes = (SceneType.GROUP, SceneType.GUILD, SceneType.CHANNEL_TEXT)
 
 @driver.on_startup
 async def print_token_on_startup() -> None:
-    """启动时打印当前认证令牌。"""
+    """启动时刷新认证令牌（WebUI 未开启时打印到控制台，开启时仅存于运行时供面板获取）。"""
     refresh_token()
 
 
@@ -51,11 +51,16 @@ def normalize_token(text: str) -> str:
 
 
 def refresh_token() -> str:
-    """刷新令牌：重新计算并覆盖当前令牌（即用即刷），返回新令牌。"""
+    """刷新令牌：重新计算并覆盖当前令牌（即用即刷），返回新令牌。
+
+    WebUI 开启时令牌可从面板（快速开始引导 / 状态接口）获取，不再打印到控制台，
+    避免日志泄露；未开启时才打印，作为获取令牌的唯一途径。
+    """
     runtime_state.auth_token = generate_token()
-    logger.info(
-        f'Auth token: <red><b><u>{runtime_state.auth_token}</u></b></red>, copy and send it in message/command groups to complete setup.'
-    )
+    if not config.webui.enabled:
+        logger.info(
+            f'Auth token: <red><b><u>{runtime_state.auth_token}</u></b></red>, copy and send it in message/command groups to complete setup.'
+        )
     return runtime_state.auth_token
 
 
