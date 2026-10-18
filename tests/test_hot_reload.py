@@ -78,7 +78,9 @@ class TestPurgeModules:
         sys.modules['Extensions'] = fake_package
         sys.modules['Extensions.Greet'] = fake_module
 
-        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
+        loader = ExtensionLoader(
+            extension_manager._registries, extension_manager.renderer_manager, extension_manager.command_manager
+        )
         try:
             loader.purge_modules()
         finally:
@@ -99,7 +101,9 @@ class TestCheckSyntax:
         (bad_dir / 'Good.py').write_text('x = 1\n', encoding='Utf-8')
         monkeypatch.setattr('Core.Extension.Runtime.Loader.EXTENSIONS_DIR', bad_dir)
 
-        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
+        loader = ExtensionLoader(
+            extension_manager._registries, extension_manager.renderer_manager, extension_manager.command_manager
+        )
         broken = loader.check_syntax()
 
         assert len(broken) == 1
@@ -176,7 +180,9 @@ class TestReloadCycle:
         command_manager.build()
         asyncio.run(extension_manager.start())
         assert extension_manager.registry['Greet'].metadata.version == '1.0.0'
-        assert command_manager.get_command('extension:Greet:greet').description == 'v1 description'
+        greet_command = command_manager.get_command('extension:Greet:greet')
+        assert greet_command is not None
+        assert greet_command.description == 'v1 description'
         old_matcher = command_manager._matchers[0]
         registry_count = len(nonebot_matchers[_MATCHER_PRIORITY])
 
@@ -187,6 +193,7 @@ class TestReloadCycle:
         # 新代码生效：版本、命令描述、处理器输出均更新
         assert extension_manager.registry['Greet'].metadata.version == '2.0.0'
         command = command_manager.get_command('extension:Greet:greet')
+        assert command is not None
         assert command.description == 'v2 description'
         assert asyncio.run(command.handler()) == 'hello v2'
         # matcher 已替换为新的类对象，且注册表数量无净增长（无泄漏）
@@ -215,7 +222,9 @@ class TestReloadCycle:
         assert result.failed_stage == 'syntax'
         assert result.recovered is True
         assert extension_manager.registry['Greet'] is old_extension
-        assert command_manager.get_command('extension:Greet:greet').description == 'v1 description'
+        greet_command = command_manager.get_command('extension:Greet:greet')
+        assert greet_command is not None
+        assert greet_command.description == 'v1 description'
         assert old_matcher in nonebot_matchers[_MATCHER_PRIORITY]
         assert command_manager._built is True
 
@@ -272,15 +281,17 @@ class TestReloadServices:
         asyncio.run(extension_manager.start())
         old_extension = extension_manager.registry['Svc']
         old_service = extension_manager.get_service('greet')
-        assert old_service.say() == 'hello v1'
+        assert old_service is not None
+        assert old_service.say() == 'hello v1'  # pyright: ignore[reportAttributeAccessIssue]
 
         (greet_extension_dir / 'Svc.py').write_text(_SERVICE_V2, encoding='Utf-8')
         asyncio.run(extension_manager.reload())
 
         new_service = extension_manager.get_service('greet')
+        assert new_service is not None
         assert new_service is not old_service
-        assert new_service.say() == 'hello v2'
-        assert old_service.disabled is True  # 旧服务已完成 on_disable
+        assert new_service.say() == 'hello v2'  # pyright: ignore[reportAttributeAccessIssue]
+        assert old_service.disabled is True  # pyright: ignore[reportAttributeAccessIssue]  # 旧服务已完成 on_disable
         assert extension_manager.registry['Svc'] is not old_extension
         assert extension_manager.registry['Svc'].metadata.version == '2.0.0'
 

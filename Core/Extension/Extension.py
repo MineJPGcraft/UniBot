@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
 from pydantic import BaseModel, ConfigDict
 
+from Core.I18n import DeferredText
 from Core.I18n import text as render
 from Core.Logging import logger
 
@@ -68,10 +69,10 @@ class Extension(Generic[ConfigModelT]):
     """
 
     # 公开元数据类属性（单文件扩展由类属性声明，多文件扩展以 Extension.toml 为准）
-    name: str = ''
+    name: str | DeferredText = ''
     version: str = ''
     author: str = ''
-    description: str = ''
+    description: str | DeferredText = ''
     types: tuple[str, ...] = ()
 
     # 由扩展类声明，Loader 实例化后注入；实例上始终非 None（缺省用空配置模型）
@@ -95,10 +96,10 @@ class Extension(Generic[ConfigModelT]):
         self,
         *,
         id: str = '',
-        name: str = '',
+        name: str | DeferredText = '',
         version: str = '',
         author: str = '',
-        description: str = '',
+        description: str | DeferredText = '',
         types: tuple[str, ...] = (),
         config_model: type[ConfigModelT] | None = None,
     ) -> None:

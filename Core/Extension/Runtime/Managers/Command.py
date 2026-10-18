@@ -151,7 +151,7 @@ class CommandManager:
             subcommand.name,
             self._build_args(subcommand),
             *nested,
-            help_text=subcommand.description or None,
+            help_text=str(subcommand.description) if subcommand.description else None,
         )
 
     def _build_matcher(self, command: Command) -> None:
@@ -168,9 +168,9 @@ class CommandManager:
             *subcommands,
         )
         # 写入描述与用法，供 Help 等功能读取
-        alconna.meta.description = command.description or 'Unknown'
+        alconna.meta.description = str(command.description) if command.description else 'Unknown'
         if command.usage:
-            alconna.meta.usage = command.usage
+            alconna.meta.usage = str(command.usage)
         matcher = on_alconna(
             alconna,
             rule=command_group_rule,

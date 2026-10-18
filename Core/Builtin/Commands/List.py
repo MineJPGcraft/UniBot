@@ -30,7 +30,7 @@ class ListCommand(Command):
         self.register_option('server', str, description=i18n_deferred('core.commands.list.option_server'))
 
     @override
-    async def handler(self, server: Match[str]):
+    async def handler(self, server: Match[str]) -> str:
         server_flag = server.result if server.available else None
         _, response = await self.get_players(server_flag)
         if not isinstance(response, dict):
@@ -38,7 +38,7 @@ class ListCommand(Command):
         return await turn_message_text(self.list_handler(response))
 
     @override
-    async def image_handler(self, server: Match[str]) -> bytes | None:
+    async def image_handler(self, server: Match[str]) -> bytes | str | None:
         """渲染在线玩家列表为图片，返回 PNG 字节（由框架在图像模式发送）。"""
         server_flag = server.result if server.available else None
         _, response = await self.get_players(server_flag)

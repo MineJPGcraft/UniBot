@@ -245,7 +245,9 @@ class TestCancelAndRetry:
 
             success, _ = center.cancel(snapshot['id'])
             assert success is True
-            assert center.get(snapshot['id']).cancel_requested is True
+            cancelled_record = center.get(snapshot['id'])
+            assert cancelled_record is not None
+            assert cancelled_record.cancel_requested is True
             await asyncio.sleep(0.1)
 
             record = center.get(snapshot['id'])
@@ -267,6 +269,7 @@ class TestCancelAndRetry:
             success, _ = center.retry(snapshot['id'])
             assert success is True
             record = center.get(snapshot['id'])
+            assert record is not None
             assert record.cancel_requested is False
 
         asyncio.run(run())

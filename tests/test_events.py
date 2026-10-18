@@ -41,7 +41,7 @@ def test_achievement_notification_uses_translated_message(monkeypatch) -> None:
     monkeypatch.setattr(Events.config, 'sync_message_between_servers', True)
 
     event = _achievement_event(translated='Steve 达成了进度 [石器时代]')
-    asyncio.run(Events.handle_player_achievement(event))
+    asyncio.run(Events.handle_player_achievement(event))  # pyright: ignore[reportArgumentType]
 
     assert group_messages == ['Steve 达成了进度 [石器时代]']
     assert server_service.broadcasts == [(('survival', 'Steve', 'Steve 达成了进度 [石器时代]'), 'survival')]
@@ -60,6 +60,6 @@ def test_achievement_notification_falls_back_to_title(monkeypatch) -> None:
     monkeypatch.setattr(Events.config, 'sync_message_between_servers', False)
 
     event = _achievement_event(translated=None, title='石器时代', key='minecraft:story/mine_stone')
-    asyncio.run(Events.handle_player_achievement(event))
+    asyncio.run(Events.handle_player_achievement(event))  # pyright: ignore[reportArgumentType]
 
     assert group_messages == ['Steve 达成了成就 [石器时代]']

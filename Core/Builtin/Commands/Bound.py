@@ -73,7 +73,7 @@ class BoundCommand(Command):
             )
 
         @override
-        async def image_handler(self, session: Uninfo) -> bytes | None:
+        async def image_handler(self, session: Uninfo) -> bytes | str | None:
             """渲染绑定列表为图片，返回 PNG 字节（由框架在图像模式发送）。"""
             if not get_permission(session):
                 return text('core.commands.bound.no_permission')

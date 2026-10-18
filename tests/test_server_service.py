@@ -69,7 +69,7 @@ def test_server_service_is_registered() -> None:
 
 def test_execute_strips_color() -> None:
     service = Servers.ServerService()
-    service.servers = {'survival': _RconBot('survival')}
+    service.servers = {'survival': _RconBot('survival')}  # pyright: ignore[reportAttributeAccessIssue]
 
     result = asyncio.run(service.execute('fake_command'))
 
@@ -82,7 +82,7 @@ def test_execute_failure_returns_none() -> None:
             raise RuntimeError('boom')
 
     service = Servers.ServerService()
-    service.servers = {'survival': _FailBot('survival')}
+    service.servers = {'survival': _FailBot('survival')}  # pyright: ignore[reportAttributeAccessIssue]
 
     result = asyncio.run(service.execute('fake_command'))
 
@@ -104,7 +104,7 @@ def test_execute_broadcast_collects_failures() -> None:
             raise RuntimeError('boom')
 
     service = Servers.ServerService()
-    service.servers = {'good': _RconBot('good'), 'bad': _FailBot('bad')}
+    service.servers = {'good': _RconBot('good'), 'bad': _FailBot('bad')}  # pyright: ignore[reportAttributeAccessIssue]
 
     results = asyncio.run(service.execute('fake_command'))
 
@@ -116,7 +116,7 @@ def test_get_player_list_strips_color() -> None:
         async def send_rcon_command(self, command: str) -> str:
             return '§6There are §a3 of a max of §c10 players online: §balice, §dbob, §ecarol'
 
-    players, max_players = asyncio.run(Servers.ServerService().get_player_list(_ListBot('survival')))
+    players, max_players = asyncio.run(Servers.ServerService().get_player_list(_ListBot('survival')))  # pyright: ignore[reportArgumentType]
 
     assert players == ['alice', 'bob', 'carol']
     assert max_players == 10

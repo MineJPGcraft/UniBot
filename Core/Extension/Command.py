@@ -15,6 +15,8 @@ from typing import Any, Generic, TypeVar
 
 from arclet.alconna import Args, MultiVar
 
+from Core.I18n import DeferredText
+
 # 到内置命令的稳定前缀
 BUILTIN_PREFIX = 'builtin'
 
@@ -43,7 +45,7 @@ class Argument:
         value_type: Any = str,
         required: bool = True,
         default: Any = UNSET,
-        description: str = '',
+        description: str | DeferredText = '',
         multi: bool = False,
     ) -> None:
         self.name = name
@@ -91,8 +93,8 @@ class Command(ABC):
     """
 
     name: str = ''
-    description: str = ''
-    usage: str | None = None
+    description: str | DeferredText = ''
+    usage: str | DeferredText | None = None
     aliases: tuple[str, ...] = ()
 
     def __init__(self) -> None:
@@ -113,7 +115,7 @@ class Command(ABC):
         *,
         required: bool = True,
         default: Any = UNSET,
-        description: str = '',
+        description: str | DeferredText = '',
         multi: bool = False,
     ) -> Argument:
         """注册一个参数。"""
@@ -127,7 +129,7 @@ class Command(ABC):
         value_type: Any = str,
         *,
         default: Any = None,
-        description: str = '',
+        description: str | DeferredText = '',
         multi: bool = False,
     ) -> Argument:
         """注册一个可选参数。"""
@@ -180,8 +182,8 @@ class Command(ABC):
         """
         return None
 
-    async def image_handler(self, *args, **kwargs) -> bytes | None:
-        """覆写以提供图片模式下渲染的 PNG 字节，由框架发送。"""
+    async def image_handler(self, *args, **kwargs) -> bytes | str | None:
+        """覆写以提供图片模式下渲染的 PNG 字节，由框架发送（可返回文本表示错误提示）。"""
         return None
 
 

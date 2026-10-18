@@ -41,9 +41,9 @@ class _FakeRenderer(BaseRenderer):
     async def setup(self) -> None:
         self.setup_called = True
 
-    async def render(self, html: str, css: str, size: tuple[int, int] | None = None) -> bytes:
-        self.rendered.append((html, css))
-        return f'{self.name}:{html}:{css}'.encode()
+    async def render(self, html_content: str, css: str, size: tuple[int, int] | None = None) -> bytes:
+        self.rendered.append((html_content, css))
+        return f'{self.name}:{html_content}:{css}'.encode()
 
     async def shutdown(self) -> None:
         self.shutdown_called = True
@@ -80,7 +80,7 @@ class TestRendererRegistration:
 
     def test_register_without_name_is_ignored(self):
         class _NoName(BaseRenderer):
-            async def render(self, html: str, css: str, size: tuple[int, int] | None = None) -> bytes:
+            async def render(self, html_content: str, css: str, size: tuple[int, int] | None = None) -> bytes:
                 return b''
 
         extension_manager.register_renderer(_NoName())
@@ -208,7 +208,7 @@ class _SizeAwareRenderer(BaseRenderer):
     async def setup(self) -> None:
         pass
 
-    async def render(self, html: str, css: str, size: tuple[int, int] | None = None) -> bytes:
+    async def render(self, html_content: str, css: str, size: tuple[int, int] | None = None) -> bytes:
         self.received_size = size
         return b'size-aware'
 
@@ -231,7 +231,7 @@ class _FileUriRenderer(BaseRenderer):
 
     name = 'file-uri'
 
-    async def render(self, html: str, css: str, size: tuple[int, int] | None = None) -> bytes:
+    async def render(self, html_content: str, css: str, size: tuple[int, int] | None = None) -> bytes:
         return b''
 
     def deal_file_asset(self, asset: FileAsset) -> str:
@@ -379,7 +379,7 @@ class TestRendererNegotiation:
             async def setup(self) -> None:
                 raise RuntimeError('engine broken')
 
-            async def render(self, html: str, css: str, size: tuple[int, int] | None = None) -> bytes:
+            async def render(self, html_content: str, css: str, size: tuple[int, int] | None = None) -> bytes:
                 return b''
 
         playwright = _FakeRenderer('playwright')

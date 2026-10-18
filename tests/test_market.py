@@ -214,9 +214,9 @@ class TestVersionCompatibility:
     def test_compatible_release_prefers_latest_compatible(self, monkeypatch):
         _patch_unibot_version(monkeypatch)
         entry = _market_extension(('1.0.0', '*'), ('1.0.1', '>=9.0.0'), ('1.0.2', '>=9.0.0'))
-        assert entry.latest_release().version == '1.0.2'
+        assert entry.latest_release().version == '1.0.2'  # pyright: ignore[reportOptionalMemberAccess]
         # 新版本都不兼容 → 回退到最新的历史兼容版本
-        assert entry.compatible_release().version == '1.0.0'
+        assert entry.compatible_release().version == '1.0.0'  # pyright: ignore[reportOptionalMemberAccess]
 
     def test_compatible_release_returns_none_without_compatible(self, monkeypatch):
         _patch_unibot_version(monkeypatch)
@@ -228,6 +228,7 @@ class TestVersionCompatibility:
         entry = _market_extension(('1.0.0', '*'), ('1.0.1', '>=9.0.0'))
         release, error_key = ExtensionMarketManager._select_release(entry, '')
         assert error_key == ''
+        assert release is not None
         assert release.version == '1.0.0'
 
     def test_select_release_unsupported(self, monkeypatch):
@@ -243,6 +244,7 @@ class TestVersionCompatibility:
         entry = _market_extension(('1.0.0', '*'), ('1.0.1', '>=9.0.0'))
         release, error_key = ExtensionMarketManager._select_release(entry, '1.0.1')
         assert error_key == ''
+        assert release is not None
         assert release.version == '1.0.1'
 
     def test_select_release_unknown_version(self, monkeypatch):

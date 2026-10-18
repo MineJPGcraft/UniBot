@@ -1,5 +1,6 @@
 """内置扩展：命令帮助指令。"""
 
+from collections.abc import Sequence
 from typing import override
 
 from nonebot_plugin_alconna import Match
@@ -67,7 +68,7 @@ def node_arg_rows(command: Command) -> list[dict]:
     ]
 
 
-def _walk_subcommands(subcommands: list[Command], path_prefix: list[str], indent: str = '') -> list[str]:
+def _walk_subcommands(subcommands: Sequence[Command], path_prefix: list[str], indent: str = '') -> list[str]:
     """递归展开子命令树为展示行（完整路径 + 嵌套子命令 + 参数描述）。"""
     lines: list[str] = []
     for index, subcommand in enumerate(subcommands):
@@ -86,7 +87,7 @@ def _walk_subcommands(subcommands: list[Command], path_prefix: list[str], indent
     return lines
 
 
-def _collect_subcommand_rows(subcommands: list[Command], path_prefix: list[str], depth: int = 0) -> list[dict]:
+def _collect_subcommand_rows(subcommands: Sequence[Command], path_prefix: list[str], depth: int = 0) -> list[dict]:
     """递归收集子命令树为结构化行（完整路径用法、描述、层级与参数），供图片模板渲染。"""
     rows: list[dict] = []
     for subcommand in subcommands:

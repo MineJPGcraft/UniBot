@@ -10,28 +10,26 @@ from typing import override
 
 import pytest
 
-from Core.Extension import Command, CommandError, CommandManager, RendererManager, SubCommand
+from Core.Extension import Command, CommandError, CommandManager, Extension, RendererManager, SubCommand
 from Core.Extension.Runtime.Loader import ExtensionLoader
 from Core.Extension.Runtime.Registries import ExtensionRegistries
 
 
-def _make_extension(command_cls: type) -> 'object':
+def _make_extension(command_cls: type) -> Extension:
     """构造一个声明了单个命令类的假扩展实例。"""
-    from Core.Extension import Extension
-
     extension = Extension()
     extension.commands = [command_cls]
     return extension
 
 
-def _commit(commands: dict[str, 'object'], builtin: bool = True):
+def _commit(commands: dict[str, Extension], builtin: bool = True):
     """
     用假扩展实例驱动 Loader._commit_commands，模拟扩展声明阶段。
 
         Loader 把命令登记到底层 CommandRegistry；命令管理器经 `loader._command_manager`
         取回（每个 Loader 独立，测试天然隔离）。
     """
-    loader = ExtensionLoader(ExtensionRegistries(), RendererManager())
+    loader = ExtensionLoader(ExtensionRegistries(), RendererManager(), CommandManager())
     for extension_id, extension in commands.items():
         loader._commit_commands(extension_id, extension, builtin=builtin)
     return loader._command_manager
@@ -194,6 +192,7 @@ class TestBuiltinStructure:
     def test_command_has_multi_argument(self):
         manager = _commit({'Command': _make_extension(_ConsoleCommand)})
         node = manager.get_command('builtin:command')
+        assert node is not None
         message_arg = node.find_argument('command')
         assert message_arg is not None
         assert message_arg.multi is True
@@ -201,22 +200,26 @@ class TestBuiltinStructure:
     def test_send_has_alias(self):
         manager = _commit({'Send': _make_extension(_SendCommand)})
         node = manager.get_command('builtin:send')
+        assert node is not None
         assert 'mc' in node.aliases
 
     def test_bound_has_four_subcommands(self):
         manager = _commit({'Bound': _make_extension(_BoundCommand)})
         node = manager.get_command('builtin:bound')
+        assert node is not None
         names = {sub.name for sub in node.subcommands}
         assert names == {'list', 'query', 'remove', 'append'}
 
     def test_about_has_check_subcommand(self):
         manager = _commit({'About': _make_extension(_AboutCommand)})
         node = manager.get_command('builtin:about')
+        assert node is not None
         assert node.find_subcommand('check') is not None
 
     def test_help_has_optional_argument(self):
         manager = _commit({'Help': _make_extension(_HelpCommand)})
         node = manager.get_command('builtin:help')
+        assert node is not None
         command_arg = node.find_argument('command')
         assert command_arg is not None
         assert command_arg.required is False
@@ -224,6 +227,7 @@ class TestBuiltinStructure:
     def test_help_has_usage_and_description(self):
         manager = _commit({'Help': _make_extension(_HelpCommand)})
         node = manager.get_command('builtin:help')
+        assert node is not None
         assert node.usage
         assert node.description
 
@@ -252,6 +256,7 @@ class TestNestedSubcommand:
         """两级嵌套子命令被自动发现，parent 链正确。"""
         manager = _commit({'Bot': _make_extension(_NestedCommand)})
         node = manager.get_command('builtin:bot')
+        assert node is not None
         superusers = node.find_subcommand('superusers')
         assert superusers is not None
         add = superusers.find_subcommand('add')
@@ -299,7 +304,7 @@ class TestManifestFromAttributes:
         from Core.Extension import Extension, ExtensionType, manifest_from_attributes
 
         class FakeExt(Extension):
-            id = 'Fake'
+            id = 'Fake'  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
             name = '假扩展'
             version = '1.0.0'
             types = ('command',)

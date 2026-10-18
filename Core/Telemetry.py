@@ -57,8 +57,8 @@ class Telemetry:
         try:
             import winreg
 
-            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Microsoft\Cryptography') as key:
-                return str(winreg.QueryValueEx(key, 'MachineGuid')[0]).strip()
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Microsoft\Cryptography') as key:  # pyright: ignore[reportAttributeAccessIssue]
+                return str(winreg.QueryValueEx(key, 'MachineGuid')[0]).strip()  # pyright: ignore[reportAttributeAccessIssue]
         except Exception:
             return ''
 

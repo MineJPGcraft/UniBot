@@ -37,14 +37,14 @@ def _valid_token() -> str:
 def test_cookie_token_authenticates():
     """同源 cookie 中的合法 access_token 通过认证。"""
     websocket = _FakeWebSocket(cookies={COOKIE_ACCESS_KEY: _valid_token()})
-    assert asyncio.run(ws_module._authenticate_websocket(websocket)) is True
+    assert asyncio.run(ws_module._authenticate_websocket(websocket)) is True  # pyright: ignore[reportArgumentType]
     assert websocket.closed is False
 
 
 def test_query_token_rejected():
     """不接受 URL query 中的 token，即使其本身合法。"""
     websocket = _FakeWebSocket(query={'token': _valid_token()})
-    assert asyncio.run(ws_module._authenticate_websocket(websocket)) is False
+    assert asyncio.run(ws_module._authenticate_websocket(websocket)) is False  # pyright: ignore[reportArgumentType]
     assert websocket.closed is True
     assert websocket.close_code == 4001
 
@@ -54,8 +54,8 @@ def test_broadcast_uses_snapshot_and_prunes_failures():
     alive = _FakeWebSocket()
     gone = _FakeWebSocket(fail_send=True)
     ws_module.ws_clients.clear()
-    ws_module.ws_clients[alive] = {'log'}
-    ws_module.ws_clients[gone] = {'log'}
+    ws_module.ws_clients[alive] = {'log'}  # pyright: ignore[reportArgumentType]
+    ws_module.ws_clients[gone] = {'log'}  # pyright: ignore[reportArgumentType]
     try:
         asyncio.run(ws_module.broadcast_event('log', {'message': 'hi'}))
     finally:

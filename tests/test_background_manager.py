@@ -168,7 +168,9 @@ def test_register_after_start_auto_schedules():
     async def run():
         await manager.start()
         assert manager.add('late', noop, 10)
-        assert manager.get('late').running is True
+        late_job = manager.get('late')
+        assert late_job is not None
+        assert late_job.running is True
         await manager.stop()
 
     asyncio.run(run())

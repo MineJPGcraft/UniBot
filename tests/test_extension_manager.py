@@ -31,7 +31,7 @@ class _GoodExt(Extension):
 
     @property
     @override
-    def id(self) -> str:
+    def id(self) -> str:  # pyright: ignore[reportIncompatibleMethodOverride]
         return self._ext_id
 
     @override
@@ -51,7 +51,7 @@ class _FailingExt(Extension):
 
     @property
     @override
-    def id(self) -> str:
+    def id(self) -> str:  # pyright: ignore[reportIncompatibleMethodOverride]
         return self._ext_id
 
     @override
@@ -90,7 +90,7 @@ class _ServiceExt(Extension):
 
     @property
     @override
-    def id(self) -> str:
+    def id(self) -> str:  # pyright: ignore[reportIncompatibleMethodOverride]
         return self._ext_id
 
 
@@ -276,7 +276,9 @@ class TestValidationIsolation:
     def _make_loader_with(manifests: dict[str, str], deps: dict[str, list[str]] | None = None) -> ExtensionLoader:
         """构造携带指定清单的 ExtensionLoader，跳过真实目录扫描。"""
         deps = deps or {}
-        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
+        loader = ExtensionLoader(
+            extension_manager._registries, extension_manager.renderer_manager, extension_manager.command_manager
+        )
         for extension_id, content in manifests.items():
             manifest = parse_manifest(content)
             # 在清单的 [dependencies] 段写入依赖关系
@@ -420,7 +422,9 @@ class TestImageModeRendererSkip:
         from Core.Config import config
 
         monkeypatch.setattr(config.image, 'mode', False)
-        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
+        loader = ExtensionLoader(
+            extension_manager._registries, extension_manager.renderer_manager, extension_manager.command_manager
+        )
         info = self._discovered(_renderer_manifest('PureRenderer', '["renderer"]'))
         assert loader._skip_before_import('PureRenderer', info, {}) is True
         assert extension_manager.registry['PureRenderer'].state is ExtensionState.disabled
@@ -430,7 +434,9 @@ class TestImageModeRendererSkip:
         from Core.Config import config
 
         monkeypatch.setattr(config.image, 'mode', False)
-        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
+        loader = ExtensionLoader(
+            extension_manager._registries, extension_manager.renderer_manager, extension_manager.command_manager
+        )
         info = self._discovered(_renderer_manifest('MixedRenderer', '["renderer", "api"]'))
         assert loader._skip_before_import('MixedRenderer', info, {}) is False
 
@@ -438,13 +444,15 @@ class TestImageModeRendererSkip:
         # 混合扩展的渲染器声明在图片模式关闭时跳过（渲染器注册表不应出现该引擎）
         from Core.Config import config
 
-        loader = ExtensionLoader(extension_manager._registries, extension_manager.renderer_manager)
+        loader = ExtensionLoader(
+            extension_manager._registries, extension_manager.renderer_manager, extension_manager.command_manager
+        )
         info = self._discovered(_renderer_manifest('MixedRenderer', '["renderer", "api"]'))
 
         class _Engine(BaseRenderer):
             name = 'engine_MixedRenderer'
 
-            async def render(self, html: str, css: str, size=None) -> bytes:
+            async def render(self, html_content: str, css: str, size=None) -> bytes:
                 return b''
 
         def _make_extension() -> Extension:

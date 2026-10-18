@@ -181,7 +181,7 @@ class TestExtensionBase:
         assert ext.id == ''  # 未声明时基类缺省为空串
 
         class FakeExt(Extension):
-            id = 'Fake'
+            id = 'Fake'  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
 
         assert FakeExt().id == 'Fake'
 
@@ -237,4 +237,6 @@ python = []
 
 def _bind_fake(ext: Extension) -> None:
     """将扩展绑定到一个伪造 metadata，供状态机/属性测试使用。"""
-    ext._bind(metadata=_fake_metadata(), config_store=None, data_store=None, api=None, renderer_manager=None)
+    ext._bind(  # pyright: ignore[reportArgumentType]
+        metadata=_fake_metadata(), config_store=None, data_store=None, api=None, renderer_manager=None
+    )

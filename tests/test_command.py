@@ -77,11 +77,12 @@ class TestCommandDiscovery:
 
     def test_subcommand_requires_parent(self):
         with pytest.raises(TypeError):
-            SubCommand()
+            SubCommand()  # pyright: ignore[reportCallIssue]
 
     def test_subcommand_arguments_isolated_from_parent(self):
         command = WeatherCommand()
         today = command.find_subcommand('today')
+        assert today is not None
         assert len(command.arguments) == 1
         assert len(today.arguments) == 1
         assert command.find_argument('city') is not None
