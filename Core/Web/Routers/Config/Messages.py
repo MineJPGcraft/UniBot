@@ -90,9 +90,7 @@ def _build_tree(language: str) -> tuple[dict[str, Any], int, int]:
         segments = key.split('.')
         node = root
         for depth, segment in enumerate(segments[:-1]):
-            node = node['children'].setdefault(
-                segment, _new_namespace(segment, '.'.join(segments[: depth + 1]))
-            )
+            node = node['children'].setdefault(segment, _new_namespace(segment, '.'.join(segments[: depth + 1])))
         node['items'].append(item)
         total += 1
         modified += int(item['modified'])

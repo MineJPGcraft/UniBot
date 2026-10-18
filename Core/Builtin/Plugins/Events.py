@@ -118,7 +118,11 @@ async def handle_player_quit(event: PlayerQuitEvent):
     player = event.player.nickname
     logger.info(f'Player {player} left server [{name}].')
 
-    if config.list_compatible_mode and name in runtime_state.player_list_cache and player in runtime_state.player_list_cache[name]:
+    if (
+        config.list_compatible_mode
+        and name in runtime_state.player_list_cache
+        and player in runtime_state.player_list_cache[name]
+    ):
         runtime_state.player_list_cache[name].remove(player)
 
     server_message = text('core.events.player_quit', player=player)
@@ -199,9 +203,7 @@ async def handle_player_chat(event: PlayerChatEvent):
             logger.warning(f'Message {chat_message} contains sensitive words, discarded.')
             return
 
-        await send_message_to_groups(
-            text('core.events.chat_forward', server=name, player=player, content=chat_message)
-        )
+        await send_message_to_groups(text('core.events.chat_forward', server=name, player=player, content=chat_message))
         return
 
     logger.debug(f'Server message received: {chat_message}')

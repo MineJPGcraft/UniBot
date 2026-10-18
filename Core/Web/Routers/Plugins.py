@@ -114,8 +114,7 @@ def installed_state(items: list[dict]) -> list[dict]:
     """标注市场插件是否已安装 / 已登记。"""
     installed_packages = {config_manager._package_base(dependency) for dependency in config_manager.get_dependencies()}
     registered_modules = {
-        plugin.get('module_name') if isinstance(plugin, dict) else plugin
-        for plugin in plugin_registry.list_plugins()
+        plugin.get('module_name') if isinstance(plugin, dict) else plugin for plugin in plugin_registry.list_plugins()
     }
     result = []
     for item in items:
@@ -185,9 +184,7 @@ async def install_plugin(body: InstallPluginRequest, current_user: dict = Depend
     plugin = await find_market_plugin(body.name)
     if not plugin:
         return {'code': 1, 'data': None, 'message': text('plugins.market_not_found')}
-    task = submit_plugin_market(
-        PluginMarketAction.install, plugin['project_link'], plugin['module_name'], body.version
-    )
+    task = submit_plugin_market(PluginMarketAction.install, plugin['project_link'], plugin['module_name'], body.version)
     return {'code': 0, 'data': task, 'message': text('task_center.submitted')}
 
 

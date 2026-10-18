@@ -80,6 +80,7 @@ class TaskKind(StrEnum):
     plugin_uninstall = 'plugin_uninstall'
     bot_update = 'bot_update'
 
+
 # ===== QQ 官方机器人事件订阅（Intent）字段 =====
 # WebUI 表单与扫码登录默认订阅共用此清单（单一来源，防止两处漂移）
 QQ_INTENT_FIELDS = [

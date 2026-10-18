@@ -95,6 +95,7 @@ async def run_studio_launch_task(context: TaskContext) -> str:
     context.log(f'Extension Studio ready: {url or message}')
     return 'task_center.msg_studio_launched'
 
+
 # 图片模式必需的扩展（渲染引擎 + 默认模板包）。这些扩展随官方市场分发而非内置，
 # 开启 image.mode 时若缺失，由 WebUI 引导用户自动下载。
 IMAGE_MODE_REQUIRED_EXTENSIONS = [
@@ -311,7 +312,9 @@ async def get_extension_config(extension_id: str, current_user: dict = Depends(g
 
 
 @router.patch('/{extension_id}/config', summary='更新扩展配置')
-async def patch_extension_config(extension_id: str, request: Request, user: dict = Depends(require_role(UserRole.admin))):
+async def patch_extension_config(
+    extension_id: str, request: Request, user: dict = Depends(require_role(UserRole.admin))
+):
     """更新扩展配置，校验失败返回字段级错误且不修改原配置。"""
     patch_data = await parse_json_object(request)
     extension = extension_manager.registry.get(extension_id)

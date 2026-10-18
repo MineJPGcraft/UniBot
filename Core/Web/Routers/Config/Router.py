@@ -71,6 +71,7 @@ async def run_adapter_uninstall_task(context: TaskContext, adapter: dict, name: 
     context.set_result(restart_required=True)
     return 'task_center.msg_adapter_uninstalled'
 
+
 # tomlkit 不支持 None 值，写盘前替换为空字符串
 # NoneBot 内置配置字段（port/superusers/command_start）在 .env 中管理，不写入 Config.toml
 _TOML_SKIP_KEYS = ('port', 'superusers', 'command_start')

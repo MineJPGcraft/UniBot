@@ -76,7 +76,9 @@ class ServiceRegistry:
 
     def get_by_owner(self, owner_id: str) -> list[Service]:
         """返回某个扩展登记的服务实例（按登记顺序），供生命周期编排使用。"""
-        return [cast('Service', service) for name, service in self._services.items() if self._owners.get(name) == owner_id]
+        return [
+            cast('Service', service) for name, service in self._services.items() if self._owners.get(name) == owner_id
+        ]
 
     def all(self) -> dict[str, object]:
         """返回全部已注册服务的浅拷贝：name -> service。"""

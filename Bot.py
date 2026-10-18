@@ -169,7 +169,11 @@ def main():
 
     # 框架内置插件随源码分发，必须先于用户插件加载（保证 startup 钩子先注册先执行）
     nonebot.load_plugin('Core.Builtin.Plugins.Extensions')
-    for builtin_plugin in ('Core.Builtin.Plugins.Collector', 'Core.Builtin.Plugins.Events', 'Core.Builtin.Plugins.Token'):
+    for builtin_plugin in (
+        'Core.Builtin.Plugins.Collector',
+        'Core.Builtin.Plugins.Events',
+        'Core.Builtin.Plugins.Token',
+    ):
         nonebot.load_plugin(builtin_plugin)
     # 用户/市场插件登记在 Config/Plugins.toml（运行时状态，不写入 pyproject.toml）
     load_plugins(plugin_registry.enabled_modules())

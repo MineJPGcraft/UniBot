@@ -149,9 +149,7 @@ class ExtensionManager:
         return {
             name: module
             for name, module in sys.modules.items()
-            if name.startswith('Extensions.')
-            or name == 'Core.Builtin'
-            or name.startswith('Core.Builtin.')
+            if name.startswith('Extensions.') or name == 'Core.Builtin' or name.startswith('Core.Builtin.')
         }
 
     async def _recover(self, old_modules: dict[str, ModuleType]) -> bool:

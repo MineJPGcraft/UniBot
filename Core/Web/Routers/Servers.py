@@ -84,7 +84,9 @@ async def get_server_players(name: str, current_user: dict = Depends(get_current
 
 @router.post('/{name}/execute', summary='执行 RCON 指令')
 async def execute_command(
-    name: str, body: ExecuteCommandRequest, current_user: dict = Depends(require_role(UserRole.admin, UserRole.operator))
+    name: str,
+    body: ExecuteCommandRequest,
+    current_user: dict = Depends(require_role(UserRole.admin, UserRole.operator)),
 ):
     """在指定服务器执行 RCON 指令，name 为 all 时广播。"""
     if not body.command:
@@ -114,7 +116,9 @@ async def execute_command(
 
 
 @router.post('/broadcast', summary='广播消息')
-async def broadcast_message(body: BroadcastRequest, current_user: dict = Depends(require_role(UserRole.admin, UserRole.operator))):
+async def broadcast_message(
+    body: BroadcastRequest, current_user: dict = Depends(require_role(UserRole.admin, UserRole.operator))
+):
     """广播消息到所有服务器。"""
     if not body.message:
         return {'code': 1, 'data': None, 'message': text('servers.message_empty')}

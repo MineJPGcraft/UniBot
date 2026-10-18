@@ -78,7 +78,9 @@ async def get_user_bindings(user: str, current_user: dict = Depends(get_current_
 
 
 @router.post('', summary='绑定玩家')
-async def bind_player(body: BindPlayerRequest, current_user: dict = Depends(require_role(UserRole.admin, UserRole.operator))):
+async def bind_player(
+    body: BindPlayerRequest, current_user: dict = Depends(require_role(UserRole.admin, UserRole.operator))
+):
     """绑定用户与游戏 ID。"""
     if not body.user or not body.player:
         return {'code': 1, 'data': None, 'message': text('players.bind_fields_required')}
@@ -114,7 +116,9 @@ async def bind_player(body: BindPlayerRequest, current_user: dict = Depends(requ
 
 
 @router.delete('/{user}/{player}', summary='解除绑定')
-async def unbind_player(user: str, player: str, current_user: dict = Depends(require_role(UserRole.admin, UserRole.operator))):
+async def unbind_player(
+    user: str, player: str, current_user: dict = Depends(require_role(UserRole.admin, UserRole.operator))
+):
     """解除用户与游戏 ID 的绑定。"""
     player_service = runtime_state.player_service
     if player_service is None:

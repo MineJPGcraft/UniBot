@@ -61,7 +61,9 @@ def node_arg_rows(command: Command) -> list[dict]:
             'notice': argument.description,
             'required': argument.required,
             'required_text': (
-                text('core.commands.help.arg_required') if argument.required else text('core.commands.help.arg_optional')
+                text('core.commands.help.arg_required')
+                if argument.required
+                else text('core.commands.help.arg_optional')
             ),
         }
         for argument in command.arguments

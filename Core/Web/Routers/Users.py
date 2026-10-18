@@ -55,7 +55,9 @@ async def get_user(user_id: str, current_user: dict = Depends(require_role(UserR
 
 
 @router.put('/{user_id}', summary='修改用户信息')
-async def update_user(user_id: str, body: UpdateUserRequest, current_user: dict = Depends(require_role(UserRole.admin))):
+async def update_user(
+    user_id: str, body: UpdateUserRequest, current_user: dict = Depends(require_role(UserRole.admin))
+):
     """修改用户昵称或角色，不可修改自己的角色。"""
     if user_id == current_user['user_id'] and body.role is not None:
         return {'code': 1, 'data': None, 'message': text('users.cannot_change_own_role')}
