@@ -95,7 +95,7 @@ class PluginManager:
             return self.market_cache
         self.market_cache = [item for item in data if isinstance(item, dict)]
         self.market_cache_time = now
-        logger.success(f'Plugin market refreshed: <yellow>{len(self.market_cache)}</yellow> plugins indexed.')
+        logger.success(f'Plugin market refreshed: {len(self.market_cache)} plugins indexed.')
         return self.market_cache
 
     async def install(self, project_link: str, module_name: str, version: str = '') -> tuple[bool, str]:
@@ -107,7 +107,7 @@ class PluginManager:
         """
         plugin_registry.add(module_name)
         logger.success(
-            f'Plugin <green>{project_link}</green> registered for install (requested {version or "latest"}).'
+            f'Plugin "<blue>{project_link}</blue>" registered for install (requested {version or "latest"}).'
         )
         return True, '安装成功，重启后生效'
 
@@ -116,14 +116,14 @@ class PluginManager:
         plugin_registry.add(module_name)
         plugin_registry.set_enabled(module_name, True)
         logger.success(
-            f'Plugin <green>{project_link}</green> registered for upgrade (requested {version or "latest"}).'
+            f'Plugin "<blue>{project_link}</blue>" registered for upgrade (requested {version or "latest"}).'
         )
         return True, '升级成功，重启后生效'
 
     async def uninstall(self, project_link: str, module_name: str) -> tuple[bool, str]:
         """卸载市场插件：仅移除插件登记，依赖移除由任务中心走 uv remove。"""
         plugin_registry.remove(module_name)
-        logger.success(f'Plugin <green>{project_link}</green> registered for uninstall.')
+        logger.success(f'Plugin "<blue>{project_link}</blue>" registered for uninstall.')
         return True, '卸载成功，重启后生效'
 
 

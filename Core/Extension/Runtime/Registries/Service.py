@@ -36,7 +36,7 @@ class ServiceRegistry:
         if name in self._services:
             previous = self._owners.get(name, '') or 'unknown'
             current = owner_id or 'unknown'
-            logger.warning(f'API service {name} registered twice (owner: {previous} -> {current}), the latest wins.')
+            logger.warning(f'API service {name} registered twice (owner: {previous} -> {current}), keeping the latest one.')
         self._services[name] = service
         self._owners[name] = owner_id
 

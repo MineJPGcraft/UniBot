@@ -34,9 +34,9 @@ from enum import IntEnum
 
 import httpx
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from nonebot.log import logger
 
 from Core.Constants import QQ_INTENT_FIELDS
+from Core.Logging import logger
 from Core.Managers import config_manager
 
 # --------------------------------------------------------------------------- #
@@ -352,8 +352,7 @@ async def qr_login(
                 task = await connector.create_bind_task()
                 qr_url = QQBotConnector.build_connect_url(task.task_id, source)
 
-                logger.info('QQ QR code login: scan the QR code with your phone QQ to complete binding')
-                logger.info(f'QR code link: {qr_url}')
+                logger.info(f'QQ QR code login ready, scan with your phone QQ to bind: {qr_url}')
                 yield QrLoginState(state='pending', qr_url=qr_url, qr_image=qr_image_data_url(qr_url))
 
                 outcome = await _poll_until_settled(
@@ -364,7 +363,7 @@ async def qr_login(
                     cancel_event=cancel_event,
                 )
                 if outcome is not None:
-                    logger.info(f'QQ QR code login succeeded: app_id={outcome.app_id}')
+                    logger.info(f'QQ QR code login succeeded: app_id=<blue>{outcome.app_id}</blue>')
                     yield QrLoginState(
                         state='completed',
                         app_id=outcome.app_id,
@@ -408,10 +407,9 @@ async def _poll_until_settled(
             raise QrConnectTimeout('登录超时')
         try:
             result = await connector.poll_bind_result(task.task_id)
-        except PollBindResultError as e:
+        except PollBindResultError as error:
             # 单次轮询失败不应终止流程，与官方 SDK 行为一致
-            logger.warning(f'Polling QR code result failed: {e}, retrying in {poll_interval}s')
-            await _sleep_or_cancel(poll_interval, cancel_event)
+            logger.warning(f'Polling QR code result failed: {error}, retrying in {poll_interval}s')
             continue
 
         if result.status == BindStatus.COMPLETED:

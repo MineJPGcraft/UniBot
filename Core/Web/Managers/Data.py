@@ -40,7 +40,7 @@ class DataManager:
             except Exception as error:
                 # 损坏时先备份再以空数据继续，避免下次保存直接覆盖原文件导致不可恢复
                 backup = self._backup_corrupt_file(self.users_file)
-                logger.error(f'User data file is corrupted ({error}); backed up to {backup}. Starting with empty data.')
+                logger.error(f'User data file is corrupted ({error}); backed up to {backup}, starting with empty data.')
                 stored_data = {}
         self.users = stored_data.get('users') or {}
         self.revoked_tokens = stored_data.get('revoked_tokens') or {}

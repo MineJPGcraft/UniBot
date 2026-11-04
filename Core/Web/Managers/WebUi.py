@@ -170,7 +170,7 @@ class WebUiManager:
             return RedirectResponse(url='/webui')
 
         self.app.frontend('/webui', directory=self.webui_dir, fallback='index.html')
-        logger.success('WebUI static files mounted. Visit the root path below to open the WebUi.')
+        logger.success('WebUI static files mounted. Visit the root path below to open the WebUI.')
 
     def mount_assets_missing_page(self):
         """WebUI 资源缺失时挂载根路径提示页，告知静态资源下载失败。"""
@@ -192,11 +192,11 @@ class WebUiManager:
         try:
             await self.ensure_downloaded()
         except Exception as error:
-            exception_logger.error(f'WebUi download failed, WebUi has been disabled automatically: {error}')
+            exception_logger.error(f'WebUI download failed, WebUI has been disabled automatically: {error}')
         try:
             self.mount_static()
         except Exception as error:
-            exception_logger.error(f'Failed to mount WebUi static files: {error}')
+            exception_logger.error(f'Failed to mount WebUI static files: {error}')
 
 
 webui_manager = WebUiManager()

@@ -203,7 +203,7 @@ class TaskCenter:
         self._order.append(record.id)
         self._prune()
         record.handle = asyncio.create_task(record.factory(), name=f'task-center:{kind}')
-        logger.debug(f'Task {record.id} ({kind}) submitted.')
+        logger.debug(f'Task <blue>{record.id}</blue> ({kind}) submitted.')
         return record.snapshot()
 
     async def _execute(self, record: TaskRecord, runner: TaskRunner) -> str | None:
@@ -218,7 +218,7 @@ class TaskCenter:
             # 唯一终态收尾点：取消由本 worker 落定，cancel() 只负责请求
             record.cancel_requested = True
             self._finish(record, TaskStatus.cancelled, 'task_center.msg_cancelled')
-            logger.info(f'Task {record.id} ({record.kind}) cancelled.')
+            logger.info(f'Task <blue>{record.id}</blue> ({record.kind}) cancelled.')
             return None
         except TaskCancelledError:
             self._finish(record, TaskStatus.cancelled, 'task_center.msg_cancelled')
@@ -232,7 +232,7 @@ class TaskCenter:
             self._finish(record, TaskStatus.cancelled, 'task_center.msg_cancelled')
             return None
         self._finish(record, TaskStatus.succeeded, message_key or 'task_center.msg_finished', progress=100.0)
-        logger.success(f'Task {record.id} ({record.kind}) finished.')
+        logger.success(f'Task <blue>{record.id}</blue> ({record.kind}) finished.')
         return None
 
     def _finish(

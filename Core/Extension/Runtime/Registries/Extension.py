@@ -33,7 +33,7 @@ class ExtensionRegistry:
     def register_extension(self, extension_id: str, extension: Extension) -> None:
         """登记一个已加载的扩展实例（重复登记覆盖并告警）。"""
         if extension_id in self.extensions:
-            logger.warning(f'Extension {extension_id} registered twice, the latest one wins.')
+            logger.warning(f'Extension {extension_id} registered twice, keeping the latest one.')
         self.extensions[extension_id] = extension
 
     def unregister_extension(self, extension_id: str) -> None:

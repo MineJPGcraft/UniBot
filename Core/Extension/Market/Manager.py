@@ -184,7 +184,7 @@ class ExtensionMarketManager:
             # 损坏时先备份原文件，避免后续写入直接覆盖导致不可恢复
             backup = path.with_name(f'{path.name}.corrupt.{int(time.time())}')
             path.replace(backup)
-            logger.error(f'Failed to read extension install states ({error}); backed up to {backup}.')
+            logger.error(f'Failed to read extension install states ({error}); backed up to {backup}, starting with empty data.')
             return {}
         states: dict[str, ExtensionInstallState] = {}
         for extension_id, raw in data.items():
@@ -383,7 +383,7 @@ class ExtensionMarketManager:
         if extension_id in states:
             del states[extension_id]
             await asyncio.to_thread(self._write_states, states)
-        logger.success(f'Extension {extension_id} uninstalled, takes effect after restart.')
+        logger.success(f'Extension <blue>{extension_id}</blue> uninstalled, takes effect after restart.')
         return MarketOperationResult(True, 'extensions.uninstall_success', {'id': extension_id})
 
 

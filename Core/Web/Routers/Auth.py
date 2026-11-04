@@ -172,7 +172,7 @@ async def setup(body: SetupRequest):
         user_info = await data_manager.create_user(body.username, body.password, body.nickname, role=UserRole.admin)
         if user_info is None:
             return {'code': 1, 'data': None, 'message': text('auth.setup_failed')}
-    logger.success(f'WebUI admin account [{body.username}] created.')
+    logger.success(f'WebUI admin account "<blue>{body.username}</blue>" created.')
     return {'code': 0, 'data': {'user_id': user_info['user_id']}, 'message': text('auth.setup_success')}
 
 

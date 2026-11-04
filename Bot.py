@@ -117,7 +117,7 @@ def register_adapters(driver, adapters: list[dict]) -> None:
             if adapter_class is None:
                 logger.warning(f'Adapter module {module_name} does not contain an Adapter class, skipped.')
                 continue
-            logger.info(f'Registering <cyan>{adapter_class}</cyan> adapter.')
+            logger.info(f'Registering <blue>{adapter_class}</blue> adapter.')
             driver.register_adapter(adapter_class)
         except ValidationError as error:
             # 纯数字/布尔配置被 NoneBot 解析为非字符串时，自动转为字符串并重试一次

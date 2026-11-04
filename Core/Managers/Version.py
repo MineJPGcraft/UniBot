@@ -64,10 +64,9 @@ class VersionManager:
         await self.try_notify_update()
 
     def print_update_notice(self) -> None:
-        """检测到新版本时在控制台输出黄色加粗下划线的更新提醒。"""
+        """检测到新版本时在控制台输出更新提醒。"""
         logger.info(
-            f'<yellow><bold><underline>检测到新版本请及时更新</underline></bold></yellow>'
-            f'（当前 {self.version}，最新 {self.latest_version}）'
+            f'New version {self.latest_version} available (current {self.version}), update in time.'
         )
 
     async def fetch_latest(self) -> bool:
@@ -81,8 +80,6 @@ class VersionManager:
             logger.warning('Failed to fetch the latest version: response is missing version info.')
             return False
         self.latest_asset_url = self.find_bot_asset(latest_data)
-        if self.check_update():
-            logger.info(f'New version {self.latest_version} available, current version is {self.version}.')
         return True
 
     @staticmethod

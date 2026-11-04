@@ -32,7 +32,7 @@ class PluginRegistry:
         except Exception as error:
             backup = self.path.with_name(f'{self.path.name}.corrupt.{int(time.time())}')
             self.path.replace(backup)
-            logger.error(f'Failed to read plugin registry ({error}); backed up to {backup}. Treated as empty.')
+            logger.error(f'Failed to read plugin registry ({error}); backed up to {backup}, starting with empty data.')
             return {}
 
     def _save(self, plugins: dict) -> None:
@@ -78,7 +78,7 @@ class PluginRegistry:
             entry['dependency_packages'] = list(dependency_packages)
         plugins[module_name] = entry
         self._save(plugins)
-        logger.info(f'Plugin {module_name} registered in Config/Plugins.toml.')
+        logger.info(f'Plugin "<blue>{module_name}</blue>" registered in Config/Plugins.toml.')
         return True
 
     def remove(self, module_name: str) -> None:
@@ -86,7 +86,7 @@ class PluginRegistry:
         plugins = self._load()
         plugins.pop(module_name, None)
         self._save(plugins)
-        logger.info(f'Plugin {module_name} removed from Config/Plugins.toml.')
+        logger.info(f'Plugin "<blue>{module_name}</blue>" removed from Config/Plugins.toml.')
 
     def set_enabled(self, module_name: str, enabled: bool) -> None:
         """更新插件启停状态，缺失时补登记。"""
@@ -96,7 +96,10 @@ class PluginRegistry:
         entry['enabled'] = enabled
         plugins[module_name] = entry
         self._save(plugins)
-        logger.info(f'Plugin {module_name} set to {"enabled" if enabled else "disabled"}, takes effect after restart.')
+        logger.info(
+            f'Plugin "<blue>{module_name}</blue>" set to {"enabled" if enabled else "disabled"}, '
+            'takes effect after restart.'
+        )
 
     def enabled_modules(self) -> list[str]:
         """全部已启用插件的模块名（供 Bootstrap 程序化加载）。"""

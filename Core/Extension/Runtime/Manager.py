@@ -285,7 +285,8 @@ class ExtensionManager:
         data[extension_id] = extension_config
         atomic_write(config_path, tomlkit.dumps(data))
         logger.info(
-            f'Extension {extension_id} set to {"enabled" if enabled else "disabled"}, takes effect after restart.'
+            f'Extension <blue>{extension_id}</blue> set to {"enabled" if enabled else "disabled"}, '
+            'takes effect after restart.'
         )
 
     # ===== 展示信息 =====

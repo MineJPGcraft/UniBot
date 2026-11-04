@@ -33,7 +33,7 @@ class RendererRegistry:
         if not renderer.name:
             return
         if renderer.name in self._renderers:
-            logger.warning(f'Render engine {renderer.name} registered twice, the latest one wins.')
+            logger.warning(f'Render engine {renderer.name} registered twice, keeping the latest one.')
         self._renderers[renderer.name] = renderer
         self._owners[renderer.name] = owner_id
 

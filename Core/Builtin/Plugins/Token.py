@@ -59,7 +59,8 @@ def refresh_token() -> str:
     runtime_state.auth_token = generate_token()
     if not config.webui.enabled:
         logger.info(
-            f'Auth token: <red><b><u>{runtime_state.auth_token}</u></b></red>, copy and send it in message/command groups to complete setup.'
+            f'Auth token: <light-yellow><b>{runtime_state.auth_token}</b></light-yellow>, '
+            'send it in a message or command group to complete setup.'
         )
     return runtime_state.auth_token
 

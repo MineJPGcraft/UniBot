@@ -28,7 +28,7 @@ class TemplateRegistry:
     def register(self, registration: TemplateRegistration) -> None:
         """注册一个 template 扩展包（重复注册覆盖并告警）。"""
         if registration.extension_id in self._templates:
-            logger.warning(f'Template extension {registration.extension_id} registered twice, the latest one wins.')
+            logger.warning(f'Template extension {registration.extension_id} registered twice, keeping the latest one.')
         self._templates[registration.extension_id] = registration
 
     def unregister(self, extension_id: str) -> None:

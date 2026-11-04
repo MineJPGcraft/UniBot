@@ -117,7 +117,7 @@ class RendererManager:
         """注册 template 无代码扩展；重复注册覆盖并失效缓存。"""
         self._templates.register(registration)
         self._environments.pop(registration.extension_id, None)
-        logger.info(f'Template extension {registration.extension_id} registered.')
+        logger.info(f'Template extension <blue>{registration.extension_id}</blue> registered.')
 
     def unregister_template(self, extension_id: str) -> None:
         """注销 template 扩展并清理缓存。"""
@@ -127,7 +127,7 @@ class RendererManager:
     def register_resources(self, extension_id: str, resources_dir: Path) -> None:
         """注册 resources 无代码扩展。"""
         self._resources.register(extension_id, resources_dir)
-        logger.info(f'Resource extension {extension_id} registered.')
+        logger.info(f'Resource extension <blue>{extension_id}</blue> registered.')
 
     def unregister_resources(self, extension_id: str) -> None:
         """注销 resources 扩展。"""
@@ -565,7 +565,7 @@ class RendererManager:
         if resolved not in self._semaphores:
             # 默认并发 = 1：渲染引擎（浏览器内核等）通常不支持并发页面安全复用
             self._semaphores[resolved] = asyncio.Semaphore(1)
-        logger.info(f'Render engine {renderer.name} is ready.')
+        logger.info(f'Render engine <blue>{renderer.name}</blue> is ready.')
         return renderer
 
     async def render(

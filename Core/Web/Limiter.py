@@ -77,7 +77,8 @@ class RateLimiter:
             ban_duration = min(ban_duration, self.max_ban_seconds)
             record['banned_until'] = now + ban_duration
             logger.warning(
-                f'IP [{ip}] 请求频率异常（{len(timestamps)} 次/{self.window_seconds}s），第 {record["ban_count"]} 次封禁 {ban_duration}s！'
+                f'IP [{ip}] rate limit exceeded ({len(timestamps)} requests/{self.window_seconds}s), '
+                f'banned for {ban_duration}s (attempt {record["ban_count"]}).'
             )
             return False
 

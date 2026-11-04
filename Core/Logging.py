@@ -20,16 +20,16 @@ exception_logger = logger.opt(exception=True)
 if TYPE_CHECKING:
     from loguru import HandlerConfig, Record
 
-# 模块名前缀 → 展示名，按前缀长度从长到短排列
+# 模块名前缀 → 展示名，按前缀长度从长到短排列（长前缀必须先于其父前缀，否则永不匹配）
 MODULE_ALIASES: tuple[tuple[str, str], ...] = (
     ('Core.Platforms.Connectors', 'Conn'),
     ('Core.Platforms.Panels', 'Panel'),
+    ('Core.Web.Managers', 'WebMgr'),
+    ('Core.Builtin.Plugins', 'Plg'),
     ('Core.Builtin', 'Builtin'),
     ('Core.Extension', 'Ext'),
     ('Core.Managers', 'Mgr'),
-    ('Core.Web.Managers', 'WebMgr'),
     ('Core.Web', 'WebApi'),
-    ('Core.Builtin.Plugins', 'Plg'),
     ('Core', 'Core'),
     ('nonebot_plugin_alconna', 'Alconna'),
     ('nonebot', 'NoneBot'),
@@ -39,24 +39,24 @@ MODULE_ALIASES: tuple[tuple[str, str], ...] = (
 # 模块名为空时的兜底展示名
 FALLBACK_NAME = 'Unknown'
 
-# 启动横幅：Slant 风格的 ASCII Art，自带倾斜笔画，逐行配色形成渐变
-BANNER_LINES: tuple[tuple[str, str], ...] = (
-    ('    __  _________     __  __      _ ____        __', 'white'),
-    ('   /  |/  / ____/    / / / /___  (_) __ )____  / /_', 'white'),
-    ('  / /|_/ / /  ______/ / / / __ \\/ / __  / __ \\/ __/', 'white'),
-    (' / /  / / /__/_____/ / /_/ / / / / /_/ / /_/ / /_', 'white'),
-    ('/_/  /_/\\____/     \\____/_/ /_/_/_____/\\____/\\__/', 'white'),
-    ('', 'white'),
-    ('--------------------------------------------------', 'white'),
-    ('', 'white'),
+# 启动横幅：Slant 风格的 ASCII Art，统一使用与模块名相同的青色，不做渐变
+BANNER_LINES: tuple[str, ...] = (
+    '    __  _________     __  __      _ ____        __',
+    '   /  |/  / ____/    / / / /___  (_) __ )____  / /_',
+    '  / /|_/ / /  ______/ / / / __ \\/ / __  / __ \\/ __/',
+    ' / /  / / /__/_____/ / /_/ / / / / /_/ / /_/ / /_',
+    '/_/  /_/\\____/     \\____/_/ /_/_/_____/\\____/\\__/',
+    '',
+    '--------------------------------------------------',
+    '',
 )
 
 
 def print_banner() -> None:
-    """启动时向控制台打印 MC-UniBot 的斜体渐变 ASCII 横幅。"""
-    for line, color in BANNER_LINES:
+    """启动时向控制台打印 MC-UniBot 的斜体 ASCII 横幅。"""
+    for line in BANNER_LINES:
         # raw=True 跳过时间戳等格式前缀，保证横幅整体不被拆行破坏
-        logger.opt(colors=True, raw=True).info(f'<b><{color}>{line}</{color}></b>\n')
+        logger.opt(colors=True, raw=True).info(f'<b><light-cyan>{line}</light-cyan></b>\n')
 
 
 def resolve_module_alias(module_name: str | None) -> str:

@@ -154,7 +154,7 @@ class ExtensionLoader:
         if EXTENSIONS_DIR.exists():
             self._scan_directory(EXTENSIONS_DIR, builtin=False)
             return
-        logger.info('User extensions directory does not exist, skipping user extension loading.')
+        logger.info('User extensions directory not found, skipping user extension discovery.')
 
     def _scan_directory(self, directory: Path, builtin: bool) -> None:
         """扫描目录下的单文件扩展与扩展目录并解析清单。"""
@@ -250,7 +250,7 @@ class ExtensionLoader:
                 # 单个扩展校验失败不阻断整体加载：标记为 blocked 并跳过导入
                 info.blocked_reason = str(error)
                 self._register_display(extension_id, info, ExtensionState.blocked, str(error))
-                logger.error(f'Validation failed, loading blocked: <red>{error}</red>')
+                logger.error(f'Extension {extension_id} validation failed, loading blocked: {error}')
                 continue
 
     @staticmethod
@@ -368,7 +368,7 @@ class ExtensionLoader:
             self._register_no_code_display(extension_id, info, ExtensionState.failed, str(error))
             return
         self._register_no_code_display(extension_id, info, ExtensionState.enabled, '')
-        logger.success(f'Loaded extension package <yellow>{extension_id} v{info.manifest.extension.version}</yellow>.')
+        logger.success(f'Loaded no-code extension package <blue>{extension_id} v{info.manifest.extension.version}</blue>.')
 
     def _load_extension(self, extension_id: str, info: DiscoveredExtension, blocked_reasons: dict[str, str]) -> None:
         """导入代码扩展并依次完成绑定与声明提交。"""
@@ -392,7 +392,7 @@ class ExtensionLoader:
             return
         self.extensions.append(extension)
         self._registries.extensions.register_extension(extension_id, extension)
-        logger.success(f'Loaded extension <yellow>{extension_id} v{extension.metadata.version}</yellow>.')
+        logger.success(f'Loaded extension <blue>{extension_id} v{extension.metadata.version}</blue>.')
 
     def _try_import(
         self, extension_id: str, info: DiscoveredExtension, blocked_reasons: dict[str, str]

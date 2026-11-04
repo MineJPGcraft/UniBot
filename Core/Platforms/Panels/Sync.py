@@ -16,10 +16,9 @@
 
 from __future__ import annotations
 
-from nonebot.log import logger
-
 from Core.Config import config
 from Core.Extension import extension_manager
+from Core.Logging import logger
 from Core.Managers import config_manager
 from Core.Platforms.Panels.Base import MAX_ITEMS_PER_PANEL, PanelError
 from Core.Platforms.Panels.QQ import MAX_PANELS_PER_BOT, QQPanelClient
@@ -106,7 +105,7 @@ async def _sync_one_bot(app_id: str, client_secret: str, panel_items: list[dict]
         if managed is not None:
             panel_id = managed.get('panel_id')
             await client.update_panel(str(panel_id), panel_items, remark=PANEL_REMARK)
-            logger.success(f'Updated group-wide command panel for bot {app_id}: {panel_id}')
+            logger.success(f'Updated group-wide command panel for bot <blue>{app_id}</blue>: {panel_id}')
             return
         # 无 UniBot 面板：创建；若面板数量已达上限，清理旧面板后重试一次
         try:
@@ -131,7 +130,7 @@ async def _sync_one_bot(app_id: str, client_secret: str, panel_items: list[dict]
                 target_type='all',
                 remark=PANEL_REMARK,
             )
-        logger.success(f'Created group-wide command panel for bot {app_id}: {panel_id}')
+        logger.success(f'Created group-wide command panel for bot <blue>{app_id}</blue>: {panel_id}')
 
 
 async def sync_panels_for_all_bots() -> None:
@@ -184,6 +183,6 @@ async def remove_panels_for_all_bots(bots: list[dict] | None = None) -> None:
             logger.warning(f'Failed to clean up panels for QQ bot {app_id}: {error}')
             continue
         if removed:
-            logger.success(f'Removed {removed} leftover command panels for bot {app_id}!')
+            logger.success(f'Removed {removed} leftover command panels for bot <blue>{app_id}</blue>.')
             continue
         logger.info(f'No leftover command panels found for bot {app_id}.')
