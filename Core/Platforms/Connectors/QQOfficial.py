@@ -27,6 +27,7 @@ import base64
 import io
 import json
 import secrets
+import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from enum import IntEnum
@@ -344,6 +345,7 @@ async def qr_login(
           - failed：流程失败（含 error）
           - cancelled：被外部取消（含 error）
     """
+    deadline = time.monotonic() + total_timeout if total_timeout is not None else None
     try:
         async with QQBotConnector(env=env) as connector:
             while not (cancel_event is not None and cancel_event.is_set()):
@@ -358,6 +360,7 @@ async def qr_login(
                     connector,
                     task,
                     poll_interval=poll_interval,
+                    deadline=deadline,
                     cancel_event=cancel_event,
                 )
                 if outcome is not None:
@@ -375,6 +378,10 @@ async def qr_login(
     except QrConnectCancelled:
         yield QrLoginState(state='cancelled', error='用户取消')
         return
+    except QrConnectTimeout:
+        logger.warning(f'QQ QR code login timed out after {total_timeout} seconds.')
+        yield QrLoginState(state='failed', error='登录超时')
+        return
     except Exception as error:
         logger.error(f'QQ QR code login failed: {error}')
         yield QrLoginState(state='failed', error=str(error) or error.__class__.__name__)
@@ -389,13 +396,16 @@ async def _poll_until_settled(
     connector: QQBotConnector,
     task: BindTask,
     poll_interval: float,
+    deadline: float | None,
     cancel_event: asyncio.Event | None,
 ) -> QrConnectCredentials | None:
     """
     轮询直到拿到凭据（返回）或二维码过期（返回 None）。
-    抛出 QrConnectCancelled 表示被外部取消。
+    抛出 QrConnectCancelled 表示被外部取消，QrConnectTimeout 表示整体超时。
     """
     while not (cancel_event is not None and cancel_event.is_set()):
+        if deadline is not None and time.monotonic() >= deadline:
+            raise QrConnectTimeout('登录超时')
         try:
             result = await connector.poll_bind_result(task.task_id)
         except PollBindResultError as e:

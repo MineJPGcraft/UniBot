@@ -106,14 +106,18 @@ class PluginManager:
         `project.dependencies` 并同步环境，本方法不改写任何项目元数据。
         """
         plugin_registry.add(module_name)
-        logger.success(f'Plugin <green>{project_link}</green> registered for install.')
+        logger.success(
+            f'Plugin <green>{project_link}</green> registered for install (requested {version or "latest"}).'
+        )
         return True, '安装成功，重启后生效'
 
     async def upgrade(self, project_link: str, module_name: str, version: str = '') -> tuple[bool, str]:
         """升级市场插件：仅确保插件已登记并启用，依赖更新由任务中心走 uv。"""
         plugin_registry.add(module_name)
         plugin_registry.set_enabled(module_name, True)
-        logger.success(f'Plugin <green>{project_link}</green> registered for upgrade.')
+        logger.success(
+            f'Plugin <green>{project_link}</green> registered for upgrade (requested {version or "latest"}).'
+        )
         return True, '升级成功，重启后生效'
 
     async def uninstall(self, project_link: str, module_name: str) -> tuple[bool, str]:

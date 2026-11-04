@@ -247,7 +247,7 @@ class ExtensionMarketManager:
         try:
             archive_data = await self._download_release(release.asset_url, release.sha256)
             # 安装事务：解压到临时目录，校验清单后原子替换（重 IO 放入线程，避免阻塞事件循环）
-            success, message = await asyncio.to_thread(self._install_transaction, extension_id, archive_data, release)
+            success, message = await asyncio.to_thread(self._install_transaction, extension_id, archive_data)
             if not success:
                 return MarketOperationResult(
                     False, 'extensions.install_failed_reason', {'error': message}, error=message
@@ -291,7 +291,7 @@ class ExtensionMarketManager:
                 )
         return archive_data
 
-    def _install_transaction(self, extension_id: str, archive_data: bytes, release: MarketRelease) -> tuple[bool, str]:
+    def _install_transaction(self, extension_id: str, archive_data: bytes) -> tuple[bool, str]:
         """在临时目录解压校验，成功后原子替换目标目录（同步阻塞，调用方需放入线程）。"""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_dir_path = Path(temp_dir)

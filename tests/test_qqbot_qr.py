@@ -162,6 +162,24 @@ def test_qr_login_generator_cancel_yields_cancelled():
     asyncio.run(run())
 
 
+def test_qr_login_generator_timeout_yields_failed():
+    """整体超时后，qr_login 生成器应产出 failed 状态。"""
+
+    async def run():
+        connector = AsyncMock()
+        connector.__aenter__.return_value = connector
+        connector.create_bind_task.return_value = BindTask(task_id='task-1', key_base64='a2V5')
+
+        with patch('Core.Platforms.Connectors.QQOfficial.QQBotConnector', return_value=connector):
+            states = [state async for state in qr_login(source='test', env='production', total_timeout=0)]
+
+        assert states[-1].state == 'failed'
+        assert states[-1].error == '登录超时'
+        connector.poll_bind_result.assert_not_awaited()
+
+    asyncio.run(run())
+
+
 def test_qr_login_state_to_dict():
     """QrLoginState.to_dict 应包含全部 API 字段。"""
     state = QrLoginState(

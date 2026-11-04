@@ -42,9 +42,9 @@ def generate_token() -> str:
     return hash_result.hexdigest()[:TOKEN_LENGTH].upper()
 
 
-def normalize_token(text: str) -> str:
+def normalize_token(message_text: str) -> str:
     """去除消息中的指令前缀与空白，返回规范化令牌文本。"""
-    token = text.strip()
+    token = message_text.strip()
     for prefix in config.command_start:
         token = token.removeprefix(prefix)
     return token.upper()
@@ -75,7 +75,7 @@ token_watcher = on_message(rule=Rule(token_rule), priority=0, block=True)
 
 
 @token_watcher.handle()
-async def handle_auth_token(session: Uninfo, message: UniMsg) -> None:
+async def handle_auth_token(session: Uninfo) -> None:
     """校验消息中的认证令牌，通过后立即刷新令牌并授权当前群与发送者。"""
     refresh_token()
     results = []

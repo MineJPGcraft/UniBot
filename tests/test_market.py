@@ -301,7 +301,7 @@ class TestInstallVersionSelection:
         async def fake_download(asset_url, expected_sha256):
             return b'archive'
 
-        def fake_transaction(extension_id, archive_data, release):
+        def fake_transaction(extension_id, archive_data):
             return True, 'ok'
 
         monkeypatch.setattr(manager, '_download_release', fake_download)
