@@ -53,6 +53,10 @@ class RendererRegistry:
         """按名称获取渲染引擎，未注册返回 None。"""
         return self._renderers.get(name)
 
+    def owner_of(self, name: str) -> str:
+        """获取渲染引擎的归属扩展 id。"""
+        return self._owners.get(name, '')
+
     def resolve_name(self, name: str) -> str | None:
         """按注册名解析引擎名：完全匹配优先，其次大小写不敏感匹配。"""
         if name in self._renderers:
@@ -65,4 +69,4 @@ class RendererRegistry:
 
     def all(self) -> dict[str, BaseRenderer]:
         """返回全部已注册引擎，未注册时为空字典。"""
-        return self._renderers
+        return dict(self._renderers)

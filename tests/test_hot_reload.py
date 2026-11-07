@@ -3,10 +3,11 @@
 import asyncio
 import sys
 import types
+from pathlib import Path
 
 import pytest
 
-from Core.Extension import Command, extension_manager
+from Core.Extension import Command, Extension, ExtensionState, extension_manager
 from Core.Extension.Runtime.Loader import ExtensionLoader
 
 # 单个内置命令的 NoneBot 优先级（Command.py 固定 priority=0）
@@ -28,6 +29,63 @@ class _ReloadCommand(Command):
 
 
 class TestCleanupMatchers:
+    def test_reset_unregisters_existing_matchers(self):
+        from nonebot.internal.matcher import matchers as nonebot_matchers
+
+        command_manager.register_command(_ReloadCommand(), 'extension:Reload:greet')
+        command_manager.build()
+        matcher = command_manager._matchers[0]
+        extension_manager.reset()
+        assert matcher not in nonebot_matchers[_MATCHER_PRIORITY]
+        assert command_manager._matchers == []
+
+    def test_build_failure_cleans_partially_created_matchers(self, monkeypatch):
+        from nonebot.internal.matcher import matchers as nonebot_matchers
+
+        command_manager.register_command(_ReloadCommand(), 'extension:Reload:greet')
+        created = []
+
+        def fail_after_matcher(matcher, *args):
+            created.append(matcher)
+            raise RuntimeError('handler assignment failed')
+
+        monkeypatch.setattr(command_manager, '_route', fail_after_matcher)
+        with pytest.raises(RuntimeError, match='handler assignment failed'):
+            command_manager.build()
+        assert created
+        assert all(matcher not in nonebot_matchers[_MATCHER_PRIORITY] for matcher in created)
+        assert command_manager._matchers == []
+        assert command_manager._built is False
+        assert command_manager.get_command('extension:Reload:greet') is not None
+
+    def test_command_dispatch_checks_owner_state(self):
+        class Matcher:
+            async def finish(self, message):
+                return message
+
+        extension = Extension(id='Reload')
+        from Core.Extension import ExtensionMetadata, parse_manifest
+        from Core.Extension.Runtime.Registries import ExtensionRecord
+
+        manifest = parse_manifest("""
+            [extension]
+            id = "Reload"
+            name = "Reload"
+            version = "1.0.0"
+            types = ["command"]
+        """)
+        extension._set_metadata(ExtensionMetadata(manifest))
+        extension_manager._registries.extensions.register_record(
+            'Reload', ExtensionRecord(manifest, Path(), False, True, instance=extension)
+        )
+        command = _ReloadCommand()
+        dispatched = command_manager._route(Matcher(), command.image_handler, command.handler, command, 'Reload')
+        for state in (ExtensionState.loaded, ExtensionState.failed, ExtensionState.blocked, ExtensionState.disabled):
+            extension.state = state
+            assert asyncio.run(dispatched()) is None
+        extension.state = ExtensionState.enabled
+        assert asyncio.run(dispatched()) == 'hello v1'
+
     def test_cleanup_removes_matchers_and_resets_state(self):
         from arclet.alconna import command_manager as alconna_manager
         from nonebot.internal.matcher import matchers as nonebot_matchers
@@ -171,6 +229,67 @@ def greet_extension_dir(tmp_path, monkeypatch):
 
 
 class TestReloadCycle:
+    def test_reload_keeps_disabled_extension_and_its_dependents_blocked(self, greet_extension_dir, tmp_path, monkeypatch):
+        (greet_extension_dir / 'Base.py').write_text(_GREET_V1.replace('Greet', 'Base'), encoding='Utf-8')
+        dependent_dir = greet_extension_dir / 'Dependent'
+        dependent_dir.mkdir()
+        (dependent_dir / 'Extension.toml').write_text(
+            """
+[extension]
+id = "Dependent"
+name = "Dependent"
+version = "1.0.0"
+types = ["api"]
+
+[dependencies]
+extensions = ["Base"]
+""",
+            encoding='Utf-8',
+        )
+        (dependent_dir / '__init__.py').write_text(
+            """
+from Core.Extension import Extension
+
+extension = Extension(id="Dependent", name="Dependent", version="1.0.0", types=("api",))
+""",
+            encoding='Utf-8',
+        )
+        from Core.Extension.Runtime import Dependencies
+
+        config_file = tmp_path / 'Extensions.toml'
+        monkeypatch.setattr(Dependencies, 'CONFIG_EXTENSIONS_FILE', config_file)
+        config_file.write_text('[Base]\nenabled = false\n', encoding='Utf-8')
+        result = asyncio.run(extension_manager.reload())
+
+        assert result.success is True
+        assert extension_manager.records['Base'].state is ExtensionState.disabled
+        assert extension_manager.records['Dependent'].state is ExtensionState.blocked
+
+    @pytest.mark.parametrize(
+        ('source', 'stage'),
+        [
+            (_GREET_V2 + '\nraise RuntimeError("import failed")\n', 'load'),
+            (_GREET_V2.replace('name = "greet"', 'name = "INVALID"'), 'build'),
+            (_GREET_V2 + '\nasync def fail():\n    raise RuntimeError("start failed")\nextension.on_enable = fail\n', 'start'),
+        ],
+    )
+    def test_reload_failure_restores_previous_code(self, greet_extension_dir, source, stage):
+        (greet_extension_dir / 'Greet.py').write_text(_GREET_V1, encoding='Utf-8')
+        extension_manager.load()
+        command_manager.build()
+        asyncio.run(extension_manager.start())
+        (greet_extension_dir / 'Greet.py').write_text(source, encoding='Utf-8')
+
+        result = asyncio.run(extension_manager.reload())
+
+        assert result.success is False
+        assert result.failed_stage == stage
+        assert result.recovered is True
+        assert extension_manager.registry['Greet'].metadata.version == '1.0.0'
+        command = command_manager.get_command('extension:Greet:greet')
+        assert command is not None
+        assert asyncio.run(command.handler()) == 'hello v1'
+
     def test_reload_picks_up_code_changes(self, greet_extension_dir):
         from nonebot.internal.matcher import matchers as nonebot_matchers
 

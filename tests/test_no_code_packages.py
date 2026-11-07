@@ -6,14 +6,14 @@
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import cast
 
 import pytest
 
 from Core.Extension import ExtensionState, ExtensionType, extension_manager
 from Core.Extension.Errors import ExtensionError, ManifestError
 from Core.Extension.Manifest import TemplateFieldConfig, parse_manifest
-from Core.Extension.Runtime.Loader import DiscoveredExtension, ExtensionLoader
+from Core.Extension.Runtime.Loader import ExtensionLoader
+from Core.Extension.Runtime.Registries import ExtensionRecord
 from Core.Extension.TemplateConfig import build_template_config_model
 
 _TEMPLATE_TOML = """
@@ -105,9 +105,11 @@ root = "Resources"
 """
 
 
-def _info(tmp_path: Path, toml: str) -> DiscoveredExtension:
-    """构造一个最小 DiscoveredExtension 替身（仅需要 directory 与 manifest）。"""
-    return cast(DiscoveredExtension, SimpleNamespace(directory=tmp_path, manifest=parse_manifest(toml)))
+def _info(tmp_path: Path, toml: str) -> ExtensionRecord:
+    """构造带清单与包目录的扩展记录。"""
+    return ExtensionRecord(
+        manifest=parse_manifest(toml), directory=tmp_path, single_file=False, enabled=True
+    )
 
 
 class TestTemplatePackage:
@@ -215,6 +217,66 @@ class TestCommitNoCodePackage:
         loader._register_no_code_display('TestTemplate', info, ExtensionState.enabled, '')
         assert 'TestTemplate' not in extension_manager.registry
         assert extension_manager.no_code_info['TestTemplate']['state'] == 'enabled'
+
+    def test_runtime_failed_dependency_blocks_template_package(self, tmp_path):
+        from Core.Extension import Extension, ExtensionMetadata
+
+        (tmp_path / 'Templates').mkdir()
+        manifest = parse_manifest(_TEMPLATE_TOML.replace('TestTemplate', 'DependentTemplate'))
+        manifest.dependencies.extensions.append('FailedProvider')
+        info = SimpleNamespace(directory=tmp_path, manifest=manifest)
+        loader = ExtensionLoader(
+            extension_manager._registries, extension_manager.renderer_manager, extension_manager.command_manager
+        )
+        loader._commit_template_package('DependentTemplate', info)
+        loader._register_no_code_display('DependentTemplate', info, ExtensionState.enabled, '')
+        provider_manifest = parse_manifest("""
+            [extension]
+            id = "FailedProvider"
+            name = "FailedProvider"
+            version = "1.0.0"
+            types = ["api"]
+        """)
+        provider = Extension()
+        provider._set_metadata(ExtensionMetadata(provider_manifest))
+        provider.state = ExtensionState.failed
+        dependent_manifest = parse_manifest("""
+            [extension]
+            id = "CodeDependent"
+            name = "CodeDependent"
+            version = "1.0.0"
+            types = ["api"]
+            [dependencies]
+            extensions = ["DependentTemplate"]
+        """)
+        code_dependent = Extension()
+        code_dependent._set_metadata(ExtensionMetadata(dependent_manifest))
+        code_dependent.state = ExtensionState.loaded
+        extension_manager.loader.extensions = [code_dependent]
+        extension_manager._registries.extensions.register_record(
+            'DependentTemplate', ExtensionRecord(manifest, tmp_path, False, True, _state=ExtensionState.enabled)
+        )
+        extension_manager._registries.extensions.register_record(
+            'FailedProvider', ExtensionRecord(
+                provider_manifest, tmp_path, False, True, instance=provider, _state=ExtensionState.failed
+            )
+        )
+        extension_manager._registries.extensions.register_record(
+            'CodeDependent', ExtensionRecord(
+                dependent_manifest, tmp_path, False, True, instance=code_dependent
+            )
+        )
+        extension_manager.loader.load_order = ['FailedProvider', 'DependentTemplate', 'CodeDependent']
+
+        import asyncio
+
+        asyncio.run(extension_manager.start())
+
+        record = extension_manager.records['DependentTemplate']
+        assert record.state is ExtensionState.blocked
+        assert record.failure_reason == '依赖扩展 FailedProvider 未启用'
+        assert 'DependentTemplate' not in extension_manager.templates
+        assert extension_manager.records['CodeDependent'].state is ExtensionState.blocked
 
 
 class TestExtensionTypes:

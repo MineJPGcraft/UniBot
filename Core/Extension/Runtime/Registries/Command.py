@@ -22,7 +22,7 @@ class CommandRegistry:
 
     def __init__(self) -> None:
         self._commands: dict[str, Command] = {}
-        # command_id -> 归属扩展 id（内置命令为 'builtin'）
+        # command_id -> 归属扩展 id
         self._owners: dict[str, str] = {}
 
     def clear(self) -> None:

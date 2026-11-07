@@ -23,11 +23,13 @@ from Core.Constants import CONFIG_EXTENSIONS_FILE
 from Core.Files import atomic_write
 from Core.Logging import exception_logger, logger
 
+from ..Errors import LoadError
 from ..Extension import Extension, ExtensionState
+from ..Manifest import _CODE_TYPES
 from ..Renderer import BaseRenderer, TemplateRegistration
 from .Loader import ExtensionLoader
 from .Managers import CommandManager, RendererManager, ServiceManager
-from .Registries import ExtensionRegistries
+from .Registries import ExtensionRecord, ExtensionRegistries
 
 
 @dataclass
@@ -47,7 +49,7 @@ class ExtensionManager:
         # 注册容器与加载状态必须实例私有，避免多实例共享与热重载脏状态
         self._registries = ExtensionRegistries()
         self.service_manager = ServiceManager(self._registries.services)
-        self.command_manager = CommandManager(self._registries.commands)
+        self.command_manager = CommandManager(self._registries.commands, self._registries.extensions)
         self.renderer_manager = RendererManager(
             self._registries.renderers,
             self._registries.templates,
@@ -64,6 +66,11 @@ class ExtensionManager:
         return self._registries.extensions.extensions
 
     @property
+    def records(self) -> dict[str, ExtensionRecord]:
+        """全部已发现扩展的运行记录，代码实例可选。"""
+        return dict(self._registries.extensions.records)
+
+    @property
     def services(self) -> dict[str, object]:
         """已注册的 API 服务表：name -> service。"""
         return self._registries.services.all()
@@ -75,8 +82,11 @@ class ExtensionManager:
 
     @property
     def no_code_info(self) -> dict[str, dict]:
-        """无代码扩展包展示信息：extension_id -> info dict。"""
-        return self._registries.extensions.no_code_info
+        """从运行记录生成无代码包信息，保留既有查询接口。"""
+        return {
+            key: self.get_extension_info(key) for key, record in self.records.items()
+            if record.metadata is not None and not (_CODE_TYPES & set(record.metadata.types))
+        }
 
     @property
     def templates(self) -> dict[str, TemplateRegistration]:
@@ -94,6 +104,7 @@ class ExtensionManager:
         """清空全部注册与加载状态（重新加载前调用，测试也用它做隔离）。"""
         self._registries.extensions.clear()
         self._registries.services.clear()
+        self.service_manager.clear()
         self.command_manager.clear()
         self.renderer_manager.reset()
         self.loader.reset()
@@ -133,14 +144,19 @@ class ExtensionManager:
 
     async def _switch_to_candidate(self, old_modules: dict[str, ModuleType]) -> ReloadResult:
         """加载候选状态并启用；失败时恢复旧模块并尝试回到旧状态。"""
+        stage = 'load'
         try:
             self.load()
+            self._raise_on_failed_extensions()
+            stage = 'build'
             self.command_manager.build()
+            stage = 'start'
             await self.start()
+            self._raise_on_failed_extensions()
         except Exception as error:
-            exception_logger.error(f'Extension reload failed during load/build/start: {error}')
+            exception_logger.error(f'Extension reload failed during {stage}: {error}')
             recovered = await self._recover(old_modules)
-            return ReloadResult(success=False, failed_stage='load', error=str(error), recovered=recovered)
+            return ReloadResult(success=False, failed_stage=stage, error=str(error), recovered=recovered)
         logger.success('All extensions reloaded.')
         return ReloadResult(success=True)
 
@@ -165,18 +181,49 @@ class ExtensionManager:
             self.loader.purge_modules()
             sys.modules.update(old_modules)
             self.load()
+            self._raise_on_failed_extensions()
             self.command_manager.build()
             await self.start()
+            self._raise_on_failed_extensions()
         except Exception as error:
             exception_logger.error(f'Failed to recover previous extension state: {error}')
             return False
         logger.warning('Reload failed; the previous extension state has been restored.')
         return True
 
+    def _raise_on_failed_extensions(self) -> None:
+        failures = [
+            f'{info["id"]}: {info["failure_reason"] or info["state"]}'
+            for info in self.get_extensions()
+            if info['state'] == ExtensionState.failed
+        ]
+        failures.extend(f'{extension_id}: {reason}' for extension_id, reason in self.loader.failures.items())
+        if failures:
+            raise LoadError('; '.join(failures))
+
     async def start(self) -> None:
-        """按拓扑顺序调用 on_load 与 on_enable，失败时回滚已启用扩展；渲染引擎失败仅降级图片功能。"""
-        for extension in self.loader.extensions:
+        """按依赖顺序启用扩展，失败仅清理自身并阻塞依赖方。"""
+        discovered = bool(self.loader.load_order)
+        extension_order = self.loader.load_order if discovered else [
+            extension.id for extension in self.loader.extensions
+        ]
+        loaded_extensions = {extension.id: extension for extension in self.loader.extensions}
+        for extension_id in extension_order:
+            record = self._registries.extensions.records.get(extension_id)
+            if record is None and not discovered:
+                extension = loaded_extensions.get(extension_id)
+                if extension is None:
+                    continue
+            elif record is None or record.instance is None:
+                self._block_unavailable_record(extension_id, record)
+                continue
+            else:
+                extension = record.instance
             if extension.state is not ExtensionState.loaded:
+                continue
+            if reason := self._unavailable_dependency(extension):
+                extension.failure_reason = reason
+                extension.transition(ExtensionState.blocked)
                 continue
             try:
                 await extension.on_load()
@@ -186,7 +233,6 @@ class ExtensionManager:
             except Exception as error:
                 extension.mark_failed(str(error))
                 await self._disable_extension(extension)
-                await self._rollback(extension)
         # 图片模式开启时才预初始化配置的渲染引擎；未配置时延迟到渲染时按模板协商。
         # 初始化失败不阻断启动：渲染时会重新尝试并按模板声明协商降级
         if config.image.mode and config.image.renderer:
@@ -198,14 +244,29 @@ class ExtensionManager:
                 )
         logger.success('All extensions started.')
 
-    async def _rollback(self, failed_extension: Extension) -> None:
-        """当某个扩展启用失败时，按逆拓扑顺序回滚已启用扩展。"""
-        for extension in reversed(self.loader.extensions):
-            if extension is failed_extension:
+    def _unavailable_dependency(self, extension: Extension) -> str:
+        if extension._metadata is None:
+            return ''
+        for dependency_id in extension.metadata.extension_dependencies:
+            info = self.get_extension_info(dependency_id)
+            if not info or info['state'] != ExtensionState.enabled:
+                return f'依赖扩展 {dependency_id} 未启用'
+        return ''
+
+    def _block_unavailable_record(self, extension_id: str, record: ExtensionRecord | None) -> None:
+        if record is None or record.metadata is None or record.state is not ExtensionState.enabled:
+            return
+        for dependency_id in record.metadata.extension_dependencies:
+            dependency = self._registries.extensions.records.get(dependency_id)
+            if dependency is not None and dependency.state is ExtensionState.enabled:
                 continue
-            if extension.state is ExtensionState.enabled:
-                await self._disable_extension(extension)
-                extension.transition(ExtensionState.disabled)
+            record._failure_reason = f'依赖扩展 {dependency_id} 未启用'
+            record._state = ExtensionState.blocked
+            self.renderer_manager.unregister_template(extension_id)
+            self.renderer_manager.unregister_resources(extension_id)
+            self.renderer_manager.unregister_renderers_by_owner(extension_id)
+            self.renderer_manager.invalidate_all()
+            return
 
     async def shutdown(self) -> None:
         """按逆拓扑顺序释放资源，单个扩展失败不阻止其它扩展关闭。"""
@@ -224,15 +285,7 @@ class ExtensionManager:
         except Exception as error:
             logger.error(f'Extension {extension.id} failed to shut down: {error}')
 
-    # ===== 注册透传（供 Loader / 测试直接登记） =====
-
-    def register_extension(self, extension_id: str, extension: Extension) -> None:
-        """登记一个已加载的扩展实例。"""
-        self._registries.extensions.register_extension(extension_id, extension)
-
-    def register_no_code_info(self, extension_id: str, info: dict) -> None:
-        """登记一个无代码扩展包（template/resources）的展示信息。"""
-        self._registries.extensions.register_no_code_info(extension_id, info)
+    # ===== 注册透传（供测试直接登记能力） =====
 
     def register_service(self, name: str, service: object, *, owner_id: str = '') -> None:
         """注册一个 API 服务，`owner_id` 声明归属扩展。"""
@@ -293,34 +346,30 @@ class ExtensionManager:
 
     def get_extension_info(self, extension_id: str) -> dict:
         """获取扩展的展示信息（供 WebUI 使用）。"""
-        extension = self.registry.get(extension_id)
-        if extension is not None:
-            metadata = extension.metadata
-            return {
-                'id': metadata.id,
-                'name': str(metadata.name),
-                'version': metadata.version,
-                'author': metadata.author,
-                'description': str(metadata.description),
-                'types': [entry.value for entry in metadata.types],
-                'state': extension.state.value,
-                'failure_reason': extension.failure_reason,
-                'builtin': extension.builtin,
-                'config_schema': extension.get_config_schema(),
-            }
-        # 无代码扩展包（template/resources）：无 Extension 实例，信息由 Loader 提交
-        info = self.no_code_info.get(extension_id)
-        if info is None:
+        record = self._registries.extensions.records.get(extension_id)
+        if record is None or record.metadata is None:
             return {}
+        metadata = record.metadata
+        schema = record.instance.get_config_schema() if record.instance is not None else None
         registration = self.renderer_manager.templates.get(extension_id)
-        if registration is not None:
-            info['config_schema'] = registration.config_model.model_json_schema()
-        return dict(info)
+        if schema is None and registration is not None:
+            schema = registration.config_model.model_json_schema()
+        return {
+            'id': metadata.id,
+            'name': str(metadata.name),
+            'version': metadata.version,
+            'author': metadata.author,
+            'description': str(metadata.description),
+            'types': [entry.value for entry in metadata.types],
+            'state': record.state.value,
+            'failure_reason': record.failure_reason,
+            'builtin': record.builtin,
+            'config_schema': schema,
+        }
 
     def get_extensions(self) -> list[dict]:
         """获取全部已加载扩展的展示信息（代码扩展 + 无代码扩展包）。"""
-        ids = list(self.registry) + [eid for eid in self.no_code_info if eid not in self.registry]
-        return [self.get_extension_info(extension_id) for extension_id in ids]
+        return [self.get_extension_info(extension_id) for extension_id in self.records]
 
 
 # 单例

@@ -24,7 +24,8 @@ from Core.Utils import turn_message_text
 
 from ...Command import _NAME_PATTERN, UNSET, Command, Handler, SubCommand
 from ...Errors import CommandError, CommandFieldError
-from ..Registries import CommandRegistry
+from ...Extension import ExtensionState
+from ..Registries import CommandRegistry, ExtensionRegistry
 
 
 def _format_path(extension_id: str, path: list[str]) -> str:
@@ -62,9 +63,12 @@ class CommandManager:
     # 稳定 command_id 中各段的连接符（如 `extension:MyExt:weather`）
     command_id_separator = ':'
 
-    def __init__(self, registry: CommandRegistry | None = None) -> None:
+    def __init__(
+        self, registry: CommandRegistry | None = None, extensions: ExtensionRegistry | None = None
+    ) -> None:
         # 注册容器由 ExtensionManager 创建后按引用传入；独立使用（测试）时自建
         self._registry = registry if registry is not None else CommandRegistry()
+        self._extensions = extensions
         self._built = False
         self._matchers: list[Any] = []
 
@@ -154,7 +158,7 @@ class CommandManager:
             help_text=str(subcommand.description) if subcommand.description else None,
         )
 
-    def _build_matcher(self, command: Command) -> None:
+    def _build_matcher(self, command: Command, owner_id: str = '') -> None:
         """
         为一个命令实例构建 Alconna matcher 并绑定 handler。
 
@@ -180,25 +184,25 @@ class CommandManager:
             use_cmd_start=True,
             skip_for_unmatch=True,
         )
+        self._matchers.append(matcher)
         # Alconna 把 matcher 位置记录为 on_alconna 调用处（本文件），重映射为命令类实际声明位置
         if source := _command_source(command):
             matcher._source = source
             alconna.meta.extra['matcher.source'] = source
-        matcher.assign('$main')(self._route(matcher, command.image_handler, command.handler, command))
+        matcher.assign('$main')(self._route(matcher, command.image_handler, command.handler, command, owner_id))
         # 递归注册子命令分派：叶子优先（后序遍历），父级子命令在嵌套子命令之后匹配，
         # 保证 `/bot superusers add 123` 命中 `add` 而非 `superusers`
         for subcommand in command.subcommands:
-            self._assign_subcommand(matcher, subcommand, subcommand.name)
-        self._matchers.append(matcher)
+            self._assign_subcommand(matcher, subcommand, subcommand.name, owner_id)
         logger.debug(f'Command {command.name} built.')
 
-    def _assign_subcommand(self, matcher, subcommand: SubCommand[Any], path: str) -> None:
+    def _assign_subcommand(self, matcher, subcommand: SubCommand[Any], path: str, owner_id: str = '') -> None:
         """递归注册子命令分派处理器，路径用点路径（如 `superusers.add`）。"""
         for nested in subcommand.subcommands:
-            self._assign_subcommand(matcher, nested, f'{path}.{nested.name}')
-        matcher.assign(path)(self._route(matcher, subcommand.image_handler, subcommand.handler, subcommand))
+            self._assign_subcommand(matcher, nested, f'{path}.{nested.name}', owner_id)
+        matcher.assign(path)(self._route(matcher, subcommand.image_handler, subcommand.handler, subcommand, owner_id))
 
-    def _route(self, matcher, image_handler, handler: Handler, command: Command) -> Handler:
+    def _route(self, matcher, image_handler, handler: Handler, command: Command, owner_id: str = '') -> Handler:
         """
         绑定处理器并统一处理返回值。
 
@@ -216,6 +220,10 @@ class CommandManager:
 
         @wraps(target)
         async def dispatched(*args, **kwargs):
+            if self._extensions is not None and owner_id:
+                record = self._extensions.records.get(owner_id)
+                if record is None or record.state is not ExtensionState.enabled:
+                    return None
             try:
                 # 异步生成器：不 await，逐项收集后转多行文本发送
                 if inspect.isasyncgenfunction(target):
@@ -242,25 +250,32 @@ class CommandManager:
 
     def cleanup_matchers(self) -> None:
         """注销全部已构建 matcher 并清空登记状态（热重载前调用）。"""
+        self.clear()
+
+    def _remove_matchers(self) -> None:
         for matcher in self._matchers:
             try:
                 matcher.clean()
             except Exception as error:
                 logger.error(f'Failed to unregister matcher {matcher}: {error}')
-        self.clear()
+        self._matchers.clear()
+        self._built = False
 
     def clear(self) -> None:
         """清空全部已登记命令与构建状态（测试隔离与热重载使用）。"""
+        self._remove_matchers()
         self._registry.clear()
-        self._matchers = []
-        self._built = False
 
     def build(self) -> list:
         """校验全部命令并构建 matcher，任一失败则整体失败。"""
         if self._built:
             return self._matchers
         self.validate()
-        for command in self._registry.all().values():
-            self._build_matcher(command)
+        try:
+            for command_id, command in self._registry.all().items():
+                self._build_matcher(command, self._registry.owner_of(command_id))
+        except BaseException:
+            self._remove_matchers()
+            raise
         self._built = True
         return self._matchers

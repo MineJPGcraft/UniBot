@@ -42,7 +42,7 @@ class ExtensionState(StrEnum):
 _STATE_TRANSITIONS: dict[ExtensionState, set[ExtensionState]] = {
     ExtensionState.discovered: {ExtensionState.validated, ExtensionState.failed},
     ExtensionState.validated: {ExtensionState.loaded, ExtensionState.failed},
-    ExtensionState.loaded: {ExtensionState.enabled, ExtensionState.disabled, ExtensionState.failed},
+    ExtensionState.loaded: {ExtensionState.enabled, ExtensionState.disabled, ExtensionState.blocked, ExtensionState.failed},
     ExtensionState.enabled: {ExtensionState.disabled, ExtensionState.failed},
     ExtensionState.disabled: {ExtensionState.enabled, ExtensionState.failed},
     ExtensionState.blocked: {ExtensionState.enabled, ExtensionState.failed},

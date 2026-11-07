@@ -20,6 +20,7 @@ class ServiceManager:
     def __init__(self, registry: ServiceRegistry | None = None) -> None:
         # 全局服务容器由 ExtensionManager 创建后按引用传入；独立使用（测试）时自建
         self._registry = registry if registry is not None else ServiceRegistry()
+        self._enabled: dict[str, list[Service]] = {}
 
     @property
     def registry(self) -> ServiceRegistry:
@@ -32,11 +33,14 @@ class ServiceManager:
 
     async def enable(self, owner_id: str) -> None:
         """按登记顺序启动某扩展的全部服务；中途失败时回滚已启动部分。"""
+        if owner_id in self._enabled:
+            return
         enabled_services: list[Service] = []
         try:
             for service in self._registry.get_by_owner(owner_id):
                 await service.on_enable()
                 enabled_services.append(service)
+            self._enabled[owner_id] = enabled_services
         except Exception:
             await self._disable_services(enabled_services)
             raise
@@ -50,7 +54,11 @@ class ServiceManager:
         的服务句柄（`self.xxx = api.get(X)`，文档允许的写法）会失效，且重新启用时会
         注册出新实例造成新旧两个活实例并存。
         """
-        await self._disable_services(self._registry.get_by_owner(owner_id))
+        await self._disable_services(self._enabled.pop(owner_id, []))
+
+    def clear(self) -> None:
+        """清空服务生命周期状态；注册项由注册表统一清理。"""
+        self._enabled.clear()
 
     @staticmethod
     async def _disable_services(services: list[Service]) -> None:

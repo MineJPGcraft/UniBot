@@ -10,7 +10,7 @@
 
 from .Bundle import ExtensionRegistries
 from .Command import CommandRegistry
-from .Extension import ExtensionRegistry
+from .Extension import ExtensionRecord, ExtensionRegistry
 from .Renderer import RendererRegistry
 from .Resources import ResourcesRegistry
 from .Service import ServiceRegistry
@@ -19,6 +19,7 @@ from .Template import TemplateRegistry
 __all__ = [
     'CommandRegistry',
     'ExtensionRegistries',
+    'ExtensionRecord',
     'ExtensionRegistry',
     'RendererRegistry',
     'ResourcesRegistry',

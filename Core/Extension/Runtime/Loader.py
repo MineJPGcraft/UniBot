@@ -6,7 +6,6 @@ import ast
 import importlib
 import shutil
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 
 from Core.Config import config
@@ -44,27 +43,12 @@ from ..TemplateConfig import build_template_config_model
 from .Dependencies import is_extension_enabled, load_enabled_config
 from .Managers.Command import CommandManager
 from .Managers.Renderer import RendererManager
-from .Registries import ExtensionRegistries
+from .Registries import ExtensionRecord, ExtensionRegistries
 
 # 内置内容目录（框架包内随代码分发）：Core/Builtin/Commands|Services
 BUILTIN_DIR = Path(__file__).parent.parent.parent / 'Builtin'
 CONFIG_ROOT = Path('Config') / 'Extensions'
 DATA_ROOT = Path('Data') / 'Exs'
-
-
-@dataclass
-class DiscoveredExtension:
-    """发现阶段收集的扩展元信息，供校验、拓扑排序与加载统一访问。"""
-
-    manifest: ExtensionManifest
-    directory: Path
-    single_file: bool
-    enabled: bool
-    # 仅单文件扩展存在
-    builtin: bool = False
-    module_path: str = ''
-    # 校验阶段失败原因（版本不兼容/入口缺失），非空表示阻止加载
-    blocked_reason: str = ''
 
 
 class ExtensionLoader:
@@ -80,10 +64,10 @@ class ExtensionLoader:
         self._registries = registries
         self._renderer_manager = renderer_manager
         self._command_manager = command_manager
-        # 发现的扩展元信息：id -> DiscoveredExtension
-        self._discovered: dict[str, DiscoveredExtension] = {}
         # 已加载的扩展实例（按拓扑顺序）
         self.extensions: list[Extension] = []
+        self.load_order: list[str] = []
+        self.failures: dict[str, str] = {}
         # 已登记的内置命令类，用于判定扩展是否覆盖内置命令
         self._builtin_command_classes: set[type] = set()
         # 启停配置缓存（load 开头重置，避免重复读文件）
@@ -91,8 +75,10 @@ class ExtensionLoader:
 
     def reset(self) -> None:
         """清空发现与加载状态（配合 ExtensionManager.reset 使用）。"""
-        self._discovered.clear()
+        self._registries.extensions.clear()
         self.extensions.clear()
+        self.load_order.clear()
+        self.failures.clear()
         self._builtin_command_classes.clear()
         self._enabled_config = None
 
@@ -141,6 +127,7 @@ class ExtensionLoader:
         self._discover()
         self._validate_all()
         order = self._topological_sort()
+        self.load_order = order
         self._import_and_load(order)
         # 扩展目录在加载期不写依赖声明：安装/卸载扩展时由任务中心统一走 uv 同步，
         # 此处仅聚合当前声明（避免加载流程内触发耗时命令阻塞启动）
@@ -175,6 +162,7 @@ class ExtensionLoader:
         try:
             manifest = parse_manifest(manifest_path.read_text('Utf-8'))
         except ManifestError as error:
+            self.failures[directory.name] = str(error)
             logger.error(f'Failed to parse manifest of extension {directory.name}: {error}, skipped.')
             return
         extension_id = manifest.extension.id
@@ -183,12 +171,12 @@ class ExtensionLoader:
             logger.error(f'Extension id {extension_id} does not match directory name {directory.name}, skipped.')
             return
         enabled = self._read_enabled(directory.name)
-        self._discovered[extension_id] = DiscoveredExtension(
+        self._registries.extensions.register_record(extension_id, ExtensionRecord(
             manifest=manifest,
             directory=directory,
             single_file=False,
             enabled=enabled,
-        )
+        ))
         logger.debug(f'Discovered extension {extension_id} v{manifest.extension.version}.')
 
     def _discover_single_file(self, file: Path, builtin: bool = False) -> None:
@@ -205,11 +193,13 @@ class ExtensionLoader:
         try:
             extension = self._import_single_file(module_path, extension_id)
         except Exception as error:
+            self.failures[extension_id] = str(error)
             logger.error(f'Failed to import single-file extension {extension_id}: {error}, skipped.')
             return
         try:
             manifest = manifest_from_attributes(extension)
         except ManifestError as error:
+            self.failures[extension_id] = str(error)
             logger.error(f'Metadata validation failed for single-file extension {extension_id}: {error}, skipped.')
             return
         if manifest.extension.id != extension_id:
@@ -218,14 +208,14 @@ class ExtensionLoader:
             )
             return
         enabled = self._read_enabled(extension_id)
-        self._discovered[extension_id] = DiscoveredExtension(
+        self._registries.extensions.register_record(extension_id, ExtensionRecord(
             manifest=manifest,
             directory=file.parent,
             single_file=True,
             enabled=enabled,
             builtin=builtin,
             module_path=module_path,
-        )
+        ))
         logger.debug(f'Discovered single-file extension {extension_id} v{manifest.extension.version}.')
 
     def _read_enabled(self, extension_id: str) -> bool:
@@ -239,7 +229,7 @@ class ExtensionLoader:
 
     def _validate_all(self) -> None:
         """校验发现的扩展：版本兼容性、Python 依赖、入口模块命名。"""
-        for extension_id, info in self._discovered.items():
+        for extension_id, info in self._registries.extensions.records.items():
             manifest = info.manifest
             try:
                 self._validate_compatibility(extension_id, manifest)
@@ -283,7 +273,8 @@ class ExtensionLoader:
         内置扩展（`builtin: 前缀声明`）优先于用户扩展排序，确保覆盖命令所需的
         内置命令类先被登记，用户扩展随后才能判定并取代内置命令。
         """
-        extension_ids = set(self._discovered.keys())
+        records = self._registries.extensions.records
+        extension_ids = set(records)
         order: list[str] = []
         visited: dict[str, int] = {}  # 0=临时标记, 1=已加入
 
@@ -295,7 +286,7 @@ class ExtensionLoader:
                 raise DependencyError(f'Circular dependency detected: {cycle}')
             visited[extension_id] = 0
             stack.append(extension_id)
-            dependencies = self._discovered[extension_id].manifest.dependencies.extensions
+            dependencies = records[extension_id].manifest.dependencies.extensions
             for dependency_id in dependencies:
                 if dependency_id not in extension_ids:
                     raise DependencyError(f'Extension {extension_id} has missing dependency: {dependency_id}!')
@@ -306,10 +297,10 @@ class ExtensionLoader:
 
         # 先访问内置扩展，确保其命令类先登记
         for extension_id in extension_ids:
-            if self._discovered[extension_id].builtin:
+            if records[extension_id].builtin:
                 visit(extension_id, [])
         for extension_id in extension_ids:
-            if not self._discovered[extension_id].builtin:
+            if not records[extension_id].builtin:
                 visit(extension_id, [])
         return order
 
@@ -324,13 +315,13 @@ class ExtensionLoader:
         """
         blocked_reasons: dict[str, str] = {}
         for extension_id in order:
-            info = self._discovered[extension_id]
+            info = self._registries.extensions.records[extension_id]
             if self._skip_before_import(extension_id, info, blocked_reasons):
                 continue
             self._load_extension(extension_id, info, blocked_reasons)
 
     def _skip_before_import(
-        self, extension_id: str, info: DiscoveredExtension, blocked_reasons: dict[str, str]
+        self, extension_id: str, info: ExtensionRecord, blocked_reasons: dict[str, str]
     ) -> bool:
         """
         处理「无需导入代码」的前置情形，命中返回 `True`。
@@ -344,11 +335,17 @@ class ExtensionLoader:
         # 主动禁用：直接进入 disabled，不导入、不绑定、不注册
         if not info.enabled:
             self._register_display(extension_id, info, ExtensionState.disabled, '')
+            blocked_reasons[extension_id] = '扩展被禁用'
+            return True
+        if dependency_block := self._find_blocked_dependency(info.manifest, blocked_reasons):
+            blocked_reasons[extension_id] = dependency_block
+            self._register_display(extension_id, info, ExtensionState.blocked, dependency_block)
             return True
         # 图片模式未开启：仅「纯渲染器扩展」不加载（避免 html2pic 等原生依赖未安装时导入失败）；
         # 混合扩展（renderer + api/command）仍正常加载，只跳过其渲染器声明（见 _try_commit_declarations）
         if not config.image.mode and set(info.manifest.extension.types) == {ExtensionType.renderer}:
             self._register_display(extension_id, info, ExtensionState.disabled, '图片模式未开启，渲染扩展不加载')
+            blocked_reasons[extension_id] = '图片模式未开启，渲染扩展不加载'
             return True
         # 纯无代码扩展包（template/resources）：不导入入口、无 Extension 实例
         if not self._has_code_part(info.manifest):
@@ -357,12 +354,14 @@ class ExtensionLoader:
         return False
 
     def _load_no_code_extension(
-        self, extension_id: str, info: DiscoveredExtension, blocked_reasons: dict[str, str]
+        self, extension_id: str, info: ExtensionRecord, blocked_reasons: dict[str, str]
     ) -> None:
         """提交无代码扩展包的资源与模板注册。"""
         try:
-            self._commit_no_code_package(extension_id, info)
+            with self._registries.transaction():
+                self._commit_no_code_package(extension_id, info)
         except Exception as error:
+            self._renderer_manager.invalidate_all()
             exception_logger.error(f'Failed to load no-code extension {extension_id}!')
             blocked_reasons[extension_id] = f'无代码扩展加载失败：{error}'
             self._register_no_code_display(extension_id, info, ExtensionState.failed, str(error))
@@ -370,13 +369,8 @@ class ExtensionLoader:
         self._register_no_code_display(extension_id, info, ExtensionState.enabled, '')
         logger.success(f'Loaded no-code extension package <blue>{extension_id} v{info.manifest.extension.version}</blue>.')
 
-    def _load_extension(self, extension_id: str, info: DiscoveredExtension, blocked_reasons: dict[str, str]) -> None:
+    def _load_extension(self, extension_id: str, info: ExtensionRecord, blocked_reasons: dict[str, str]) -> None:
         """导入代码扩展并依次完成绑定与声明提交。"""
-        dependency_block = self._find_blocked_dependency(extension_id, blocked_reasons)
-        if dependency_block is not None:
-            blocked_reasons[extension_id] = dependency_block
-            self._register_display(extension_id, info, ExtensionState.blocked, dependency_block)
-            return
         extension = self._try_import(extension_id, info, blocked_reasons)
         if extension is None:
             return
@@ -386,16 +380,17 @@ class ExtensionLoader:
             return
         extension.state = ExtensionState.loaded
         # 注册扩展语言包（Extensions/<id>/Locales/{zh,en}.toml → ext.<id>.*，无需代码）
-        self._register_locales(extension_id, info)
         if not self._try_commit_declarations(extension_id, extension, info, blocked_reasons):
             self._register_display(extension_id, info, ExtensionState.failed, blocked_reasons.get(extension_id, ''))
             return
+        self._register_locales(extension_id, info)
         self.extensions.append(extension)
-        self._registries.extensions.register_extension(extension_id, extension)
+        info.instance = extension
+        info.builtin = extension.builtin
         logger.success(f'Loaded extension <blue>{extension_id} v{extension.metadata.version}</blue>.')
 
     def _try_import(
-        self, extension_id: str, info: DiscoveredExtension, blocked_reasons: dict[str, str]
+        self, extension_id: str, info: ExtensionRecord, blocked_reasons: dict[str, str]
     ) -> Extension | None:
         """导入扩展入口模块并取回实例，失败返回 `None`。"""
         try:
@@ -407,7 +402,7 @@ class ExtensionLoader:
             return None
 
     def _try_bind(
-        self, extension_id: str, extension: Extension, info: DiscoveredExtension, blocked_reasons: dict[str, str]
+        self, extension_id: str, extension: Extension, info: ExtensionRecord, blocked_reasons: dict[str, str]
     ) -> bool:
         """两阶段绑定：一次性注入 metadata/config/data/api/logger。"""
         try:
@@ -419,30 +414,33 @@ class ExtensionLoader:
         return True
 
     def _try_commit_declarations(
-        self, extension_id: str, extension: Extension, info: DiscoveredExtension, blocked_reasons: dict[str, str]
+        self, extension_id: str, extension: Extension, info: ExtensionRecord, blocked_reasons: dict[str, str]
     ) -> bool:
         """执行声明：实例化装饰器收集的能力类并统一提交；失败时按 owner 回滚已提交项。"""
+        builtin_classes = self._builtin_command_classes.copy()
         try:
-            self._commit_services(extension)
-            self._commit_commands(extension_id, extension, builtin=info.builtin)
-            # 图片模式未开启时跳过渲染器声明提交：纯渲染器扩展已在 _skip_before_import 拦截，
-            # 混合扩展的 api/command 能力照常生效，仅其渲染器待图片模式开启后再注册
-            if config.image.mode:
-                self._commit_renderers(extension)
-            # 混合扩展（代码 + template/resources）：代码部分提交成功后追加注册无代码部分
-            if self._has_no_code_part(info.manifest):
-                self._commit_no_code_package(extension_id, info)
+            with self._registries.transaction():
+                self._commit_services(extension)
+                self._commit_commands(extension_id, extension, builtin=info.builtin)
+                # 图片模式未开启时跳过渲染器声明提交：纯渲染器扩展已在 _skip_before_import 拦截，
+                # 混合扩展的 api/command 能力照常生效，仅其渲染器待图片模式开启后再注册
+                if config.image.mode:
+                    self._commit_renderers(extension)
+                # 混合扩展（代码 + template/resources）：代码部分提交成功后追加注册无代码部分
+                if self._has_no_code_part(info.manifest):
+                    self._commit_no_code_package(extension_id, info)
         except Exception as error:
-            self._rollback_declarations(extension_id)
+            self._builtin_command_classes = builtin_classes
+            self._renderer_manager.invalidate_all()
             extension.mark_failed(f'Declaration stage failed: {error}')
             blocked_reasons[extension_id] = f'声明阶段失败：{error}'
             return False
         return True
 
     def _rollback_declarations(self, extension_id: str) -> None:
-        """按 owner 注销某扩展的全部注册项（扩展实例/无代码包/服务/命令/渲染器/模板/资源）。
+        """按 owner 注销某扩展的全部注册项（运行记录、服务、命令、渲染器、模板与资源）。
 
-        六类容器全部按 owner 对称清理；本方法幂等，未登记项静默忽略，
+        各容器按 owner 对称清理；本方法幂等，未登记项静默忽略，
         既用于声明阶段失败回滚，也可安全用作单扩展卸载的收尾。
         """
         self._registries.extensions.unregister_by_owner(extension_id)
@@ -479,53 +477,34 @@ class ExtensionLoader:
             renderer_manager=self._renderer_manager,
         )
 
-    def _find_blocked_dependency(self, extension_id: str, blocked_reasons: dict) -> str | None:
+    def _find_blocked_dependency(self, manifest: ExtensionManifest, blocked_reasons: dict) -> str | None:
         """查找扩展的依赖是否被禁用/失败，返回阻塞原因或 None。"""
-        manifest = self._discovered[extension_id].manifest
         for dependency_id in manifest.dependencies.extensions:
             if dependency_id in blocked_reasons:
                 return f'依赖扩展 {dependency_id} 不可用：{blocked_reasons[dependency_id]}'
-            dep_info = self._discovered.get(dependency_id)
+            dep_info = self._registries.extensions.records.get(dependency_id)
             if dep_info is not None and not dep_info.enabled:
                 return f'依赖扩展 {dependency_id} 被禁用！'
         return None
 
-    def _register_display(self, extension_id: str, info: DiscoveredExtension, state: ExtensionState, reason: str):
-        """注册一个未绑定的展示实例（disabled/blocked），供 WebUI 展示状态。"""
-        extension = Extension()
-        extension._set_metadata(ExtensionMetadata(info.manifest))
-        extension.state = state
-        extension.builtin = info.builtin
-        extension.failure_reason = reason if reason else None
-        self._registries.extensions.register_extension(extension_id, extension)
+    def _register_display(self, extension_id: str, info: ExtensionRecord, state: ExtensionState, reason: str):
+        """更新扩展记录状态，不构造代码实例。"""
+        info._state = state
+        info._failure_reason = reason or None
+        self._registries.extensions.records[extension_id] = info
 
     def _register_no_code_display(
         self,
         extension_id: str,
-        info: DiscoveredExtension,
+        info: ExtensionRecord,
         state: ExtensionState,
         reason: str,
     ) -> None:
-        """登记无代码扩展包（template/resources）的展示信息，不创建 Extension 实例。"""
-        metadata = ExtensionMetadata(info.manifest)
-        self._registries.extensions.register_no_code_info(
-            extension_id,
-            {
-                'id': metadata.id,
-                'name': str(metadata.name),
-                'version': metadata.version,
-                'author': metadata.author,
-                'description': str(metadata.description),
-                'types': [entry.value for entry in metadata.types],
-                'state': state.value,
-                'failure_reason': reason if reason else None,
-                'builtin': False,
-                'config_schema': None,
-            },
-        )
+        """无代码包使用与代码包相同的运行记录。"""
+        self._register_display(extension_id, info, state, reason)
 
     @staticmethod
-    def _register_locales(extension_id: str, info: DiscoveredExtension) -> None:
+    def _register_locales(extension_id: str, info: ExtensionRecord) -> None:
         """注册扩展语言包 Extensions/<id>/Locales/{zh,en}.toml → ext.<id>.*（无需代码）。"""
         locales_dir = info.directory / 'Locales'
         if locales_dir.is_dir():
@@ -538,7 +517,7 @@ class ExtensionLoader:
 
     # ===== 无代码扩展包（template/resources） =====
 
-    def _commit_no_code_package(self, extension_id: str, info: DiscoveredExtension) -> None:
+    def _commit_no_code_package(self, extension_id: str, info: ExtensionRecord) -> None:
         """提交无代码部分：按声明类型分别注册（template 编译配置、resources 校验根目录）。"""
         manifest = info.manifest
         types = set(manifest.extension.types)
@@ -547,7 +526,7 @@ class ExtensionLoader:
         if ExtensionType.resources in types:
             self._commit_resources_package(extension_id, info)
 
-    def _commit_template_package(self, extension_id: str, info: DiscoveredExtension) -> None:
+    def _commit_template_package(self, extension_id: str, info: ExtensionRecord) -> None:
         """编译模板配置 schema、创建独立配置存储并注册 TemplateRegistration。"""
         manifest = info.manifest
         templates_dir = info.directory / manifest.template.entry
@@ -567,7 +546,7 @@ class ExtensionLoader:
         )
         self._renderer_manager.register_template(registration)
 
-    def _commit_resources_package(self, extension_id: str, info: DiscoveredExtension) -> None:
+    def _commit_resources_package(self, extension_id: str, info: ExtensionRecord) -> None:
         """校验资源根目录并注册 resources 扩展。"""
         manifest = info.manifest
         resources_root = info.directory / manifest.resources.root
@@ -578,7 +557,7 @@ class ExtensionLoader:
         self._renderer_manager.register_resources(extension_id, resources_root)
 
     @staticmethod
-    def _import_extension(extension_id: str, info: DiscoveredExtension) -> Extension:
+    def _import_extension(extension_id: str, info: ExtensionRecord) -> Extension:
         """导入扩展入口模块并获取 extension 实例。"""
         if info.single_file:
             return ExtensionLoader._import_single_file(info.module_path, extension_id)
@@ -619,7 +598,7 @@ class ExtensionLoader:
             if builtin:
                 # 记录内置命令类，供后续扩展判定是否覆盖内置
                 self._builtin_command_classes.add(command_cls)
-                self._command_manager.register_command(command, f'{BUILTIN_PREFIX}:{command.name}', owner_id='builtin')
+                self._command_manager.register_command(command, f'{BUILTIN_PREFIX}:{command.name}', owner_id=extension_id)
                 continue
             # 扩展命令：若继承自某个内置命令类，则判定为覆盖内置，以同名
             # command_id 取代内置定义；否则作为新增命令以 extension: 前缀注册

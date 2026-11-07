@@ -752,7 +752,7 @@ class WeatherExtension(Extension):
 
 Rules:
 
-- `on_load()` / `on_enable()` run in topological order (depended-on extensions run first); on failure, the extensions enabled in this run are rolled back.
+- `on_load()` / `on_enable()` run in topological order (depended-on extensions run first); a failed extension is cleaned up locally, its dependents become unavailable, and unrelated extensions keep running.
 - At shutdown, `on_disable()` runs in reverse topological order of dependencies; a single extension's cleanup failure does not block other extensions from shutting down.
 - `on_disable()` only releases resources that were started; ==it does not delete config or business data==.
 

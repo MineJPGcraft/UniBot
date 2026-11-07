@@ -7,10 +7,11 @@ from typing import override
 import pytest
 import tomlkit
 
-from Core.Extension import Extension, ExtensionState, Service, ServiceRegistry, extension_manager
+from Core.Extension import Extension, ExtensionMetadata, ExtensionState, Service, ServiceRegistry, extension_manager
 from Core.Extension.Manifest import parse_manifest
 from Core.Extension.Renderer import BaseRenderer
-from Core.Extension.Runtime.Loader import DiscoveredExtension, ExtensionLoader
+from Core.Extension.Runtime.Loader import ExtensionLoader
+from Core.Extension.Runtime.Registries import ExtensionRecord
 
 
 def _bind_registry(extension: Extension) -> ServiceRegistry:
@@ -71,6 +72,7 @@ class _LifecycleService(Service):
     def __init__(self) -> None:
         self.enabled = False
         self.disabled = False
+        self.disable_count = 0
 
     @override
     async def on_enable(self) -> None:
@@ -79,6 +81,16 @@ class _LifecycleService(Service):
     @override
     async def on_disable(self) -> None:
         self.disabled = True
+        self.disable_count += 1
+
+
+class _FailingLifecycleService(_LifecycleService):
+    name = 'failing_lifecycle'
+
+    @override
+    async def on_enable(self) -> None:
+        self.enabled = True
+        raise RuntimeError('service enable failed')
 
 
 class _ServiceExt(Extension):
@@ -151,12 +163,68 @@ class TestLifecycle:
         failing = _FailingExt('Bad')
         good.state = ExtensionState.loaded
         failing.state = ExtensionState.loaded
-        # extending list so rollback tries to disable good
         extension_manager.loader.extensions = [good, failing]
         asyncio.run(extension_manager.start())
         assert failing.state is ExtensionState.failed
-        # rollback disables already-enabled extensions
-        assert good.disabled is True
+        assert good.disabled is False
+        assert good.state is ExtensionState.enabled
+
+    def test_start_blocks_dependents_and_preserves_unrelated_extensions(self):
+        from Core.Extension import ExtensionMetadata
+
+        failing = _FailingExt('Bad')
+        dependent = _GoodExt('Dependent')
+        indirect = _GoodExt('Indirect')
+        independent = _GoodExt('Independent')
+        for extension, dependencies in (
+            (failing, []), (dependent, ['Bad']), (indirect, ['Dependent']), (independent, [])
+        ):
+            manifest = parse_manifest(f"""
+                [extension]
+                id = "{extension.id}"
+                name = "{extension.id}"
+                version = "1.0.0"
+                types = ["api"]
+                [dependencies]
+                extensions = {dependencies!r}
+            """)
+            extension._set_metadata(ExtensionMetadata(manifest))
+            extension.state = ExtensionState.loaded
+            extension_manager._registries.extensions.register_record(
+                extension.id, ExtensionRecord(manifest, Path(), False, True, instance=extension)
+            )
+        extension_manager.loader.extensions = [failing, dependent, indirect, independent]
+        asyncio.run(extension_manager.start())
+        assert failing.state is ExtensionState.failed
+        assert dependent.state is ExtensionState.blocked
+        assert indirect.state is ExtensionState.blocked
+        assert dependent.enabled is indirect.enabled is False
+        assert independent.state is ExtensionState.enabled
+
+    def test_start_blocks_extension_with_missing_dependency_record(self):
+        from Core.Extension import ExtensionMetadata
+
+        extension = _GoodExt('Orphan')
+        manifest = parse_manifest("""
+            [extension]
+            id = "Orphan"
+            name = "Orphan"
+            version = "1.0.0"
+            types = ["api"]
+            [dependencies]
+            extensions = ["Missing"]
+        """)
+        extension._set_metadata(ExtensionMetadata(manifest))
+        extension.state = ExtensionState.loaded
+        extension_manager._registries.extensions.register_record(
+            extension.id, ExtensionRecord(manifest, Path(), False, True, instance=extension)
+        )
+        extension_manager.loader.extensions = [extension]
+
+        asyncio.run(extension_manager.start())
+
+        assert extension.state is ExtensionState.blocked
+        assert extension.enabled is False
 
     def test_renderer_setup_failure_degrades_not_crash(self, monkeypatch):
         """渲染引擎初始化失败仅降级图片功能，不阻断扩展启动。"""
@@ -238,6 +306,20 @@ class TestLifecycle:
         assert service.disabled is True
         assert ext.state is ExtensionState.disabled
 
+    def test_failed_service_enable_disables_started_services_once(self):
+        first = _LifecycleService()
+        failing = _FailingLifecycleService()
+        extension = _ServiceExt('Partial', first)
+        extension.api.register(failing.name, failing, owner_id=extension.id)
+        extension.state = ExtensionState.loaded
+        extension_manager.loader.extensions = [extension]
+
+        asyncio.run(extension_manager.start())
+
+        assert first.disable_count == 1
+        assert failing.disable_count == 0
+        assert extension.state is ExtensionState.failed
+
 
 # ===== 启停状态文件 =====
 
@@ -283,12 +365,12 @@ class TestValidationIsolation:
             manifest = parse_manifest(content)
             # 在清单的 [dependencies] 段写入依赖关系
             manifest.dependencies.extensions = deps.get(extension_id, [])
-            loader._discovered[extension_id] = DiscoveredExtension(
+            extension_manager._registries.extensions.register_record(extension_id, ExtensionRecord(
                 manifest=manifest,
                 directory=Path('unused'),
                 single_file=True,
                 enabled=True,
-            )
+            ))
         return loader
 
     def test_incompatible_extension_blocked_not_crash(self, monkeypatch):
@@ -311,7 +393,7 @@ unibot = ">=999.0.0"
         # 完整校验+排序+加载流程，不应抛异常
         loader._validate_all()
         loader._import_and_load(loader._topological_sort())
-        info = extension_manager.registry.get('Playwright')
+        info = extension_manager.records.get('Playwright')
         assert info is not None
         assert info.state is ExtensionState.blocked
         assert info.failure_reason is not None
@@ -345,9 +427,9 @@ unibot = ">=999.0.0"
         )
         loader._validate_all()
         loader._import_and_load(loader._topological_sort())
-        assert extension_manager.registry['BadExt'].state is ExtensionState.blocked
+        assert extension_manager.records['BadExt'].state is ExtensionState.blocked
         # GoodExt 未失败也未被禁用：应进入 failed（模块不存在，导入失败）而非崩溃
-        assert extension_manager.registry['GoodExt'].state in (
+        assert extension_manager.records['GoodExt'].state in (
             ExtensionState.failed,
             ExtensionState.blocked,
         )
@@ -384,9 +466,9 @@ unibot = "*"
         # 拓扑排序必须仍能完成，不抛 DependencyError
         assert 'Incompat' in order and 'Depends' in order
         loader._import_and_load(order)
-        assert extension_manager.registry['Incompat'].state is ExtensionState.blocked
-        assert extension_manager.registry['Depends'].state is ExtensionState.blocked
-        assert 'Incompat' in (extension_manager.registry['Depends'].failure_reason or '')
+        assert extension_manager.records['Incompat'].state is ExtensionState.blocked
+        assert extension_manager.records['Depends'].state is ExtensionState.blocked
+        assert 'Incompat' in (extension_manager.records['Depends'].failure_reason or '')
 
 
 # ===== 图片模式关闭时的渲染扩展处理（#7） =====
@@ -410,8 +492,8 @@ class TestImageModeRendererSkip:
     """图片模式关闭时：纯渲染器扩展整体跳过，混合扩展仅跳过渲染器声明。"""
 
     @staticmethod
-    def _discovered(manifest: str) -> DiscoveredExtension:
-        return DiscoveredExtension(
+    def _make_record(manifest: str) -> ExtensionRecord:
+        return ExtensionRecord(
             manifest=parse_manifest(manifest),
             directory=Path('unused'),
             single_file=True,
@@ -425,9 +507,10 @@ class TestImageModeRendererSkip:
         loader = ExtensionLoader(
             extension_manager._registries, extension_manager.renderer_manager, extension_manager.command_manager
         )
-        info = self._discovered(_renderer_manifest('PureRenderer', '["renderer"]'))
+        info = self._make_record(_renderer_manifest('PureRenderer', '["renderer"]'))
         assert loader._skip_before_import('PureRenderer', info, {}) is True
-        assert extension_manager.registry['PureRenderer'].state is ExtensionState.disabled
+        assert extension_manager.records['PureRenderer'].state is ExtensionState.disabled
+        assert extension_manager.records['PureRenderer'].instance is None
 
     def test_mixed_renderer_extension_not_skipped_when_image_mode_off(self, monkeypatch):
         # renderer + api 的混合扩展：api 能力必须照常加载，不能因图片模式关闭被整体跳过
@@ -437,7 +520,7 @@ class TestImageModeRendererSkip:
         loader = ExtensionLoader(
             extension_manager._registries, extension_manager.renderer_manager, extension_manager.command_manager
         )
-        info = self._discovered(_renderer_manifest('MixedRenderer', '["renderer", "api"]'))
+        info = self._make_record(_renderer_manifest('MixedRenderer', '["renderer", "api"]'))
         assert loader._skip_before_import('MixedRenderer', info, {}) is False
 
     def test_mixed_renderer_declaration_skipped_when_image_mode_off(self, monkeypatch):
@@ -447,7 +530,7 @@ class TestImageModeRendererSkip:
         loader = ExtensionLoader(
             extension_manager._registries, extension_manager.renderer_manager, extension_manager.command_manager
         )
-        info = self._discovered(_renderer_manifest('MixedRenderer', '["renderer", "api"]'))
+        info = self._make_record(_renderer_manifest('MixedRenderer', '["renderer", "api"]'))
 
         class _Engine(BaseRenderer):
             name = 'engine_MixedRenderer'
@@ -476,16 +559,42 @@ class TestImageModeRendererSkip:
 
 
 class TestExtensionRegistryOwnerCleanup:
-    def test_unregister_by_owner_clears_instance_and_no_code_info(self):
+    def test_unregister_by_owner_clears_runtime_record(self):
         registry = extension_manager._registries.extensions
         extension = Extension()
         extension._declared_id = 'Mixed'
-        registry.register_extension('Mixed', extension)
-        registry.register_no_code_info('Mixed', {'id': 'Mixed'})
+        manifest = parse_manifest("""
+            [extension]
+            id = "Mixed"
+            name = "Mixed"
+            version = "1.0.0"
+            types = ["api"]
+        """)
+        extension._set_metadata(ExtensionMetadata(manifest))
+        registry.register_record('Mixed', ExtensionRecord(
+            manifest=manifest, directory=Path(), single_file=False, enabled=True, instance=extension
+        ))
         removed = registry.unregister_by_owner('Mixed')
-        assert removed == ['Mixed', 'Mixed']
-        assert registry.get_extension('Mixed') is None
-        assert 'Mixed' not in registry.no_code_info
+        assert removed == ['Mixed']
+        assert 'Mixed' not in registry.records
+        assert 'Mixed' not in registry.records
+
+    def test_records_returns_a_snapshot(self):
+        extension = Extension(id='Snapshot')
+        manifest = parse_manifest("""
+            [extension]
+            id = "Snapshot"
+            name = "Snapshot"
+            version = "1.0.0"
+            types = ["api"]
+        """)
+        extension._set_metadata(ExtensionMetadata(manifest))
+        extension_manager._registries.extensions.register_record(
+            'Snapshot', ExtensionRecord(manifest, Path(), False, True, instance=extension)
+        )
+        records = extension_manager.records
+        records.clear()
+        assert 'Snapshot' in extension_manager.records
 
     def test_unregister_by_owner_is_idempotent(self):
         registry = extension_manager._registries.extensions

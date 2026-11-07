@@ -6,11 +6,13 @@
 `@override` 仅作为编码惯例标记，不做运行时强制校验。
 """
 
+from pathlib import Path
 from typing import override
 
 import pytest
 
-from Core.Extension import Command, SubCommand
+from Core.Extension import Command, Extension, SubCommand, extension_manager, parse_manifest
+from Core.Extension.Runtime.Registries import ExtensionRecord
 
 
 class BuiltinListCommand(Command):
@@ -103,3 +105,30 @@ class TestCommandIdOverride:
         manager.register_command(BuiltinListCommand(), 'builtin:list')
         with pytest.raises(CommandError):
             manager.register_command(_OverrideListCommand(), 'builtin:list')
+
+    def test_declaration_failure_restores_overridden_command(self, monkeypatch):
+        manager = extension_manager.command_manager
+        loader = extension_manager.loader
+        original = BuiltinListCommand()
+        manager.register_command(original, 'builtin:list', owner_id='builtin')
+        loader._builtin_command_classes.add(BuiltinListCommand)
+        extension = Extension(id='Broken')
+        extension.register_command(_OverrideListCommand)
+        manifest = parse_manifest("""
+            [extension]
+            id = "Broken"
+            name = "Broken"
+            version = "1.0.0"
+            types = ["command", "resources"]
+            [resources]
+            root = "Resources"
+        """)
+        info = ExtensionRecord(manifest, Path('Broken'), single_file=False, enabled=True)
+
+        def fail_resources(extension_id, discovered):
+            raise RuntimeError('resources unavailable')
+
+        monkeypatch.setattr(loader, '_commit_no_code_package', fail_resources)
+        assert loader._try_commit_declarations('Broken', extension, info, {}) is False
+        assert manager.get_command('builtin:list') is original
+        assert extension_manager._registries.commands.owner_of('builtin:list') == 'builtin'

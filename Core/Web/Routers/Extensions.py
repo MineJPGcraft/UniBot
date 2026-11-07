@@ -138,9 +138,7 @@ def _restore_masked(current: dict, patch_data: dict) -> dict:
 
 def _ensure_extension_exists(extension_id: str) -> None:
     """校验扩展存在（registry 或无代码包），否则抛 404。"""
-    if extension_id in extension_manager.registry:
-        return
-    if extension_id in extension_manager.no_code_info:
+    if extension_id in extension_manager.records:
         return
     raise HTTPException(status_code=404, detail=text('extensions.not_found', extension_id=extension_id))
 
@@ -308,6 +306,8 @@ async def get_extension_config(extension_id: str, current_user: dict = Depends(g
     registration = extension_manager.templates.get(extension_id)
     if registration is not None:
         return {'code': 0, 'data': registration.config_store.value.model_dump(), 'message': 'ok'}
+    if extension_id in extension_manager.records:
+        return {'code': 0, 'data': {}, 'message': 'ok'}
     raise HTTPException(status_code=404, detail=text('extensions.not_found', extension_id=extension_id))
 
 
@@ -334,6 +334,8 @@ async def patch_extension_config(
         except Exception as error:
             return {'code': 1, 'data': None, 'message': text('extensions.config_invalid', error=error)}
         return {'code': 0, 'data': None, 'message': 'ok'}
+    if extension_id in extension_manager.records:
+        return {'code': 1, 'data': None, 'message': text('extensions.not_loaded')}
     raise HTTPException(status_code=404, detail=text('extensions.not_found', extension_id=extension_id))
 
 
@@ -355,9 +357,9 @@ async def get_renderers(current_user: dict = Depends(get_current_user)):
     """返回全部渲染插件（含图片模式未开启而禁用的），标注可用性与当前选中。"""
     active_names = set(extension_manager.renderers)
     items = []
-    for extension in extension_manager.registry.values():
-        metadata = extension.metadata
-        if ExtensionType.renderer not in metadata.types:
+    for record in extension_manager.records.values():
+        metadata = record.metadata
+        if metadata is None or ExtensionType.renderer not in metadata.types:
             continue
         name = metadata.renderer_name or metadata.id
         items.append(
@@ -365,8 +367,8 @@ async def get_renderers(current_user: dict = Depends(get_current_user)):
                 'name': name,
                 'current': name == config.image.renderer,
                 'available': name in active_names,
-                'state': extension.state.value,
-                'reason': extension.failure_reason or None,
+                'state': record.state.value,
+                'reason': record.failure_reason,
             }
         )
     items.sort(key=lambda item: (not item['available'], item['name']))
@@ -403,7 +405,7 @@ async def get_config_items(current_user: dict = Depends(get_current_user)):
         schema = registration.config_model.model_json_schema()
         if not (schema or {}).get('properties'):
             continue
-        no_code = extension_manager.no_code_info.get(extension_id, {})
+        no_code = extension_manager.get_extension_info(extension_id)
         items.append(
             {
                 'id': extension_id,
@@ -425,9 +427,9 @@ async def get_render_configs(current_user: dict = Depends(get_current_user)):
     active_names = set(extension_manager.renderers)
     items = []
     # 渲染器类型扩展（含图片模式未开启而禁用的）
-    for extension in extension_manager.registry.values():
-        metadata = extension.metadata
-        if ExtensionType.renderer not in metadata.types:
+    for record in extension_manager.records.values():
+        metadata = record.metadata
+        if metadata is None or ExtensionType.renderer not in metadata.types:
             continue
         name = metadata.renderer_name or metadata.id
         items.append(
@@ -438,31 +440,28 @@ async def get_render_configs(current_user: dict = Depends(get_current_user)):
                 'renderer_name': name,
                 'current': name == config.image.renderer,
                 'available': name in active_names,
-                'state': extension.state.value,
-                'reason': extension.failure_reason or None,
+                'state': record.state.value,
+                'reason': record.failure_reason,
                 # 未绑定扩展（图片模式未开启被禁用）无配置模型，schema 为空
-                'schema': extension.get_config_schema() if extension.config_model is not None else None,
-                'values': _mask_config(extension),
+                'schema': record.instance.get_config_schema() if record.instance is not None else {},
+                'values': _mask_config(record.instance) if record.instance is not None else {},
             }
         )
     # 模板类型扩展（纯无代码包 + 混合扩展的模板部分）
     for extension_id, registration in extension_manager.templates.items():
         # 混合扩展在 registry 中有实例，展示信息优先取实例
-        registry_extension = extension_manager.registry.get(extension_id)
-        no_code = extension_manager.no_code_info.get(extension_id, {})
-        display_name = str(registry_extension.metadata.name) if registry_extension else ''
-        display_name = display_name or no_code.get('name')
+        info = extension_manager.get_extension_info(extension_id)
         items.append(
             {
                 'id': extension_id,
                 'kind': 'template',
                 'template_id': extension_id,
-                'name': display_name or extension_id,
+                'name': info.get('name') or extension_id,
                 'current': extension_id == config.image.template,
                 'available': True,
                 'support_renders': list(registration.support_renders),
-                'state': registry_extension.state.value if registry_extension else 'enabled',
-                'reason': registry_extension.failure_reason if registry_extension else None,
+                'state': info.get('state', ExtensionState.enabled.value),
+                'reason': info.get('failure_reason'),
                 'schema': registration.config_model.model_json_schema(),
                 'values': registration.config_store.value.model_dump(mode='json'),
             }
@@ -478,9 +477,9 @@ async def switch_renderer(body: NameSwitchRequest, user: dict = Depends(require_
     # 校验目标是「已安装的渲染器扩展」，而非「已启用/已 setup 的引擎实例」
     # （否则图片模式未开启或目标引擎尚未 setup 时会被误判为不存在）
     installed = {
-        (ext.metadata.renderer_name or ext.metadata.id)
-        for ext in extension_manager.registry.values()
-        if ExtensionType.renderer in ext.metadata.types
+        (record.metadata.renderer_name or record.metadata.id)
+        for record in extension_manager.records.values()
+        if record.metadata is not None and ExtensionType.renderer in record.metadata.types
     }
     if name not in installed:
         return {'code': 1, 'data': None, 'message': text('extensions.renderer_not_found', name=name)}

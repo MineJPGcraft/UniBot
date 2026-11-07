@@ -1,67 +1,73 @@
-"""
-扩展注册表：已加载扩展实例与无代码扩展包展示信息的纯容器。
-
-只保存「有什么」，生命周期编排由 `Runtime/Manager.py` 负责；
-`api` 服务的全局表见 `Service.py`。
-"""
+"""扩展运行记录与注册容器，生命周期编排由 `Runtime/Manager.py` 负责。"""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, field
+from pathlib import Path
 
 from Core.Logging import logger
 
-if TYPE_CHECKING:
-    from ...Extension import Extension
+from ...Extension import Extension, ExtensionState
+from ...Manifest import ExtensionManifest, ExtensionMetadata
+
+
+@dataclass
+class ExtensionRecord:
+    """持有扩展元数据及可选代码实例，无代码或未加载扩展独立保存状态。"""
+
+    manifest: ExtensionManifest
+    directory: Path
+    single_file: bool
+    enabled: bool
+    metadata: ExtensionMetadata = field(init=False)
+    builtin: bool = False
+    module_path: str = ''
+    blocked_reason: str = ''
+    instance: Extension | None = None
+    _state: ExtensionState = ExtensionState.discovered
+    _failure_reason: str | None = None
+
+    def __post_init__(self) -> None:
+        self.metadata = ExtensionMetadata(self.manifest)
+
+    @property
+    def state(self) -> ExtensionState:
+        return self.instance.state if self.instance is not None else self._state
+
+    @property
+    def failure_reason(self) -> str | None:
+        return self.instance.failure_reason if self.instance is not None else self._failure_reason
 
 
 class ExtensionRegistry:
-    """扩展实例与无代码扩展包展示信息的注册容器。"""
+    """统一管理代码、无代码和未加载扩展记录的注册容器。"""
 
     def __init__(self) -> None:
-        self.extensions: dict[str, Extension] = {}
-        # 无代码扩展包（template/resources）展示信息：extension_id -> info dict
-        self.no_code_info: dict[str, dict] = {}
+        self.records: dict[str, ExtensionRecord] = {}
+
+    @property
+    def extensions(self) -> dict[str, Extension]:
+        """返回已实例化的代码扩展。"""
+        return {key: record.instance for key, record in self.records.items() if record.instance is not None}
 
     def clear(self) -> None:
         """清空全部注册项。"""
-        self.extensions.clear()
-        self.no_code_info.clear()
+        self.records.clear()
 
     # ===== 扩展 =====
 
-    def register_extension(self, extension_id: str, extension: Extension) -> None:
-        """登记一个已加载的扩展实例（重复登记覆盖并告警）。"""
-        if extension_id in self.extensions:
+    def register_record(self, extension_id: str, record: ExtensionRecord) -> None:
+        """登记代码、无代码或未加载扩展的统一记录。"""
+        if extension_id in self.records:
             logger.warning(f'Extension {extension_id} registered twice, keeping the latest one.')
-        self.extensions[extension_id] = extension
+        self.records[extension_id] = record
 
     def unregister_extension(self, extension_id: str) -> None:
         """注销一个扩展实例，不存在时静默忽略。"""
-        self.extensions.pop(extension_id, None)
+        self.records.pop(extension_id, None)
 
     def unregister_by_owner(self, extension_id: str) -> list[str]:
-        """按归属扩展 id 注销其登记项（扩展实例 + 无代码包展示信息），返回被移除的 id 列表。
-
-        与 `ServiceRegistry` / `CommandRegistry` / 渲染器注册表的 `unregister_by_owner`
-        保持对称；本容器中扩展实例与无代码包展示信息均以扩展 id 为键，故二者一并清理。
-        """
-        removed = [extension_id] if extension_id in self.extensions else []
-        self.extensions.pop(extension_id, None)
-        if self.no_code_info.pop(extension_id, None) is not None:
-            removed.append(extension_id)
+        """注销扩展运行记录，返回被移除的扩展 id 列表。"""
+        removed = [extension_id] if extension_id in self.records else []
+        self.records.pop(extension_id, None)
         return removed
-
-    def get_extension(self, extension_id: str) -> Extension | None:
-        """按 id 获取扩展实例，未登记返回 None。"""
-        return self.extensions.get(extension_id)
-
-    # ===== 无代码扩展包展示信息 =====
-
-    def register_no_code_info(self, extension_id: str, info: dict) -> None:
-        """登记一个无代码扩展包（template/resources）的展示信息。"""
-        self.no_code_info[extension_id] = info
-
-    def unregister_no_code_info(self, extension_id: str) -> None:
-        """注销无代码扩展包的展示信息。"""
-        self.no_code_info.pop(extension_id, None)
