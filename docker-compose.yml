@@ -12,7 +12,7 @@ services:
     environment:
       - TZ=Asia/Shanghai
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/status"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/webui/api/auth/status"]
       interval: 30s
       timeout: 10s
       start_period: 60s
