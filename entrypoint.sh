@@ -1,55 +1,66 @@
 #!/bin/sh
 set -e
 
-# 首次启动时初始化持久化数据卷
-# 等价于原 entrypoint.py 的逻辑
+# 让 /app 下的配置始终指向持久化卷 /data。
+#
+# 镜像里的 .env / Config.toml / Config / Data 都是真实文件/目录，
+# 使用已有 /data 卷重建容器时，/app 会恢复成镜像默认值。
+# 因此不能只在“首次安装”时建立软链接，否则重建后用户配置会全部丢失。
 
-INSTALLED_LOCK="/data/INSTALLED.lock"
+# 仅在 /data 中不存在目标时，从镜像复制默认配置（绝不覆盖已有配置）
+copy_default() {
+    name="$1"
+    src="/app/$name"
+    dst="/data/$name"
 
-# 建立符号链接：/data 下的目标 -> /app 下的链接
-symlink() {
-    target="$1"
-    link_path="$2"
-
-    # 若链接路径是已存在的真实目录（非符号链接），先删除
-    if [ -d "$link_path" ] && [ ! -L "$link_path" ]; then
-        rm -rf "$link_path"
+    if [ -e "$dst" ] || [ -L "$dst" ]; then
+        return 0
+    fi
+    if [ ! -e "$src" ]; then
+        return 0
     fi
 
-    # 若链接路径已存在（含符号链接），先删除
-    if [ -e "$link_path" ] || [ -L "$link_path" ]; then
-        rm -rf "$link_path"
+    if [ -d "$src" ] && [ ! -L "$src" ]; then
+        cp -rp "$src" "$dst"
+    else
+        cp -p "$src" "$dst"
     fi
-
-    ln -s "$target" "$link_path"
 }
 
-# 首次启动：把 /app 下的配置复制到 /data 并建立符号链接
-if [ ! -f "$INSTALLED_LOCK" ]; then
-    # 需要复制并持久化的文件/文件夹
-    for file in .env Config.toml Config; do
-        src="/app/$file"
-        dst="/data/$file"
-        if [ -f "$src" ]; then
-            cp -p "$src" "$dst"
-        elif [ -d "$src" ]; then
-            cp -rp "$src" "$dst"
-        fi
-        symlink "$dst" "$src"
-    done
+# 确保 /app/<name> 是指向 /data/<name> 的软链接
+link_to_data() {
+    name="$1"
+    dst="/data/$name"
+    path="/app/$name"
 
-    # 需要动态创建并持久化的文件夹
-    for file in Data; do
-        src="/data/$file"
-        dst="/app/$file"
-        mkdir -p "$src"
-        symlink "$src" "$dst"
-    done
+    if [ -L "$path" ] && [ "$(readlink "$path")" = "$dst" ]; then
+        return 0
+    fi
 
-    # 修改 .env：把 HOST 改为 0.0.0.0
-    sed -i 's/HOST="127.0.0.1"/HOST="0.0.0.0"/' /data/.env
+    if [ -e "$path" ] || [ -L "$path" ]; then
+        rm -rf "$path"
+    fi
 
-    touch "$INSTALLED_LOCK"
+    ln -s "$dst" "$path"
+}
+
+# Data 只持久化，不复制镜像默认值；若 /data/Data 缺失而 /app/Data 有内容，
+# 先把它迁到 /data，避免误删运行时生成的数据。
+if [ ! -e /data/Data ] && [ ! -L /data/Data ] && [ -d /app/Data ] && [ ! -L /app/Data ]; then
+    cp -rp /app/Data /data/Data
+fi
+mkdir -p /data/Data
+
+for name in .env Config.toml Config; do
+    copy_default "$name"
+    link_to_data "$name"
+done
+
+link_to_data "Data"
+
+# 容器内必须监听 0.0.0.0 才能通过 Docker 端口映射访问
+if [ -f /data/.env ]; then
+    sed -i 's/^HOST="127.0.0.1"/HOST="0.0.0.0"/' /data/.env
 fi
 
 # 执行传入的命令
