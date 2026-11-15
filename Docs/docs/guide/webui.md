@@ -36,7 +36,9 @@ description: UniBot 内置 WebUI 管理面板使用指南：可视化配置环�
 WebUI 是 UniBot 的**内置功能**，随机器人常驻开启，无需安装额外依赖或修改配置：
 
 - 后端依赖（`psutil` / `PyJWT` / `bcrypt` / `cryptography` / `qrcode`）已并入主依赖组，`uv sync` 即可。
-- 前端源码在仓库的 `WebUi/` 目录，构建产物 `WebUi/dist` 由发布包内置（自行部署源码时在 `WebUi/` 执行 `bun install && bun run build`）。
+- 前端源码在仓库的 `WebUi/` 目录。发布包把构建产物**直放** `WebUi/` 下（`index.html` +
+  `assets/`，不套一层 `dist/`）；自行从源码部署时在 `WebUi/` 执行 `bun install && bun run build`，
+  产物输出到 `WebUi/dist/`。两种布局后端都能自动识别。
 
 ### 启动与访问
 
@@ -193,8 +195,24 @@ UniBot 扩展系统的管理入口（需管理员权限）：
 ### 访问 WebUI 显示 404 / 无法加载
 
 1. 确认已执行 `uv sync` 安装依赖，且访问路径为 `/webui`、端口正确（默认 `8000`）。
-2. 若自行部署源码（非发布包），确认已在 `WebUi/` 目录执行 `bun install && bun run build` 生成 `WebUi/dist`。
+2. 若自行部署源码（非发布包），确认已在 `WebUi/` 目录执行 `bun install && bun run build`
+   生成 `WebUi/dist`。
 3. 查看机器人日志，确认 WebUI 静态文件是否成功挂载。
+
+### 修改前端代码后界面没变
+
+本地开发请使用 **dev 模式**，让后端不再托管旧产物、由 Vite dev server 提供热更新：
+
+```bash
+# 终端 1：后端
+UNIBOT_DEV=1 uv run Watchdog.py
+# 终端 2：前端
+cd WebUi && bun run dev
+```
+
+dev 模式下后端只挂载 `/webui/api`，不托管前端产物（访问后端端口的前端页面会 404），
+界面请访问 `http://localhost:5173/webui/`。
+需要以产物形式预览时，执行 `bun run build` 后**不要**设置 `UNIBOT_DEV` 并重启机器人。
 
 ### 登录提示密码错误 / 忘记管理员密码
 

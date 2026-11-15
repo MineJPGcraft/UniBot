@@ -170,7 +170,7 @@ list_compatible_mode = false
 ### Admin Panel (WebUI)
 
 WebUI is built in and starts with the bot — just open `http://<your-ip>:<port>/webui`, no configuration required.
-Frontend sources live in the repo's `WebUi/` directory; the build output `WebUi/dist` ships in release packages (when deploying from source, run `bun install && bun run build` in `WebUi/`).
+Frontend sources live in the repo's `WebUi/` directory. Release packages place the output directly under `WebUi/` (`index.html` + `assets/`); when deploying from source, run `bun install && bun run build` in `WebUi/`, which outputs to `WebUi/dist/`.
 
 ### Image Rendering
 

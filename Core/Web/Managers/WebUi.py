@@ -4,10 +4,14 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from Core.Logging import exception_logger, logger
+from Core.Process import is_dev_mode
 from Core.Web.Locale import get_language, text
 
-# 前端构建产物目录（`WebUi/dist`，由 `bun run build` 生成，发布包在 CI 中构建后打入）
-WEBUI_DIST_DIR = Path('WebUi') / 'dist'
+# 前端产物查找路径（两种布局）：
+#   - 发布包布局：产物直放 `WebUi/`（`index.html` + `assets/`），不套一层 dist
+#   - 本地构建布局：`bun run build` 输出到 `WebUi/dist/`
+WEBUI_DIR = Path('WebUi')
+WEBUI_DIST_DIR = WEBUI_DIR / 'dist'
 
 assets_missing_template = """
 <!DOCTYPE html>
@@ -54,19 +58,31 @@ assets_missing_template = """
 
 
 class WebUiManager:
-    """WebUI 管理面板：负责 API 路由挂载与前端构建产物（`WebUi/dist`）的静态文件挂载。
+    """WebUI 管理面板：负责 API 路由挂载与前端构建产物的静态文件挂载。
 
     WebUI 是核心内置功能，不再提供启停开关；前端源码随核心仓库分发
-    （`WebUi/`），构建产物 `WebUi/dist` 由 `bun run build` 生成，发布包在 CI 中构建后打入。
+    （`WebUi/`），构建产物由 `bun run build` 生成。发布包把产物直放 `WebUi/`，
+    本地构建则在 `WebUi/dist/`，两者都能被自动识别。
     """
 
     app: FastAPI | None = None
 
-    dist_dir: Path = WEBUI_DIST_DIR
+    @property
+    def dist_dir(self) -> Path | None:
+        """返回当前可用的前端产物目录，未找到任何产物时返回 None。
+
+        发布包布局优先：源码目录同样存在 `index.html`（Vite 入口），
+        因此以 `assets/` 目录是否存在判定该目录是否已被构建产物替换。
+        """
+        if (WEBUI_DIR / 'assets').is_dir() and (WEBUI_DIR / 'index.html').is_file():
+            return WEBUI_DIR
+        if (WEBUI_DIST_DIR / 'index.html').is_file():
+            return WEBUI_DIST_DIR
+        return None
 
     def is_ready(self) -> bool:
         """检查前端构建产物是否存在。"""
-        return (self.dist_dir / 'index.html').exists()
+        return self.dist_dir is not None
 
     def mount(self, app: FastAPI):
         """挂载 WebUI API 路由到 /webui 前缀下（需在 nonebot.init() 之后、nonebot.run() 之前调用）。"""
@@ -102,8 +118,17 @@ class WebUiManager:
         if self.app is None:
             logger.warning('WebUI API routes not mounted yet, cannot serve static files.')
             return
-        if not self.is_ready():
-            logger.warning('WebUI build output missing (WebUi/dist), only API routes are mounted.')
+        if is_dev_mode():
+            # 开发模式：前端由 Vite dev server 提供（含热更新），后端不托管本地产物，
+            # 也不注册任何前端页面路由（访问后端端口只会得到 404）
+            logger.info(
+                'WebUI dev mode: static files are not mounted. '
+                'Run `bun run dev` in WebUi/ and open the Vite dev server (default http://localhost:5173/webui/).'
+            )
+            return
+        dist_dir = self.dist_dir
+        if dist_dir is None:
+            logger.warning('WebUI build output missing, only API routes are mounted.')
             self.mount_assets_missing_page()
             return
 
@@ -112,7 +137,7 @@ class WebUiManager:
             """根路径重定向到 /webui/。"""
             return RedirectResponse(url='/webui')
 
-        self.app.frontend('/webui', directory=self.dist_dir, fallback='index.html')
+        self.app.frontend('/webui', directory=dist_dir, fallback='index.html')
         logger.success('WebUI static files mounted. Visit the root path below to open the WebUI.')
 
     def mount_assets_missing_page(self):
@@ -131,7 +156,7 @@ class WebUiManager:
             return HTMLResponse(assets_missing_template.format(lang=lang, title=title, message=message, retry=retry))
 
     def init(self):
-        """初始化：挂载静态文件（前端构建产物缺失时只保留 API 与提示页）。"""
+        """初始化：挂载静态文件（dev 模式或产物缺失时只保留 API 路由）。"""
         try:
             self.mount_static()
         except Exception as error:

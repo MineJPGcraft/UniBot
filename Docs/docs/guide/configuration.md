@@ -168,7 +168,7 @@ list_compatible_mode = false
 ### 管理面板（WebUI）
 
 WebUI 为内置功能，默认随机器人启动，访问 `http://<你的IP>:<PORT>/webui` 即可，无需任何配置项。
-前端源码位于仓库 `WebUi/`，构建产物 `WebUi/dist` 随发布包分发；自行部署源码时需在 `WebUi/` 下执行 `bun install && bun run build`。
+前端源码位于仓库 `WebUi/`；发布包把产物直放 `WebUi/`（`index.html` + `assets/`），自行部署源码时需在 `WebUi/` 下执行 `bun install && bun run build`，产物输出到 `WebUi/dist/`。
 
 ### 匿名数据上报（Telemetry）
 

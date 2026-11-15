@@ -24,7 +24,7 @@ jobs:
         with:
           bun-version: latest
 
-      # 前端源码随核心仓库分发，发布包需要内置构建产物 WebUi/dist
+      # 前端源码随核心仓库分发，发布包需要内置构建产物（直放 WebUi/ 下，不套 dist）
       - name: Build WebUI
         working-directory: WebUi
         run: |
@@ -42,7 +42,7 @@ jobs:
           #   - .github/         ：CI/CD 工作流，对用户无用
           #   - tests/           ：测试代码
           #   - docs/ Docs/      ：文档（兼容大小写，含任意层级嵌套）
-          #   - WebUi/           ：前端源码与 node_modules（仅保留构建产物 WebUi/dist）
+          #   - WebUi/           ：前端源码与 node_modules（仅保留构建产物，直放 WebUi/ 下）
           zip -r "${ZIP_NAME}" . \
             -x ".git/*" \
             -x ".github/*" \
@@ -55,8 +55,13 @@ jobs:
             -x "*/node_modules/*" \
             -x "**/__pycache__/*"
 
-          # 只把构建产物放进包里
-          zip -r "${ZIP_NAME}" WebUi/dist
+          # 只把构建产物放进包里：产物直放 WebUi/ 下（不套一层 dist），
+          # 先复制到临时目录再按 WebUi/ 前缀打包（zip 无法重写条目路径）
+          STAGE_DIR="$(mktemp -d)"
+          mkdir -p "${STAGE_DIR}/WebUi"
+          cp -R WebUi/dist/. "${STAGE_DIR}/WebUi/"
+          (cd "${STAGE_DIR}" && zip -r "${GITHUB_WORKSPACE}/${ZIP_NAME}" WebUi)
+          rm -rf "${STAGE_DIR}"
 
           echo "打包完成: ${ZIP_NAME}"
           ls -lh "${ZIP_NAME}"

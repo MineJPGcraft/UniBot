@@ -35,7 +35,10 @@ It provides **visual configuration, real-time monitoring, server / player manage
 WebUI is a **built-in feature** of UniBot and is always enabled with the bot; no extra dependencies or config changes are needed:
 
 - Backend dependencies (`psutil` / `PyJWT` / `bcrypt` / `cryptography` / `qrcode`) are part of the main dependency set, so `uv sync` is all you need.
-- Frontend sources live in the repo's `WebUi/` directory; the build output `WebUi/dist` ships inside release packages (when deploying from source, run `bun install && bun run build` in `WebUi/`).
+- Frontend sources live in the repo's `WebUi/` directory. Release packages place the
+  build output **directly** under `WebUi/` (`index.html` + `assets/`, without an extra
+  `dist/` level); when deploying from source, run `bun install && bun run build` in
+  `WebUi/`, which outputs to `WebUi/dist/`. The backend detects either layout.
 
 ### Startup and Access
 
@@ -185,6 +188,22 @@ View the current account info and change your own password.
 1. Confirm that `uv sync` has been run, and that the access path is `/webui` with the correct port (default `8000`).
 2. If deploying from source (not a release package), confirm that `bun install && bun run build` was run in `WebUi/` to produce `WebUi/dist`.
 3. Check the bot logs and confirm whether the WebUI static files were mounted successfully.
+
+### Frontend Changes Do Not Show Up
+
+For local development, use **dev mode** so the backend stops serving stale output and the
+Vite dev server provides hot reload:
+
+```bash
+# Terminal 1: backend
+UNIBOT_DEV=1 uv run Watchdog.py
+# Terminal 2: frontend
+cd WebUi && bun run dev
+```
+
+In dev mode the backend only mounts `/webui/api` and serves no frontend pages (frontend
+routes on the backend port return 404); open `http://localhost:5173/webui/` instead. To
+preview the built output, run `bun run build` and restart the bot **without** `UNIBOT_DEV`.
 
 ### Login Says Wrong Password / Forgot the Admin Password
 

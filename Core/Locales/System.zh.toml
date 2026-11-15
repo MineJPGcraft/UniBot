@@ -192,8 +192,8 @@ no_active_login = "当前没有进行中的扫码登录"
 
 [api.webui]
 assets_missing_title = "WebUI 前端资源缺失"
-assets_missing_message = "未找到前端构建产物（WebUi/dist）。源码入仓，需在 WebUi/ 目录执行 bun install && bun run build 生成；发布包已内置构建产物。"
-assets_missing_retry = "构建完成后重启机器人即可访问面板。"
+assets_missing_message = "未找到前端构建产物（发布包为 WebUi/index.html 与 WebUi/assets/）。源码部署请在 WebUi/ 目录执行 bun install && bun run build 生成 WebUi/dist/。"
+assets_missing_retry = "构建完成后重启机器人即可访问面板；开发时可用 UNIBOT_DEV=1 启动后端并运行 bun run dev。"
 
 [api.schema.config]
 admin_superusers_label = "管理员视为超级用户"

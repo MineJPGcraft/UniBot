@@ -20,6 +20,8 @@ Config/Messages.*.toml
 # 迁移完成标记 Data/.locales_migrated 随 Data/ 目录一并忽略
 /WebUi/dist/
 /WebUi/node_modules/
+# 发布包布局的构建产物（产物直放 WebUi/ 下，仅 assets/ 可忽略，index.html 是源码入口）
+/WebUi/assets/
 /Extensions/
 /.studio/
 .docs/

@@ -20,18 +20,26 @@
 
 ## 📦 构建产物
 
-本目录是 **UniBot 核心仓库的一部分**（`UniBot/WebUi/`），存放前端源码。发布时通过 `vite build` 构建出静态资源（`index.html` + `assets/`），由 `release.yml` 直接打入 `UniBot.zip`。
+本目录是 **UniBot 核心仓库的一部分**（`UniBot/WebUi/`），存放前端源码。发布时通过
+`vite build` 构建出静态资源（`index.html` + `assets/`），由 `release.yml` 打包进
+`UniBot.zip`。
 
-UniBot 后端启动时托管本目录下的 `dist/` 到 `/webui` 路径（WebUI 为内置功能，无需开关），**因此一般用户无需手动构建**。
+产物有两种布局，后端 `webui_manager` 会自动识别（WebUI 为内置功能，无需开关）：
 
 ```txt
-[bun run build]  ──►  WebUi/dist/           # 构建产物（不入库）
+[bun run build]  ──►  WebUi/dist/           # 本地构建布局（不入库）
                           ├── index.html
                           └── assets/       # JS / CSS 静态资源
-        │  CI 构建后打进 UniBot.zip
+        │
+        │  CI 打包时把 dist/ 的内容直放 WebUi/ 下
         ▼
-UniBot 启动时托管 WebUi/dist  ──►  访问 /webui
+发布包布局：WebUi/index.html + WebUi/assets/   # 不套一层 dist/
+        │
+        ▼
+UniBot 启动时托管  ──►  访问 /webui
 ```
+
+> 一般用户无需手动构建：发布包已内置产物。
 
 ## 📁 项目结构
 
@@ -73,10 +81,22 @@ WebUi/
 bun install
 
 # 启动开发服务器（热更新）
-bun dev
+bun run dev
 ```
 
-`vite.config.js` 已将 `/webui/api` 代理到 `http://localhost:8000`，因此开发时可让后端在 `8000` 端口运行，前后端联调无需额外配置。
+开发时用 **dev 模式**启动后端，避免后端托管本地产物、干扰热更新：
+
+```bash
+# 在 UniBot/ 目录
+UNIBOT_DEV=1 uv run Watchdog.py
+```
+
+dev 模式下后端只挂载 `/webui/api`，**不托管**前端产物，也不注册前端页面路由
+（访问后端端口的前端页面只会 404），启动日志会提示当前处于 dev 模式。
+界面请访问 Vite dev server：`http://localhost:5173/webui/`。
+
+`vite.config.js` 已将 `/webui/api` 代理到 `http://localhost:8000`，因此开发时可让后端在
+`8000` 端口运行，前后端联调无需额外配置。
 
 > ⚠️ 注意：`/webui/ws` 不做代理，开发环境下 WebSocket 由前端直连后端（避免 Bun 下 http-proxy 兼容问题）。
 
@@ -86,7 +106,8 @@ bun dev
 bun run build
 ```
 
-产物输出到 `dist/`，由 UniBot 后端直接托管（发布包在 CI 中构建后打入 `UniBot.zip`）。
+产物输出到 `dist/`，由 UniBot 后端直接托管（本地构建布局）；发布包会把 `dist/` 的内容
+直放 `WebUi/` 后再打包进 `UniBot.zip`。
 
 ## 🧪 接口约定
 

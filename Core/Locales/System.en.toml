@@ -192,8 +192,8 @@ no_active_login = "No QR code login is currently in progress"
 
 [api.webui]
 assets_missing_title = "WebUI frontend assets missing"
-assets_missing_message = "The frontend build output (WebUi/dist) was not found. Sources are in the repo: run bun install && bun run build inside WebUi/; release packages already bundle the build output."
-assets_missing_retry = "Restart the bot after building to access the panel."
+assets_missing_message = "Frontend build output not found (release packages ship WebUi/index.html and WebUi/assets/). For a source deployment, run bun install && bun run build inside WebUi/ to generate WebUi/dist/."
+assets_missing_retry = "Restart the bot after building to access the panel; for development, start the backend with UNIBOT_DEV=1 and run bun run dev."
 
 [api.schema.config]
 admin_superusers_label = "Treat admins as superusers"
