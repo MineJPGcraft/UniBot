@@ -272,6 +272,8 @@ class ExtensionLoader:
 
         内置扩展（`builtin: 前缀声明`）优先于用户扩展排序，确保覆盖命令所需的
         内置命令类先被登记，用户扩展随后才能判定并取代内置命令。
+        与校验阶段一致：依赖图错误（缺失/循环依赖）只隔离到涉事扩展并标记 blocked，
+        不阻断其余扩展的正常加载。
         """
         records = self._registries.extensions.records
         extension_ids = set(records)
@@ -279,9 +281,9 @@ class ExtensionLoader:
         visited: dict[str, int] = {}  # 0=临时标记, 1=已加入
 
         def visit(extension_id: str, stack: list[str]) -> None:
-            if visited.get(extension_id) == 1:
+            if visited.get(extension_id):
                 return
-            if visited.get(extension_id) == 0:
+            if visited.get(extension_id):
                 cycle = ' -> '.join(stack + [extension_id])
                 raise DependencyError(f'Circular dependency detected: {cycle}')
             visited[extension_id] = 0
@@ -295,13 +297,22 @@ class ExtensionLoader:
             visited[extension_id] = 1
             order.append(extension_id)
 
+
         # 先访问内置扩展，确保其命令类先登记
-        for extension_id in extension_ids:
-            if records[extension_id].builtin:
+        for extension_id in sorted(extension_ids, key=lambda item: not records[item].builtin):
+            # 访问单个扩展；依赖图错误时把当前依赖链上的扩展全部标记 blocked 并跳过。
+            try:
                 visit(extension_id, [])
-        for extension_id in extension_ids:
-            if not records[extension_id].builtin:
-                visit(extension_id, [])
+            except DependencyError as error:
+                # visited==0 的节点即出错时的依赖链（含循环成员/缺失依赖的声明者），
+                # 它们都无法得到合法加载顺序，统一标记 blocked，由后续阶段按依赖传播阻塞下游
+                for pending_id in [item for item, mark in visited.items() if mark == 0]:
+                    del visited[pending_id]
+                    info = records[pending_id]
+                    info.blocked_reason = str(error)
+                    self._register_display(pending_id, info, ExtensionState.blocked, str(error))
+                    logger.error(f'Extension {pending_id} blocked by dependency error: {error}')
+
         return order
 
     # ===== 导入与加载 =====
@@ -489,8 +500,7 @@ class ExtensionLoader:
 
     def _register_display(self, extension_id: str, info: ExtensionRecord, state: ExtensionState, reason: str):
         """更新扩展记录状态，不构造代码实例。"""
-        info._state = state
-        info._failure_reason = reason or None
+        info.mark_state(state, reason or None)
         self._registries.extensions.records[extension_id] = info
 
     def _register_no_code_display(
@@ -620,7 +630,3 @@ class ExtensionLoader:
             if issubclass(command_cls, builtin_cls):
                 return builtin_cls
         return None
-
-
-# 供单例使用
-loader = ExtensionLoader

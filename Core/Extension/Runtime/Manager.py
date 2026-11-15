@@ -209,16 +209,9 @@ class ExtensionManager:
         ]
         loaded_extensions = {extension.id: extension for extension in self.loader.extensions}
         for extension_id in extension_order:
-            record = self._registries.extensions.records.get(extension_id)
-            if record is None and not discovered:
-                extension = loaded_extensions.get(extension_id)
-                if extension is None:
-                    continue
-            elif record is None or record.instance is None:
-                self._block_unavailable_record(extension_id, record)
+            extension = self._resolve_startable(extension_id, discovered, loaded_extensions)
+            if extension is None:
                 continue
-            else:
-                extension = record.instance
             if extension.state is not ExtensionState.loaded:
                 continue
             if reason := self._unavailable_dependency(extension):
@@ -244,6 +237,23 @@ class ExtensionManager:
                 )
         logger.success('All extensions started.')
 
+    def _resolve_startable(
+        self, extension_id: str, discovered: bool, loaded_extensions: dict[str, Extension]
+    ) -> Extension | None:
+        """
+        解析待启用实例：无记录且未经发现流程时回退到已加载实例表；
+        记录存在但无代码实例（无代码包/被阻塞）时按依赖不可用阻塞并返回 None。
+        """
+        record = self._registries.extensions.records.get(extension_id)
+        if record is None:
+            if discovered:
+                return None
+            return loaded_extensions.get(extension_id)
+        if record.instance is None:
+            self._block_unavailable_record(extension_id, record)
+            return None
+        return record.instance
+
     def _unavailable_dependency(self, extension: Extension) -> str:
         if extension._metadata is None:
             return ''
@@ -260,8 +270,7 @@ class ExtensionManager:
             dependency = self._registries.extensions.records.get(dependency_id)
             if dependency is not None and dependency.state is ExtensionState.enabled:
                 continue
-            record._failure_reason = f'依赖扩展 {dependency_id} 未启用'
-            record._state = ExtensionState.blocked
+            record.mark_state(ExtensionState.blocked, f'依赖扩展 {dependency_id} 未启用')
             self.renderer_manager.unregister_template(extension_id)
             self.renderer_manager.unregister_resources(extension_id)
             self.renderer_manager.unregister_renderers_by_owner(extension_id)

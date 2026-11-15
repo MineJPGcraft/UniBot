@@ -30,6 +30,11 @@ class ExtensionRecord:
     def __post_init__(self) -> None:
         self.metadata = ExtensionMetadata(self.manifest)
 
+    def mark_state(self, state: ExtensionState, reason: str | None = None) -> None:
+        """迁移未实例化扩展的状态并记录失败原因（实例存在时状态由实例自身持有）。"""
+        self._state = state
+        self._failure_reason = reason
+
     @property
     def state(self) -> ExtensionState:
         return self.instance.state if self.instance is not None else self._state
