@@ -130,7 +130,7 @@ class VersionManager:
                     # 必须用复制而非移动：临时目录与工作目录可能不同盘，Windows 下 os.replace 无法跨盘移动
                     shutil.copytree(source, core_dir)
                 except Exception:
-                    shutil.rmtree(core_dir, ignore_errors=True)
+                    shutil.rmtree(core_dir, ignore_errors=True)                 
                     if backup_dir.exists():
                         backup_dir.rename(core_dir)
                     raise
@@ -150,27 +150,22 @@ class VersionManager:
         return None
 
     def _sync_version_from_archive(self, archive_pyproject: Path) -> None:
-        """从压缩包 pyproject.toml 同步项目版本与 WebUI 版本到本地，保留本地其余配置。"""
+        """从压缩包 pyproject.toml 同步项目版本到本地，保留本地其余配置。"""
         if not archive_pyproject.is_file():
             logger.warning('pyproject.toml missing in the archive, skipping version sync.')
             return
         try:
             archive_data = tomlkit.parse(archive_pyproject.read_text('Utf-8'))
             new_version = archive_data.get('project', {}).get('version', '')
-            new_webui_version = archive_data.get('tool', {}).get('unibot', {}).get('webui_version', '')
             if not new_version:
                 logger.warning('Archive pyproject.toml has no version field, skipping version sync.')
                 return
             local_path = Path('pyproject.toml')
             local_data = tomlkit.parse(local_path.read_text('Utf-8'))
             local_data['project']['version'] = new_version
-            if new_webui_version:
-                unibot_data = local_data.setdefault('tool', {}).setdefault('unibot', {})
-                unibot_data['webui_version'] = new_webui_version
             atomic_write(local_path, tomlkit.dumps(local_data))
             self.version = str(new_version)
-            config_manager.webui_version = str(new_webui_version)
-            logger.info(f'Project version synced to {new_version}, WebUI version synced to {new_webui_version}.')
+            logger.info(f'Project version synced to {new_version}.')
         except Exception as error:
             logger.warning(f'Failed to sync version numbers: {error}')
 

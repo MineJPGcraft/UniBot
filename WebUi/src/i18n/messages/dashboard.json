@@ -1,0 +1,42 @@
+{
+  "zh": {
+    "dashboard_page_desc": "机器人运行状态总览",
+    "dashboard_ws_connected": "实时推送已连接",
+    "dashboard_ws_disconnected": "实时推送未连接",
+    "dashboard_stat_version": "版本",
+    "dashboard_stat_uptime": "运行时长",
+    "dashboard_stat_players_bound": "已绑定玩家",
+    "dashboard_stat_ws_clients": "WS 客户端",
+    "dashboard_stat_memory": "内存占用",
+    "dashboard_stat_cpu": "CPU 占用",
+    "dashboard_server_title": "服务器一览",
+    "dashboard_server_online_count": "{online} / {total} 在线",
+    "dashboard_server_empty_title": "暂无服务器",
+    "dashboard_server_empty_description": "尚未有 Minecraft 服务器连接到机器人",
+    "dashboard_logs_title": "实时日志",
+    "dashboard_logs_view_all": "查看全部",
+    "dashboard_logs_waiting": "等待日志推送…",
+    "dashboard_adapters_title": "已加载适配器",
+    "dashboard_adapters_empty": "暂无适配器"
+  },
+  "en": {
+    "dashboard_page_desc": "Overview of bot runtime status",
+    "dashboard_ws_connected": "Realtime push connected",
+    "dashboard_ws_disconnected": "Realtime push disconnected",
+    "dashboard_stat_version": "Version",
+    "dashboard_stat_uptime": "Uptime",
+    "dashboard_stat_players_bound": "Bound players",
+    "dashboard_stat_ws_clients": "WS clients",
+    "dashboard_stat_memory": "Memory usage",
+    "dashboard_stat_cpu": "CPU usage",
+    "dashboard_server_title": "Servers",
+    "dashboard_server_online_count": "{online} / {total} online",
+    "dashboard_server_empty_title": "No servers yet",
+    "dashboard_server_empty_description": "No Minecraft server has connected to the bot",
+    "dashboard_logs_title": "Live logs",
+    "dashboard_logs_view_all": "View all",
+    "dashboard_logs_waiting": "Waiting for log push…",
+    "dashboard_adapters_title": "Loaded adapters",
+    "dashboard_adapters_empty": "No adapters"
+  }
+}

@@ -1,15 +1,13 @@
-import asyncio
-import shutil
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from Core.Files import atomic_write
 from Core.Logging import exception_logger, logger
-from Core.Managers import config_manager
-from Core.Network import github_download
 from Core.Web.Locale import get_language, text
+
+# 前端构建产物目录（`WebUi/dist`，由 `bun run build` 生成，发布包在 CI 中构建后打入）
+WEBUI_DIST_DIR = Path('WebUi') / 'dist'
 
 assets_missing_template = """
 <!DOCTYPE html>
@@ -56,74 +54,19 @@ assets_missing_template = """
 
 
 class WebUiManager:
-    """WebUI 管理面板：负责 API 路由挂载、前端静态资源的版本校验/下载与静态文件挂载。"""
+    """WebUI 管理面板：负责 API 路由挂载与前端构建产物（`WebUi/dist`）的静态文件挂载。
+
+    WebUI 是核心内置功能，不再提供启停开关；前端源码随核心仓库分发
+    （`WebUi/`），构建产物 `WebUi/dist` 由 `bun run build` 生成，发布包在 CI 中构建后打入。
+    """
 
     app: FastAPI | None = None
 
-    webui_dir: Path = Path('WebUi')
-    version_file: Path = Path('WebUi/.version')
-
-    @property
-    def version(self) -> str:
-        """当前期望的 WebUI 版本（来自 pyproject.toml [unibot] webui_version）。"""
-        return config_manager.webui_version
-
-    def read_local_version(self) -> str:
-        """读取本地已下载的 WebUI 版本。"""
-        if self.version_file.exists():
-            return self.version_file.read_text('Utf-8').strip()
-        return ''
+    dist_dir: Path = WEBUI_DIST_DIR
 
     def is_ready(self) -> bool:
-        """检查本地 WebUI 是否已下载且版本匹配。"""
-        return (self.webui_dir / 'index.html').exists() and self.read_local_version() == self.version
-
-    async def ensure_downloaded(self) -> bool:
-        """确保 WebUI 静态资源已下载且版本匹配，否则重新下载。"""
-        if not self.version:
-            logger.warning('No WebUI version configured, skipping download.')
-            return False
-        if self.is_ready():
-            logger.info(f'WebUI static assets ready ({self.version}).')
-            return True
-        logger.info(f'Downloading WebUI static assets ({self.version})...')
-        url = f'https://github.com/MineJPGcraft/UniBot.WebUi/releases/download/{self.version}/WebUi.zip'
-        if not (response := await github_download(url)):
-            logger.warning(f'Failed to download WebUI ({self.version}), check your network and retry later.')
-            return False
-        try:
-            # 解压与目录替换属于重 IO，放入线程执行避免阻塞事件循环
-            await asyncio.to_thread(self._install_assets, response.getvalue())
-            atomic_write(self.version_file, self.version)
-        except Exception as error:
-            logger.warning(f'Failed to extract WebUI static assets: {error}')
-            return False
-        logger.success(f'WebUI static assets downloaded ({self.version}).')
-        return True
-
-    def _install_assets(self, archive_data: bytes) -> None:
-        """先解压到同目录 staging，再原子替换 WebUi 目录，失败时回滚旧版本（同步阻塞）。"""
-        # 函数内导入：同 ensure_downloaded 的延迟导入原因（避免抢先注册插件托管包）
-        from Core.Utils import safe_extract_zip
-
-        staging_dir = self.webui_dir.with_name(f'{self.webui_dir.name}.staging')
-        backup_dir = self.webui_dir.with_name(f'{self.webui_dir.name}.backup')
-        for path in (staging_dir, backup_dir):
-            if path.exists():
-                shutil.rmtree(path)
-        staging_dir.mkdir(parents=True, exist_ok=True)
-        safe_extract_zip(archive_data, staging_dir)
-        # 旧目录先改名备份，再切换 staging；切换失败则恢复备份
-        if self.webui_dir.exists():
-            self.webui_dir.rename(backup_dir)
-        try:
-            staging_dir.rename(self.webui_dir)
-        except Exception:
-            if backup_dir.exists():
-                backup_dir.rename(self.webui_dir)
-            raise
-        if backup_dir.exists():
-            shutil.rmtree(backup_dir)
+        """检查前端构建产物是否存在。"""
+        return (self.dist_dir / 'index.html').exists()
 
     def mount(self, app: FastAPI):
         """挂载 WebUI API 路由到 /webui 前缀下（需在 nonebot.init() 之后、nonebot.run() 之前调用）。"""
@@ -159,8 +102,8 @@ class WebUiManager:
         if self.app is None:
             logger.warning('WebUI API routes not mounted yet, cannot serve static files.')
             return
-        if not (self.webui_dir / 'index.html').exists():
-            logger.warning('WebUI static assets missing, only API routes are mounted.')
+        if not self.is_ready():
+            logger.warning('WebUI build output missing (WebUi/dist), only API routes are mounted.')
             self.mount_assets_missing_page()
             return
 
@@ -169,30 +112,26 @@ class WebUiManager:
             """根路径重定向到 /webui/。"""
             return RedirectResponse(url='/webui')
 
-        self.app.frontend('/webui', directory=self.webui_dir, fallback='index.html')
+        self.app.frontend('/webui', directory=self.dist_dir, fallback='index.html')
         logger.success('WebUI static files mounted. Visit the root path below to open the WebUI.')
 
     def mount_assets_missing_page(self):
-        """WebUI 资源缺失时挂载根路径提示页，告知静态资源下载失败。"""
+        """前端构建产物缺失时挂载根路径提示页，告知如何构建。"""
         if self.app is None:
             logger.warning('WebUI API routes not mounted yet, cannot serve static files.')
             return
 
         @self.app.get('/', include_in_schema=False)
         async def assets_missing_page():
-            """根路径返回 WebUI 资源加载失败提示页。"""
+            """根路径返回 WebUI 构建产物缺失提示页。"""
             lang = 'zh-CN' if get_language() == 'zh' else 'en'
             title = text('webui.assets_missing_title')
             message = text('webui.assets_missing_message')
             retry = text('webui.assets_missing_retry')
             return HTMLResponse(assets_missing_template.format(lang=lang, title=title, message=message, retry=retry))
 
-    async def init(self):
-        """初始化：校验并下载 WebUI 静态资源，随后挂载静态文件。"""
-        try:
-            await self.ensure_downloaded()
-        except Exception as error:
-            exception_logger.error(f'WebUI download failed, WebUI has been disabled automatically: {error}')
+    def init(self):
+        """初始化：挂载静态文件（前端构建产物缺失时只保留 API 与提示页）。"""
         try:
             self.mount_static()
         except Exception as error:

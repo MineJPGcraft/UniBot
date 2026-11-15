@@ -65,13 +65,13 @@ def _write_pyproject(root: Path, extensions: list[str]) -> None:
     )
 
 
-def _write_config_toml(root: Path, *, webui_enabled: bool) -> None:
+def _write_config_toml(root: Path, *, telemetry_enabled: bool) -> None:
     """写入 Config.toml（用于验证已启用 extras 的读取）。"""
     (root / 'Config.toml').write_text(
         textwrap.dedent(
             f"""
-            [webui]
-            enabled = {str(webui_enabled).lower()}
+            [telemetry]
+            enabled = {str(telemetry_enabled).lower()}
             """
         ),
         encoding='Utf-8',
@@ -214,32 +214,32 @@ class TestUvCommandBuilders:
 
     def test_sync_command_includes_no_dev_and_extras(self, tmp_path, monkeypatch):
         """uv sync 必须带 --no-dev 并包含全部已启用 extras 与 extensions（不再带 --inexact）。"""
-        _write_config_toml(tmp_path, webui_enabled=True)
+        _write_config_toml(tmp_path, telemetry_enabled=True)
+        monkeypatch.setattr(Dependencies, 'EXTRA_CONFIG_FIELDS', {'telemetry': ('telemetry', 'enabled')})
         _setup(tmp_path, monkeypatch)
 
         command = Dependencies.build_uv_sync_command()
         assert command[:3] == ['uv', 'sync', '--no-dev']
         assert '--inexact' not in command
         assert '--extra' in command
-        assert 'webui' in command
+        assert 'telemetry' in command
         assert 'extensions' in command
 
-    def test_sync_command_forces_webui_even_when_disabled(self, tmp_path, monkeypatch):
-        """webui 为框架级必需 extra：即使 Config.toml 未开启也应始终同步。"""
-        _write_config_toml(tmp_path, webui_enabled=False)
+    def test_sync_command_never_includes_webui_extra(self, tmp_path, monkeypatch):
+        """WebUI 依赖已并入主依赖组，uv sync 不应再出现 --extra webui。"""
+        _write_config_toml(tmp_path, telemetry_enabled=True)
         _setup(tmp_path, monkeypatch)
 
         command = Dependencies.build_uv_sync_command()
-        assert 'webui' in command
+        assert 'webui' not in command
         assert 'extensions' in command
 
     def test_sync_command_skips_disabled_extras(self, tmp_path, monkeypatch):
-        """除 webui 外的未启用可选功能不应出现在 uv sync 的 extra 列表中。"""
-        _write_config_toml(tmp_path, webui_enabled=True)
+        """未启用的可选功能不应出现在 uv sync 的 extra 列表中。"""
+        _write_config_toml(tmp_path, telemetry_enabled=False)
         monkeypatch.setattr(Dependencies, 'EXTRA_CONFIG_FIELDS', {'telemetry': ('telemetry', 'enabled')})
         _setup(tmp_path, monkeypatch)
 
         command = Dependencies.build_uv_sync_command()
         assert 'telemetry' not in command
-        assert 'webui' in command
         assert 'extensions' in command

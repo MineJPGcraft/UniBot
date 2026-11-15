@@ -190,12 +190,6 @@ def build_config_schema() -> dict:
                 'description': text('schema.config.image__mode_description'),
                 'default': False,
             },
-            'webui.enabled': {
-                'type': 'boolean',
-                'title': text('schema.config.webui__enabled_label'),
-                'description': text('schema.config.webui__enabled_description'),
-                'default': False,
-            },
         },
     }
 
@@ -247,11 +241,6 @@ def build_config_groups() -> list[dict]:
             'keys': ['image.mode'],
             # 门控开关：仅当该 key 为 true 时组内字段可编辑；前端据此渲染锁定遮罩
             # 'gated_by': 'image.mode',
-        },
-        {
-            'id': 'webui',
-            'name': text('schema.config.group_webui'),
-            'keys': ['webui.enabled'],
         },
     ]
 

@@ -13,16 +13,15 @@ dependencies = [
     "nonebot-adapter-minecraft>=1.8.2",
     "nonebot-plugin-alconna>=0.62.0",
     "nonebot-plugin-uninfo>=0.11.0",
-]
-
-[project.optional-dependencies]
-webui = [
+    # WebUI 管理面板（内置，不可关闭）：后端鉴权与系统监控依赖
     "psutil>=6.0.0",
     "PyJWT>=2.8.0",
     "bcrypt>=4.0.0",
     "cryptography>=43.0.3,<49.0.0",
     "qrcode[pil]>=7.4",
 ]
+
+[project.optional-dependencies]
 extensions = []
 
 [dependency-groups]
@@ -68,10 +67,6 @@ inline-quotes = "single"
 
 [tool.uv]
 index-url = "https://mirrors.huaweicloud.com/repository/pypi/simple"
-
-[tool.unibot]
-# 此版本对应的 WebUi 版本
-webui_version = 'v2.0.0-pre'
 
 [tool.nonebot]
 # 插件登记已移出 pyproject.toml（运行时状态存于 Config/Plugins.toml）；

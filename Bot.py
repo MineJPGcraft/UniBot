@@ -32,14 +32,13 @@ async def startup() -> None:
     await background_manager.start()
     await extension_manager.start()
 
-    if config.webui.enabled:
-        # 启动钩子在 main() 插件加载完成后执行，此时导入 Core.Web 是安全的
-        from Core.Web.Limiter import rate_limiter
-        from Core.Web.Managers import data_manager, webui_manager
+    # 启动钩子在 main() 插件加载完成后执行，此时导入 Core.Web 是安全的
+    from Core.Web.Limiter import rate_limiter
+    from Core.Web.Managers import data_manager, webui_manager
 
-        data_manager.load()
-        rate_limiter.start()
-        await webui_manager.init()
+    data_manager.load()
+    rate_limiter.start()
+    webui_manager.init()
 
 
 @driver.on_shutdown
@@ -48,18 +47,16 @@ async def shutdown() -> None:
     from Core.Extension import extension_manager
     from Core.Managers import background_manager
     from Core.Telemetry import telemetry
+    from Core.Web.Limiter import rate_limiter
+    from Core.Web.Managers import data_manager
 
     if config.telemetry.enabled:
         await telemetry.stop()
     await extension_manager.shutdown()
     await background_manager.stop()
 
-    if config.webui.enabled:
-        from Core.Web.Limiter import rate_limiter
-        from Core.Web.Managers import data_manager
-
-        rate_limiter.stop()
-        await data_manager.save()
+    rate_limiter.stop()
+    await data_manager.save()
 
 
 @driver.on_bot_connect
@@ -152,7 +149,6 @@ def exit_on_sigterm(_signal_number: int, _frame: object) -> None:
 def main():
     """初始化并运行机器人进程。"""
     # NoneBot 初始化必须在本地模块导入之前完成。
-    from Core.Config import config as bot_config
     from Core.I18n import register_all as register_locales
     from Core.Managers import config_manager, plugin_registry
     from Scripts.migrate_messages import run_startup_migrations
@@ -178,12 +174,11 @@ def main():
     # 用户/市场插件登记在 Config/Plugins.toml（运行时状态，不写入 pyproject.toml）
     load_plugins(plugin_registry.enabled_modules())
 
-    if bot_config.webui.enabled:
-        # 函数内延迟导入：Core.Web 聚合全部路由，部分模块顶层依赖插件托管包，
-        # 必须等插件加载完成后再导入，避免 uninfo 等被抢先注册为普通模块
-        from Core.Web.Managers import webui_manager
+    # 函数内延迟导入：Core.Web 聚合全部路由，部分模块顶层依赖插件托管包，
+    # 必须等插件加载完成后再导入，避免 uninfo 等被抢先注册为普通模块
+    from Core.Web.Managers import webui_manager
 
-        webui_manager.mount(nonebot.get_app())
+    webui_manager.mount(nonebot.get_app())
 
     signal.signal(signal.SIGTERM, exit_on_sigterm)
     nonebot.run()

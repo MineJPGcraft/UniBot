@@ -1,7 +1,8 @@
 # UniBot 自定义配置
 # NoneBot 框架配置（PORT、HOST、SUPERUSERS、COMMAND_SEP、COMMAND_START、LOG_LEVEL）
 # 及适配器配置（ONEBOT_ACCESS_TOKEN、MINECRAFT_WS_URLS、MINECRAFT_ACCESS_TOKEN）仍在 .env 中配置。
-# 本文件使用 TOML 格式，嵌套表会自动展平为 Config 字段（如 [webui] 下的 enabled → webui_enabled）。
+# 本文件使用 TOML 格式，嵌套表会自动展平为 Config 字段（如 [image] 下的 mode → image_mode）。
+# 管理面板（WebUI）为内置功能，随机器人常驻开启，无需在此开关。
 
 # 机器人消息语言：zh / en，决定加载 Config/Messages.zh.toml 或 Messages.en.toml。
 # 仅影响机器人发送的消息；WebUI 管理面板的界面语言在面板内独立切换。
@@ -73,11 +74,6 @@ sync_color_message = "gray"
 
 # 绑定 QQ 号的最大数量，设置 0 表示不限制。
 qq_bound_max_number = 1
-
-[webui]
-# 是否启用 WebUI 管理面板。
-# 启用后将在机器人端口上挂载 Web API 与 WebSocket，配合 WebUi 前端使用。
-enabled = true
 
 [telemetry]
 # 是否启用匿名运行数据上报（Telemetry）。

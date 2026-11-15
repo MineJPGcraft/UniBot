@@ -91,6 +91,8 @@ class HelloCommand(Command):
 
 The `extension.id` of a single-file extension must match the file name. Single-file extensions also have the injected `config`, `data`, logger and lifecycle methods; they cannot bypass these boundaries by directly importing internal modules.
 
+> Note: single-file extensions are **imported during the discovery phase** (module top-level code runs to read the manifest). Top-level code must therefore be safely re-executable and idempotent, and must not rely on runtime state that only exists after NoneBot finishes initializing (such as connected adapters or bot instances); put logic that needs that state into lifecycle methods like `on_load()`.
+
 ### Directory Extension
 
 Suitable for complete extensions with multiple modules, configuration, and dependencies:

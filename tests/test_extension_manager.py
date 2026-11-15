@@ -471,6 +471,78 @@ unibot = "*"
         assert 'Incompat' in (extension_manager.records['Depends'].failure_reason or '')
 
 
+# ===== 依赖图错误隔离（缺失/循环依赖不阻断整体加载） =====
+
+
+def _plain_manifest(extension_id: str) -> str:
+    """构造无兼容性约束的普通代码扩展清单。"""
+    return f"""
+[extension]
+id = "{extension_id}"
+name = "{extension_id}"
+version = "1.0.0"
+types = ["api"]
+
+[compatibility]
+unibot = "*"
+"""
+
+
+class TestDependencyErrorIsolation:
+    """拓扑排序发现缺失/循环依赖时，仅涉事扩展标记 blocked，其余扩展照常进入加载流程。"""
+
+    @staticmethod
+    def _make_loader_with(manifests: dict[str, str], deps: dict[str, list[str]] | None = None) -> ExtensionLoader:
+        return TestValidationIsolation._make_loader_with(manifests, deps)
+
+    def test_missing_dependency_blocks_only_involved(self):
+        loader = self._make_loader_with(
+            {'BadDep': _plain_manifest('BadDep'), 'Good': _plain_manifest('Good')},
+            deps={'BadDep': ['Ghost']},
+        )
+
+        order = loader._topological_sort()
+
+        assert 'Good' in order
+        assert 'BadDep' not in order
+        assert extension_manager.records['BadDep'].state is ExtensionState.blocked
+        assert 'missing dependency' in (extension_manager.records['BadDep'].failure_reason or '')
+        # 无关扩展未被依赖错误波及（状态未被标记为 blocked）
+        assert extension_manager.records['Good'].state is not ExtensionState.blocked
+
+    def test_circular_dependency_blocks_only_cycle_members(self):
+        loader = self._make_loader_with(
+            {
+                'CycleA': _plain_manifest('CycleA'),
+                'CycleB': _plain_manifest('CycleB'),
+                'Good': _plain_manifest('Good'),
+            },
+            deps={'CycleA': ['CycleB'], 'CycleB': ['CycleA']},
+        )
+
+        order = loader._topological_sort()
+
+        assert 'Good' in order
+        assert 'CycleA' not in order and 'CycleB' not in order
+        assert extension_manager.records['CycleA'].state is ExtensionState.blocked
+        assert extension_manager.records['CycleB'].state is ExtensionState.blocked
+        assert 'Circular dependency' in (extension_manager.records['CycleA'].failure_reason or '')
+
+    def test_downstream_of_blocked_dependency_also_blocked(self):
+        # 依赖链中游扩展缺失依赖时，上游依赖方在加载阶段按 blocked_reason 传播阻塞
+        loader = self._make_loader_with(
+            {'Mid': _plain_manifest('Mid'), 'Top': _plain_manifest('Top')},
+            deps={'Mid': ['Ghost'], 'Top': ['Mid']},
+        )
+
+        order = loader._topological_sort()
+        loader._import_and_load(order)
+
+        assert extension_manager.records['Mid'].state is ExtensionState.blocked
+        assert extension_manager.records['Top'].state is ExtensionState.blocked
+        assert 'Mid' in (extension_manager.records['Top'].failure_reason or '')
+
+
 # ===== 图片模式关闭时的渲染扩展处理（#7） =====
 
 

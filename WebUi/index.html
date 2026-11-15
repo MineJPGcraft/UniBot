@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniBot WebUI</title>
+    <script>
+      ;(() => {
+        const saved = localStorage.getItem('unibot_theme')
+        const prefers_dark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (saved === 'dark' || (!saved && prefers_dark)) {
+          document.documentElement.classList.add('dark')
+        }
+        const locale = localStorage.getItem('unibot_locale')
+        document.documentElement.lang = locale === 'en' ? 'en' : 'zh-CN'
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

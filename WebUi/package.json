@@ -1,0 +1,43 @@
+{
+  "name": "minecraft-unibot-webui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "check:i18n": "bun scripts/check-i18n.mjs",
+    "check:locales": "bun scripts/check-locales.mjs",
+    "check:format": "oxfmt --check src/ scripts/",
+    "check:quality": "bun run check:locales && bun run check:i18n && bun run check:format && bun run test",
+    "dev": "vite",
+    "format": "oxfmt src/ scripts/",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@codemirror/legacy-modes": "^6.5.3",
+    "codemirror": "^6.0.2",
+    "echarts": "^6.1.0",
+    "jinrishici": "^1.0.6",
+    "pinia": "^3.0.4",
+    "reka-ui": "^2.10.5",
+    "vue": "^3.5.38",
+    "vue-echarts": "^8.1.0",
+    "vue-i18n": "^11.4.9",
+    "vue-router": "^5.1.0"
+  },
+  "devDependencies": {
+    "@iconify/vue": "^5.0.1",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "@vue/test-utils": "^2.5.1",
+    "jsdom": "^30.1.2",
+    "oxfmt": "^0.54.0",
+    "vite": "^8.0.16",
+    "vite-plugin-vue-devtools": "^8.1.2",
+    "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": "^22.18.0 || >=24.12.0"
+  }
+}

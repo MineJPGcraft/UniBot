@@ -3,6 +3,7 @@ name: CI
 # 持续集成：推送到 main 或提交 PR 时自动运行质量检查
 #   - Python 静态检查（ruff）与编译检查（compileall）
 #   - 全量单元测试（pytest）
+#   - 前端质量门禁（WebUi/：语言包 / i18n 引用 / 格式 / 单元测试 / 构建）
 #   - 文档构建（VuePress，Docs/ 走 npm，勿用 bun）
 #
 # 也可通过 Actions 页面的「Run workflow」手动触发验证改动。
@@ -28,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       docs: ${{ steps.filter.outputs.docs }}
+      webui: ${{ steps.filter.outputs.webui }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -42,6 +44,9 @@ jobs:
             # 仅 Docs/ 下内容变化才触发文档构建
             docs:
               - 'Docs/**'
+            # 仅 WebUi/ 下内容变化才触发前端质量门禁
+            webui:
+              - 'WebUi/**'
 
   lint-and-test:
     name: Lint & Test (Python)
@@ -61,10 +66,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 与 Watchdog 保持一致：同时安装 extensions 与 webui 两组 extra，
-      # 避免单 extra 同步移除其他组的包；--frozen 使用提交的 uv.lock，保证可复现。
+      # WebUI 依赖已并入主依赖组，只需同步 extensions extra；
+      # --frozen 使用提交的 uv.lock，保证可复现。
       - name: Sync dependencies
-        run: uv sync --frozen --extra extensions --extra webui
+        run: uv sync --frozen --extra extensions
 
       - name: Lint (ruff)
         run: uv run ruff check .
@@ -74,6 +79,34 @@ jobs:
 
       - name: Run tests
         run: uv run pytest -q
+
+  build-webui:
+    name: Lint & Test (WebUI)
+    needs: changes
+    # 只在 WebUi/ 内容变更时运行前端质量门禁
+    if: needs.changes.outputs.webui == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: WebUi
+        run: bun install --frozen-lockfile
+
+      # 语言包可编译性 + i18n 引用比对 + 格式检查 + 单元测试
+      - name: Quality checks
+        working-directory: WebUi
+        run: bun run check:quality
+
+      - name: Build
+        working-directory: WebUi
+        run: bun run build
 
   build-docs:
     name: Build Docs (VuePress)

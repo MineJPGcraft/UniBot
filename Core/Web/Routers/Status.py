@@ -5,7 +5,6 @@ import nonebot
 import psutil
 from fastapi import APIRouter, BackgroundTasks, Depends
 
-from Core.Config import config
 from Core.Constants import TaskKind, UserRole
 from Core.Managers import task_center, version_manager
 from Core.Managers.TaskCenter import TaskContext
@@ -51,7 +50,6 @@ def get_status_data() -> dict:
         'servers_online': len(servers),
         'players_bound': players_bound,
         'adapters': adapter_names,
-        'webui_enabled': config.webui.enabled,
         'ws_clients': len(ws_clients),
     }
 

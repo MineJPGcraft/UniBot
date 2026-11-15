@@ -13,10 +13,6 @@ class ImageConfig(BaseModel):
     font: str = ''  # 自定义字体文件路径；留空自动从资源扩展根目录查找 Font.ttf
 
 
-class WebUiConfig(BaseModel):
-    enabled: bool = False
-
-
 class TelemetryConfig(BaseModel):
     enabled: bool = True
 
@@ -59,7 +55,6 @@ class Config(BaseModel):
     qq_bound_max_number: int = 1
 
     image: ImageConfig = ImageConfig()
-    webui: WebUiConfig = WebUiConfig()
     telemetry: TelemetryConfig = TelemetryConfig()
 
     @model_validator(mode='after')

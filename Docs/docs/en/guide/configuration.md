@@ -79,7 +79,9 @@ For other platforms (Telegram, Discord, Kook, etc.), refer to the corresponding 
 
 ## `Config.toml` — Bot Configuration
 
-`Config.toml` is the main configuration for the bot's business layer, using the TOML format. Nested tables are automatically flattened into config fields (for example, `enabled` under `[webui]` → `webui_enabled`).
+`Config.toml` is the main configuration for the bot's business layer, using the TOML format. Nested tables are automatically flattened into config fields (for example, `mode` under `[image]` → `image_mode`).
+
+The admin panel (WebUI) is a **built-in feature** that is always enabled with the bot; there is no switch in `Config.toml`.
 
 ### Basic Configuration
 
@@ -165,13 +167,10 @@ whitelist_command = "whitelist"
 list_compatible_mode = false
 ```
 
-### WebUI Admin Panel
+### Admin Panel (WebUI)
 
-```toml
-[webui]
-# Whether to enable the WebUI (requires the webui dependency to be installed)
-enabled = true
-```
+WebUI is built in and starts with the bot — just open `http://<your-ip>:<port>/webui`, no configuration required.
+Frontend sources live in the repo's `WebUi/` directory; the build output `WebUi/dist` ships in release packages (when deploying from source, run `bun install && bun run build` in `WebUi/`).
 
 ### Image Rendering
 
@@ -245,17 +244,14 @@ The **Message Text** editor edits overrides in the language that follows the **p
 
 ## Dependencies & Optional Features
 
-Different optional features require additional dependencies, so sync the corresponding extra before enabling:
+WebUI admin panel dependencies (`psutil` / `PyJWT` / `bcrypt` / `cryptography` / `qrcode`) are part of the main dependency set, so `uv sync` installs them. Python dependencies declared by extensions are aggregated into the `extensions` optional group:
 
 ```bash
-# WebUI admin panel
-uv sync --no-dev --extra webui
-
-# Extension dependencies (Python dependencies declared by enabled extensions)
-uv sync --no-dev --extra webui --extra extensions
+# Core + extension dependencies
+uv sync --no-dev --extra extensions
 ```
 
-==Before enabling a feature, first confirm that the corresponding extra is installed==, otherwise the feature cannot work properly.
+==Extension dependencies may prevent extensions from loading correctly until installed==; the extension install flow triggers dependency sync automatically.
 
 Image rendering's Python dependencies are declared by the **rendering engine extension itself** (`[dependencies].python` in `Extension.toml`) and synced via the `extensions` extra after installation — ==no separate image extra is needed==.
 

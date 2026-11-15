@@ -68,7 +68,7 @@ Download the one-click installation script for your platform from the [Releases 
 | **Linux / macOS** | `Install.sh`, first run `chmod +x Install.sh`, then run `./Install.sh` |
 :::
 
-The script will automatically: detect and install UV, download and extract the matching version's package from the GitHub Release, ask whether to enable WebUI, and run `uv sync` to sync dependencies.
+The script will automatically: detect and install UV, download and extract the matching version's package from the GitHub Release, and run `uv sync` to sync dependencies. The admin panel (WebUI) is a built-in feature that is always enabled with the bot — no extra selection needed.
 
 ::: note
 After installation, the script will generate a `Start.sh` or `Start.bat` in the `UniBot` directory; you only need to run it to start the core.
@@ -91,8 +91,8 @@ A full introduction to WebUI's features (detailed page explanations, Config Cent
 git clone https://github.com/MineJPGcraft/UniBot
 cd UniBot
 
-# Install the core and WebUI dependencies
-uv sync --extra webui
+# Install dependencies (WebUI dependencies are part of the main set)
+uv sync
 
 # Start the bot
 uv run Watchdog.py

@@ -19,6 +19,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # 前端源码随核心仓库分发，发布包需要内置构建产物 WebUi/dist
+      - name: Build WebUI
+        working-directory: WebUi
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+
       - name: Package project into Zip (exclude tests / docs)
         shell: bash
         run: |
@@ -26,16 +38,25 @@ jobs:
           ZIP_NAME="UniBot.zip"
 
           # 打包仓库内容，排除：
-          #   - .git/        ：git 元数据，对用户无用
-          #   - .github/     ：CI/CD 工作流，对用户无用
-          #   - tests/       ：测试代码
-          #   - docs/ Docs/  ：文档（兼容大小写，含任意层级嵌套）
+          #   - .git/            ：git 元数据，对用户无用
+          #   - .github/         ：CI/CD 工作流，对用户无用
+          #   - tests/           ：测试代码
+          #   - docs/ Docs/      ：文档（兼容大小写，含任意层级嵌套）
+          #   - WebUi/           ：前端源码与 node_modules（仅保留构建产物 WebUi/dist）
           zip -r "${ZIP_NAME}" . \
             -x ".git/*" \
             -x ".github/*" \
             -x "tests/*" "*/tests/*" \
             -x "docs/*" "*/docs/*" \
-            -x "Docs/*" "*/Docs/*"
+            -x "Docs/*" "*/Docs/*" \
+            -x "WebUi/*" \
+            -x "WebUi/node_modules/*" \
+            -x "WebUi/dist/*" \
+            -x "*/node_modules/*" \
+            -x "**/__pycache__/*"
+
+          # 只把构建产物放进包里
+          zip -r "${ZIP_NAME}" WebUi/dist
 
           echo "打包完成: ${ZIP_NAME}"
           ls -lh "${ZIP_NAME}"

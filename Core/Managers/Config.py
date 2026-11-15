@@ -11,7 +11,6 @@ from Core.Logging import logger
 class ConfigManager:
     # pyproject.toml 数据
     version: str = ''
-    webui_version: str = ''
     nonebot_config: dict = {}
     pyproject_data: dict = {}
 
@@ -85,7 +84,6 @@ class ConfigManager:
         """更新 pyproject.toml 派生配置缓存。"""
         self.version = self.pyproject_data.get('project', {}).get('version', '')
         tools = self.pyproject_data.get('tool', {})
-        self.webui_version = tools.get('unibot', {}).get('webui_version', '')
         self.nonebot_config = tools.get('nonebot', {})
 
     # ===== .env 操作 =====

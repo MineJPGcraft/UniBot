@@ -9,7 +9,7 @@ description: "How to connect QQ, QQ Official, Telegram, Discord, DoDo and KOOK t
 UniBot is built on NoneBot2 and connects to various chat platforms by installing different adapters. This page introduces the configuration fields and connection methods for each platform adapter. All configuration is done in the `.env` file in UniBot's root directory.
 
 ::: note Fill in bot cards directly in WebUI
-If [WebUI](/en/guide/features.html) is enabled, ==you don't need to edit `.env` manually==: after logging in, go to **Config → Environment Variables**, and each platform's bot list fields (such as `QQ_BOTS`, `TELEGRAM_BOTS`, `DISCORD_BOTS`, etc.) are rendered as **bot cards**. Click **Add Item** to create a bot card and fill in fields such as `token`, `secret` one by one. Cards support expand / collapse, drag-to-sort, and deletion. After filling, save and restart the bot for the changes to take effect.
+[WebUI](/en/guide/features.html) is built in, so ==you don't need to edit `.env` manually==: after logging in, go to **Config → Environment Variables**, and each platform's bot list fields (such as `QQ_BOTS`, `TELEGRAM_BOTS`, `DISCORD_BOTS`, etc.) are rendered as **bot cards**. Click **Add Item** to create a bot card and fill in fields such as `token`, `secret` one by one. Cards support expand / collapse, drag-to-sort, and deletion. After filling, save and restart the bot for the changes to take effect.
 :::
 
 *Note: list / object type configuration values should use JSON format and wrap the entire value in double quotes.* Configuration for adapters that are not installed will not be loaded.

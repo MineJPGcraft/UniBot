@@ -45,7 +45,7 @@ class TestConfigSchema:
     def test_nested_keys_are_flat_property_names(self):
         """Config.toml 的嵌套配置以点号平铺为字段名。"""
         properties = _property_keys(build_config_schema())
-        assert {'image.mode', 'webui.enabled'} <= properties
+        assert 'image.mode' in properties
 
     def test_every_field_has_title(self):
         for key, field in build_config_schema()['properties'].items():

@@ -119,7 +119,7 @@ All managers use the **singleton pattern**, instantiated at the bottom of their 
 - `server_manager`: server connection management
 - `plugin_manager`: plugin management
 - `version_manager`: version management
-- `webui_manager`: WebUI resource management
+- `webui_manager`: WebUI route mounting and frontend static file hosting
 - `config_manager`: configuration management
 - `task_center`: background Task Center (unified registry and progress push for dependency sync, market installs, hot reloads, etc.)
 

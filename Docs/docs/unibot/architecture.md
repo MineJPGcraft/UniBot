@@ -119,7 +119,7 @@ flowchart LR
 - `server_manager`：服务器连接管理
 - `plugin_manager`：插件管理
 - `version_manager`：版本管理
-- `webui_manager`：WebUI 资源管理
+- `webui_manager`：WebUI 路由挂载与前端静态文件托管
 - `config_manager`：配置管理
 - `task_center`：后台任务中心（依赖同步、市场安装、热重载等统一登记与进度推送）
 

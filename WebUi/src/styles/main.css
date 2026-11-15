@@ -1,0 +1,409 @@
+/* ============================================================
+   UniBot WebUI 全局样式
+   设计基调：现代、扁平、克制、低圆角、弱渐变
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* 色彩 */
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-sunken: #fafbfc;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --text: #18181b;
+  --text-secondary: #3f3f46;
+  --text-muted: #71717a;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: #eff4ff;
+  --success: #16a34a;
+  --success-soft: #ecfdf3;
+  --warning: #d97706;
+  --warning-soft: #fff8eb;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-soft: #fef2f2;
+
+  /* 字体 */
+  --font-body:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-mono:
+    'SF Mono', 'JetBrains Mono', ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+
+  /* 圆角 */
+  --radius: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+
+  /* 间距 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* 字号 */
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+
+  /* 投影 */
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.08);
+  --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.14);
+
+  /* 悬浮提示：默认跟随主题表面色，深色下用更亮一档的浮起色 */
+  --tooltip-bg: var(--surface);
+  --tooltip-border: var(--border);
+  --tooltip-fg: var(--text);
+
+  /* 交互悬浮底色：跟随文字色自动适配双主题（hover 专用，与 --surface-sunken 凹陷底色区分） */
+  --hover: color-mix(in srgb, var(--text) 5%, transparent);
+
+  /* 开关旋钮：深色下用浅灰替代纯白，避免高亮刺眼 */
+  --switch-knob: #ffffff;
+
+  /* 布局 */
+  --sidebar-width: 216px;
+  --topbar-height: 56px;
+  --statusbar-height: 32px;
+
+  /* 层级 */
+  --z-overlay: 200;
+  --z-dialog: 201;
+  --z-dropdown: 300;
+  --z-tooltip: 400;
+  --z-toast: 500;
+
+  /* 动效 */
+  --transition: 150ms ease-out;
+}
+
+/* ---------- 深色主题 ---------- */
+
+html.dark {
+  color-scheme: dark;
+
+  /* 冷调中性灰阶：bg → sunken → surface 逐级提亮，sunken 恒比 surface 深（凹陷） */
+  --bg: #15161a;
+  --surface: #202128;
+  --surface-sunken: #1a1b20;
+  --border: #2e2f37;
+  --border-strong: #4a4b56;
+  --text: #e7e7ea;
+  --text-secondary: #c9c9d1;
+  --text-muted: #9b9ba4;
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --accent-soft: rgb(59 130 246 / 0.16);
+  --success: #22c55e;
+  --success-soft: rgb(34 197 94 / 0.14);
+  --warning: #f59e0b;
+  --warning-soft: rgb(245 158 11 / 0.15);
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-soft: rgb(239 68 68 / 0.16);
+
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.45);
+  --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.55);
+
+  --tooltip-bg: #33343d;
+  --tooltip-border: rgb(255 255 255 / 0.1);
+  --tooltip-fg: #e7e7ea;
+
+  --switch-knob: #c9c9d1;
+}
+
+/* ---------- Reset ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--text);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+ul,
+ol {
+  list-style: none;
+  padding: 0;
+}
+
+::selection {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+/* 细滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ---------- 通用工具类 ---------- */
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-accent {
+  color: var(--accent);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.text-warning {
+  color: var(--warning);
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+.text-xs {
+  font-size: var(--text-xs);
+}
+
+.text-sm {
+  font-size: var(--text-sm);
+}
+
+/* ---------- 动画工具类 ---------- */
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Tooltip 内容经 Portal 传送出组件子树，keyframes 需全局声明（同 spin 先例） */
+@keyframes ui-tooltip-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* 页面容器 */
+.page {
+  padding: var(--space-6);
+  max-width: 1280px;
+  margin: 0 auto;
+  min-width: 0;
+}
+
+/* 页面标题区 */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.page-title {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.page-desc {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* 卡片 */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+
+.card-title {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.card-body {
+  padding: var(--space-5);
+}
+
+/* 加载状态 */
+.loading-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-8);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* 表单行 */
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.form-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.form-hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* ---------- 表格 ---------- */
+
+.ui-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.ui-table th {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border);
+}
+
+.ui-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.ui-table tbody tr {
+  transition: background-color var(--transition);
+}
+
+.ui-table tbody tr:hover {
+  background: var(--hover);
+}
+
+.ui-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 路由切换过渡：out-in（见 AppLayout）单一元素在流内，
+   时长压到 150ms：只做状态反馈，不额外拖慢切页体感 */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition:
+    opacity 150ms ease-out,
+    transform 150ms ease-out;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+}

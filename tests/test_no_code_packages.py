@@ -224,7 +224,7 @@ class TestCommitNoCodePackage:
         (tmp_path / 'Templates').mkdir()
         manifest = parse_manifest(_TEMPLATE_TOML.replace('TestTemplate', 'DependentTemplate'))
         manifest.dependencies.extensions.append('FailedProvider')
-        info = SimpleNamespace(directory=tmp_path, manifest=manifest)
+        info = SimpleNamespace(directory=tmp_path, manifest=manifest, mark_state=lambda state, reason=None: None)
         loader = ExtensionLoader(
             extension_manager._registries, extension_manager.renderer_manager, extension_manager.command_manager
         )

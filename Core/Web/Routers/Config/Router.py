@@ -137,13 +137,18 @@ async def patch_config(request: Request, current_user: dict = Depends(require_ro
     for key in _TOML_SKIP_KEYS:
         toml_output.pop(key, None)
 
+    # 先经模型校验再写盘：非法配置直接返回错误，避免非法内容落盘后与内存配置不一致
+    try:
+        updated_config = Config.model_validate(merged_data)
+    except Exception as error:
+        return {'code': 1, 'data': None, 'message': text('config.validate.failed', error=error)}
+
     try:
         config_manager.update_config(sanitize_none(toml_output))
     except Exception as error:
         return {'code': 1, 'data': None, 'message': text('config.write.failed', error=error)}
 
-    # 热更新内存中的配置对象（先经模型校验，保证嵌套配置仍为 Pydantic 子模型而非 dict）
-    updated_config = Config.model_validate(merged_data)
+    # 热更新内存中的配置对象（嵌套配置保持为 Pydantic 子模型而非 dict）
     for field_name in Config.model_fields:
         setattr(config, field_name, getattr(updated_config, field_name))
 

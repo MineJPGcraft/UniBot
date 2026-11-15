@@ -28,31 +28,20 @@ It provides **visual configuration, real-time monitoring, server / player manage
 | **::fluent-color:lock-closed-24:: Login Authentication** | JWT + password authentication (HttpOnly Cookie); first visit guides you through initializing the admin account |
 :::
 
-## Enable and Access
+## Access
 
-### Prerequisites
+### Built-in
 
-The WebUI dependencies must be installed first, and WebUI must be enabled in `Config.toml`:
+WebUI is a **built-in feature** of UniBot and is always enabled with the bot; no extra dependencies or config changes are needed:
 
-```bash
-# Install webui dependencies (required for both the install script and manual deployment)
-cd UniBot
-uv sync --no-dev --extra webui
-```
-
-```toml
-[webui]
-enabled = true
-```
-
-::: warning
-==WebUI cannot be enabled if the dependency installation above hasn't been run==, please make sure the dependencies are installed first.
-:::
+- Backend dependencies (`psutil` / `PyJWT` / `bcrypt` / `cryptography` / `qrcode`) are part of the main dependency set, so `uv sync` is all you need.
+- Frontend sources live in the repo's `WebUi/` directory; the build output `WebUi/dist` ships inside release packages (when deploying from source, run `bun install && bun run build` in `WebUi/`).
 
 ### Startup and Access
 
 1. Start the bot: `uv run Watchdog.py`.
-2. On the first start, the bot will **automatically download the WebUI static assets matching its own version from GitHub Releases** and mount them.
+2. The bot mounts the frontend build output bundled in the repo/release package on startup.
+3. Open `http://<your-ip>:<port>/webui` in your browser (default `http://127.0.0.1:8000/webui`).
 3. Open `http://<your-ip>:<PORT>/webui` in your browser (default `http://127.0.0.1:8000/webui`).
 
 ### Initialize the Admin
@@ -193,9 +182,9 @@ View the current account info and change your own password.
 
 ### WebUI Shows 404 / Fails to Load
 
-1. Confirm `[webui] enabled = true` and that `uv sync --no-dev --extra webui` has been run.
-2. Confirm the access path is `/webui` and the port is correct (default `8000`).
-3. Check the bot logs and confirm whether the WebUI static assets were downloaded and mounted successfully.
+1. Confirm that `uv sync` has been run, and that the access path is `/webui` with the correct port (default `8000`).
+2. If deploying from source (not a release package), confirm that `bun install && bun run build` was run in `WebUi/` to produce `WebUi/dist`.
+3. Check the bot logs and confirm whether the WebUI static files were mounted successfully.
 
 ### Login Says Wrong Password / Forgot the Admin Password
 

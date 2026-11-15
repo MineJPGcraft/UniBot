@@ -191,9 +191,9 @@ start_login_failed = "启动扫码登录失败：{error}"
 no_active_login = "当前没有进行中的扫码登录"
 
 [api.webui]
-assets_missing_title = "WebUI 资源加载失败"
-assets_missing_message = "WebUI assets download 失败，前端页面无法加载。"
-assets_missing_retry = "请检查网络连接，重启机器人后将自动重试下载。"
+assets_missing_title = "WebUI 前端资源缺失"
+assets_missing_message = "未找到前端构建产物（WebUi/dist）。源码入仓，需在 WebUi/ 目录执行 bun install && bun run build 生成；发布包已内置构建产物。"
+assets_missing_retry = "构建完成后重启机器人即可访问面板。"
 
 [api.schema.config]
 admin_superusers_label = "管理员视为超级用户"
@@ -238,8 +238,6 @@ whitelist_command_label = "白名单指令名称"
 whitelist_command_description = "服务器用于管理白名单的 Minecraft 指令名称"
 image__mode_label = "启用图片模式"
 image__mode_description = "将机器人发送的消息渲染为图片；需要额外安装图片依赖，且响应速度会变慢"
-webui__enabled_label = "启用 WebUI"
-webui__enabled_description = "是否启用 WebUI 管理面板，并在机器人端口挂载 Web API 与 WebSocket"
 group_basic = "基础与权限"
 group_groups = "群组"
 group_mc_command = "Minecraft 指令"
@@ -247,7 +245,6 @@ group_broadcast = "消息播报"
 group_sync = "消息同步"
 group_player_list = "玩家列表"
 group_image = "图片渲染"
-group_webui = "WebUI"
 
 [api.schema.env]
 group_framework = "框架"
@@ -405,6 +402,9 @@ satori_name = "Satori"
 satori_description = "连接 Koishi 等 Satori 服务；服务端上报的平台可由 Uninfo/Alconna 识别为微信或企业微信。"
 minecraft_name = "Minecraft"
 minecraft_description = "Minecraft 通信适配器，支持 Rcon 与 WebSocket。"
+
+[api.config.validate]
+failed = "配置校验失败：{error}"
 
 [api.config.write]
 failed = "写入配置文件失败：{error}"

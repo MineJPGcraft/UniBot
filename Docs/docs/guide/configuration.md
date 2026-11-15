@@ -79,7 +79,9 @@ ONEBOT_WS_URLS=["ws://127.0.0.1:6700"]
 
 ## `Config.toml` — 机器人配置
 
-`Config.toml` 是机器人业务层的主要配置，采用 TOML 格式。嵌套表会自动展平成配置字段（例如 `[webui]` 下的 `enabled` → `webui_enabled`）。
+`Config.toml` 是机器人业务层的主要配置，采用 TOML 格式。嵌套表会自动展平成配置字段（例如 `[image]` 下的 `mode` → `image_mode`）。
+
+管理面板（WebUI）为**内置功能**，随机器人常驻开启，无需在 `Config.toml` 中开关。
 
 ### 基础配置
 
@@ -163,13 +165,10 @@ whitelist_command = "whitelist"
 list_compatible_mode = false
 ```
 
-### WebUI 管理面板
+### 管理面板（WebUI）
 
-```toml
-[webui]
-# 是否启用 WebUI（需额外安装 webui 依赖）
-enabled = true
-```
+WebUI 为内置功能，默认随机器人启动，访问 `http://<你的IP>:<PORT>/webui` 即可，无需任何配置项。
+前端源码位于仓库 `WebUi/`，构建产物 `WebUi/dist` 随发布包分发；自行部署源码时需在 `WebUi/` 下执行 `bun install && bun run build`。
 
 ### 匿名数据上报（Telemetry）
 
@@ -254,17 +253,15 @@ WebUI 管理面板的界面语言（中/英）在面板右上角切换、仅保�
 
 ## 依赖与可选功能
 
-不同的可选功能需要额外的依赖，请在启用前同步对应的 extra：
+WebUI 管理面板的依赖（`psutil` / `PyJWT` / `bcrypt` / `cryptography` / `qrcode`）已并入主依赖组，`uv sync` 即可完成安装。
+扩展声明的 Python 依赖聚合在 `extensions` 可选组：
 
 ```bash
-# WebUI 管理面板
-uv sync --no-dev --extra webui
-
-# 扩展依赖（已启用扩展声明的 Python 依赖，聚合自各扩展清单）
-uv sync --no-dev --extra webui --extra extensions
+# 核心 + 扩展依赖
+uv sync --no-dev --extra extensions
 ```
 
-==启用某个功能前，先确认对应的 extra 已安装==，否则该功能无法正常工作。
+==扩展依赖尚未安装时，扩展可能无法正常启用==；扩展安装流程会自动触发依赖同步。
 
 图片渲染的 Python 依赖由**渲染引擎扩展自身声明**（`Extension.toml` 的 `[dependencies].python`），安装扩展后通过 `extensions` extra 统一同步，==无需单独的 image extra==。
 

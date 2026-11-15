@@ -29,31 +29,19 @@ description: UniBot 内置 WebUI 管理面板使用指南：可视化配置环�
 | **::fluent-color:lock-closed-24:: 登录认证** | JWT + 密码认证（HttpOnly Cookie），首次访问引导初始化管理员账户 |
 :::
 
-## 启用与访问
+## 访问
 
-### 前置要求
+### 内置说明
 
-WebUI 依赖需要先安装，且需在 `Config.toml` 中开启：
+WebUI 是 UniBot 的**内置功能**，随机器人常驻开启，无需安装额外依赖或修改配置：
 
-```bash
-# 安装 webui 依赖（安装脚本 / 手动部署均需执行）
-cd UniBot
-uv sync --no-dev --extra webui
-```
-
-```toml
-[webui]
-enabled = true
-```
-
-::: warning
-==未执行上述依赖安装时 WebUI 无法启用==，请先确认已安装。
-:::
+- 后端依赖（`psutil` / `PyJWT` / `bcrypt` / `cryptography` / `qrcode`）已并入主依赖组，`uv sync` 即可。
+- 前端源码在仓库的 `WebUi/` 目录，构建产物 `WebUi/dist` 由发布包内置（自行部署源码时在 `WebUi/` 执行 `bun install && bun run build`）。
 
 ### 启动与访问
 
 1. 启动机器人：`uv run Watchdog.py`。
-2. 首次启动时，机器人会**自动从 GitHub Releases 下载与自身版本匹配的 WebUI 静态资源**并挂载。
+2. 机器人启动时会自动挂载仓库/发行包内的前端构建产物。
 3. 浏览器访问 `http://<你的IP>:<PORT>/webui`（默认 `http://127.0.0.1:8000/webui`）。
 
 ### 初始化管理员
@@ -204,9 +192,9 @@ UniBot 扩展系统的管理入口（需管理员权限）：
 
 ### 访问 WebUI 显示 404 / 无法加载
 
-1. 确认 `[webui] enabled = true` 且已执行 `uv sync --no-dev --extra webui`。
-2. 确认访问路径为 `/webui`，且端口正确（默认 `8000`）。
-3. 查看机器人日志，确认 WebUI 静态资源是否成功下载与挂载。
+1. 确认已执行 `uv sync` 安装依赖，且访问路径为 `/webui`、端口正确（默认 `8000`）。
+2. 若自行部署源码（非发布包），确认已在 `WebUi/` 目录执行 `bun install && bun run build` 生成 `WebUi/dist`。
+3. 查看机器人日志，确认 WebUI 静态文件是否成功挂载。
 
 ### 登录提示密码错误 / 忘记管理员密码
 

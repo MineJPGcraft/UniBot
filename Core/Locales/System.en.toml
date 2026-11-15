@@ -191,9 +191,9 @@ start_login_failed = "Failed to start QR code login: {error}"
 no_active_login = "No QR code login is currently in progress"
 
 [api.webui]
-assets_missing_title = "WebUI resources failed to load"
-assets_missing_message = "WebUI assets download failed, the frontend page could not be loaded."
-assets_missing_retry = "Please check your network connection; the bot will retry automatically after restart."
+assets_missing_title = "WebUI frontend assets missing"
+assets_missing_message = "The frontend build output (WebUi/dist) was not found. Sources are in the repo: run bun install && bun run build inside WebUi/; release packages already bundle the build output."
+assets_missing_retry = "Restart the bot after building to access the panel."
 
 [api.schema.config]
 admin_superusers_label = "Treat admins as superusers"
@@ -238,8 +238,6 @@ whitelist_command_label = "Whitelist command name"
 whitelist_command_description = "Name of the Minecraft command your server uses to manage its whitelist"
 image__mode_label = "Enable image mode"
 image__mode_description = "Render outgoing bot messages as images; requires extra image dependencies and slows down responses"
-webui__enabled_label = "Enable WebUI"
-webui__enabled_description = "Whether to enable the WebUI panel and mount the Web API and WebSocket on the bot port"
 group_basic = "Basics & Permissions"
 group_groups = "Groups"
 group_mc_command = "Minecraft Commands"
@@ -247,7 +245,6 @@ group_broadcast = "Broadcasting"
 group_sync = "Message Sync"
 group_player_list = "Player List"
 group_image = "Image Rendering"
-group_webui = "WebUI"
 
 [api.schema.env]
 group_framework = "Framework"
@@ -405,6 +402,9 @@ satori_name = "Satori"
 satori_description = "Connects to Satori servers such as Koishi; platforms reported by the server are recognized as WeChat or WeCom via Uninfo/Alconna."
 minecraft_name = "Minecraft"
 minecraft_description = "Minecraft communication adapter supporting Rcon and WebSocket."
+
+[api.config.validate]
+failed = "Configuration validation failed: {error}"
 
 [api.config.write]
 failed = "Failed to write configuration file: {error}"
